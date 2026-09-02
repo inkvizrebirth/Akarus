@@ -1,4 +1,4 @@
-package com.aio.client.settings;
+package com.akarus.client.settings;
 
 /** Настройка-переключатель («да/нет»). */
 public class BooleanSetting extends Setting<Boolean> {

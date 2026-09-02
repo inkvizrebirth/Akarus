@@ -2,7 +2,7 @@
 Генератор мокапов интерфейса для документации (docs/preview-*.png).
 
 Скрипт НЕ нужен для сборки мода — он повторяет ту же геометрию и те же цвета,
-что и com.aio.client.gui.ClickGuiScreen / HudRenderer, и рисует их средствами
+что и com.akarus.client.gui.ClickGuiScreen / HudRenderer, и рисует их средствами
 Pillow. Удобно посмотреть на внешний вид, не запуская Minecraft.
 
 Запуск:  python3 tools/preview_render.py
@@ -197,8 +197,8 @@ def render_clickgui(path):
                  mix(argb(PANEL_TOP), argb(accent), 0.18))
     canvas.vgradient(x + 1, y + HEADER_HEIGHT - 1, GUI_WIDTH - 2, 2, with_alpha(accent, 0.12), argb(accent))
 
-    canvas.text(x + PADDING, y + 12, "AIO Client", argb(TEXT_PRIMARY))
-    canvas.text(x + PADDING + canvas.text_width("AIO Client") + 5, y + 13, "v0.1.0", argb(TEXT_DIM))
+    canvas.text(x + PADDING, y + 12, "Akarus", argb(TEXT_PRIMARY))
+    canvas.text(x + PADDING + canvas.text_width("Akarus") + 5, y + 13, "v0.1.0", argb(TEXT_DIM))
     hint = "ESC — закрыть"
     canvas.text(x + GUI_WIDTH - PADDING - canvas.text_width(hint) - 3, y + 12, hint, argb(TEXT_DIM))
 
@@ -253,7 +253,7 @@ def render_hud(path):
 
     # Водяной знак: радуга по символам
     cursor = x
-    for index, symbol in enumerate("AIO Client 0.1.0"):
+    for index, symbol in enumerate("Akarus 0.1.0"):
         canvas.text(cursor, y, symbol, hsb(index * 0.035, 0.75, 1.0))
         cursor += canvas.text_width(symbol)
     y += LINE_HEIGHT + 5

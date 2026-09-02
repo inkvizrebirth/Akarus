@@ -1,13 +1,13 @@
-package com.aio.client.gui;
+package com.akarus.client.gui;
 
-import com.aio.client.AioClient;
-import com.aio.client.config.ConfigManager;
-import com.aio.client.module.Module;
-import com.aio.client.module.ModuleCategory;
-import com.aio.client.module.ModuleManager;
-import com.aio.client.settings.BooleanSetting;
-import com.aio.client.settings.Setting;
-import com.aio.client.util.RenderUtils;
+import com.akarus.client.AkarusClient;
+import com.akarus.client.config.ConfigManager;
+import com.akarus.client.module.Module;
+import com.akarus.client.module.ModuleCategory;
+import com.akarus.client.module.ModuleManager;
+import com.akarus.client.settings.BooleanSetting;
+import com.akarus.client.settings.Setting;
+import com.akarus.client.util.RenderUtils;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -83,7 +83,7 @@ public class ClickGuiScreen extends Screen {
 	private float step;
 
 	public ClickGuiScreen() {
-		super(Component.literal(AioClient.MOD_NAME + " " + AioClient.MOD_VERSION));
+		super(Component.literal(AkarusClient.MOD_NAME + " " + AkarusClient.MOD_VERSION));
 	}
 
 	@Override
@@ -162,8 +162,8 @@ public class ClickGuiScreen extends Screen {
 		Font font = this.font;
 		int titleY = y + (HEADER_HEIGHT - font.lineHeight) / 2;
 
-		graphics.text(font, AioClient.MOD_NAME, x + PADDING, titleY, TEXT_PRIMARY, true);
-		graphics.text(font, "v" + AioClient.MOD_VERSION, x + PADDING + font.width(AioClient.MOD_NAME) + 5, titleY + 1, TEXT_DIM, false);
+		graphics.text(font, AkarusClient.MOD_NAME, x + PADDING, titleY, TEXT_PRIMARY, true);
+		graphics.text(font, "v" + AkarusClient.MOD_VERSION, x + PADDING + font.width(AkarusClient.MOD_NAME) + 5, titleY + 1, TEXT_DIM, false);
 
 		String closeHint = "ESC — закрыть";
 		graphics.text(font, closeHint, x + GUI_WIDTH - PADDING - font.width(closeHint), titleY, TEXT_DIM, false);

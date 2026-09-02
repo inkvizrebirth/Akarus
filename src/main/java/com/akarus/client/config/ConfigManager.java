@@ -1,10 +1,10 @@
-package com.aio.client.config;
+package com.akarus.client.config;
 
-import com.aio.client.AioClient;
-import com.aio.client.module.Module;
-import com.aio.client.module.ModuleManager;
-import com.aio.client.settings.BooleanSetting;
-import com.aio.client.settings.Setting;
+import com.akarus.client.AkarusClient;
+import com.akarus.client.module.Module;
+import com.akarus.client.module.ModuleManager;
+import com.akarus.client.settings.BooleanSetting;
+import com.akarus.client.settings.Setting;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -18,7 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Простой конфиг в формате JSON: config/aio-client.json
+ * Простой конфиг в формате JSON: config/akarus.json
  *
  * Структура:
  * <pre>
@@ -32,7 +32,7 @@ import java.nio.file.Path;
 public final class ConfigManager {
 
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve(AioClient.MOD_ID + ".json");
+	private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve(AkarusClient.MOD_ID + ".json");
 
 	/** Содержимое файла до момента создания модулей. */
 	private static JsonObject pending;
@@ -52,7 +52,7 @@ public final class ConfigManager {
 			JsonObject parsed = GSON.fromJson(reader, JsonObject.class);
 			pending = parsed == null ? null : parsed;
 		} catch (IOException | com.google.gson.JsonParseException exception) {
-			AioClient.LOGGER.error("Не удалось прочитать конфиг {}", PATH, exception);
+			AkarusClient.LOGGER.error("Не удалось прочитать конфиг {}", PATH, exception);
 		}
 	}
 
@@ -126,7 +126,7 @@ public final class ConfigManager {
 			Files.createDirectories(PATH.getParent());
 			Files.writeString(PATH, GSON.toJson(root), StandardCharsets.UTF_8);
 		} catch (IOException exception) {
-			AioClient.LOGGER.error("Не удалось сохранить конфиг {}", PATH, exception);
+			AkarusClient.LOGGER.error("Не удалось сохранить конфиг {}", PATH, exception);
 		}
 	}
 

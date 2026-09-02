@@ -1,4 +1,4 @@
-package com.aio.client.module;
+package com.akarus.client.module;
 
 /** Категории модулей (вкладки в левой части ClickGUI). */
 public enum ModuleCategory {

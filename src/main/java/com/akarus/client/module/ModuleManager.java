@@ -1,8 +1,8 @@
-package com.aio.client.module;
+package com.akarus.client.module;
 
-import com.aio.client.AioClient;
-import com.aio.client.config.ConfigManager;
-import com.aio.client.module.impl.HudInfoModule;
+import com.akarus.client.AkarusClient;
+import com.akarus.client.config.ConfigManager;
+import com.akarus.client.module.impl.HudInfoModule;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,7 +25,7 @@ public final class ModuleManager {
 		MODULES.add(module);
 		// Подтягиваем сохранённые значения из конфига
 		ConfigManager.applyTo(module);
-		AioClient.LOGGER.info("Модуль зарегистрирован: {} ({})", module.getName(), module.getCategory().getDisplayName());
+		AkarusClient.LOGGER.info("Модуль зарегистрирован: {} ({})", module.getName(), module.getCategory().getDisplayName());
 	}
 
 	public static List<Module> getAll() {

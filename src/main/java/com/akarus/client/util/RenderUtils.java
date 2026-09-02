@@ -1,4 +1,4 @@
-package com.aio.client.util;
+package com.akarus.client.util;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;

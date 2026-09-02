@@ -1,9 +1,9 @@
-package com.aio.client;
+package com.akarus.client;
 
-import com.aio.client.config.ConfigManager;
-import com.aio.client.gui.ClickGuiScreen;
-import com.aio.client.gui.hud.HudRenderer;
-import com.aio.client.module.ModuleManager;
+import com.akarus.client.config.ConfigManager;
+import com.akarus.client.gui.ClickGuiScreen;
+import com.akarus.client.gui.hud.HudRenderer;
+import com.akarus.client.module.ModuleManager;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.ClientModInitializer;
@@ -18,15 +18,15 @@ import org.slf4j.Logger;
  * Главный класс мода. Точка входа объявлена в fabric.mod.json (секция "client"),
  * поэтому весь код выполняется только на стороне клиента.
  */
-public class AioClient implements ClientModInitializer {
+public class AkarusClient implements ClientModInitializer {
 
-	public static final String MOD_ID = "aio-client";
-	public static final String MOD_NAME = "AIO Client";
+	public static final String MOD_ID = "akarus";
+	public static final String MOD_NAME = "Akarus";
 	public static final String MOD_VERSION = "0.1.0";
 
 	public static final Logger LOGGER = LogUtils.getLogger();
 
-	/** Своя категория в настройках управления ("AIO Client"). */
+	/** Своя категория в настройках управления ("Akarus"). */
 	public static final KeyMapping.Category KEY_CATEGORY =
 			KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "modules"));
 
@@ -61,7 +61,7 @@ public class AioClient implements ClientModInitializer {
 		});
 
 		// Сохраняем настройки при закрытии игры
-		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::save, "aio-client-config-save"));
+		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::save, "akarus-config-save"));
 
 		LOGGER.info("{} {} готов к работе. Меню — правый Shift.", MOD_NAME, MOD_VERSION);
 	}

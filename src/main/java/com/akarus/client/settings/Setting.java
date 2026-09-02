@@ -1,4 +1,4 @@
-package com.aio.client.settings;
+package com.akarus.client.settings;
 
 /**
  * Базовая настройка модуля.

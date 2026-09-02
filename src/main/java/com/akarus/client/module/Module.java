@@ -1,9 +1,9 @@
-package com.aio.client.module;
+package com.akarus.client.module;
 
-import com.aio.client.AioClient;
-import com.aio.client.config.ConfigManager;
-import com.aio.client.settings.BooleanSetting;
-import com.aio.client.settings.Setting;
+import com.akarus.client.AkarusClient;
+import com.akarus.client.config.ConfigManager;
+import com.akarus.client.settings.BooleanSetting;
+import com.akarus.client.settings.Setting;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
@@ -38,10 +38,10 @@ public abstract class Module {
 
 		// Регистрируем клавишу модуля в ванильных настройках управления
 		this.keyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key." + AioClient.MOD_ID + "." + id,
+				"key." + AkarusClient.MOD_ID + "." + id,
 				InputConstants.Type.KEYSYM,
 				defaultKey,
-				AioClient.KEY_CATEGORY));
+				AkarusClient.KEY_CATEGORY));
 	}
 
 	/** Включает модуль, если он выключен — и наоборот. */

@@ -37,8 +37,14 @@ processResources {
 	}
 }
 
+// Minecraft 26.2 собирается под Java 25. Если в системе стоит более старый JDK,
+// сборка упадёт с «release version 25 not supported» — подскажем заранее.
+if (JavaVersion.current() < JavaVersion.VERSION_25) {
+	logger.warn("\nДля сборки нужен JDK 25, а сейчас используется {}. Скачать: https://adoptium.net/temurin/releases/?version=25\n",
+			JavaVersion.current())
+}
+
 tasks.withType(JavaCompile).configureEach {
-	// Minecraft 26.2 собирается под Java 25
 	it.options.release = 25
 	// В проекте русские строки и комментарии — явно указываем кодировку
 	it.options.encoding = 'UTF-8'

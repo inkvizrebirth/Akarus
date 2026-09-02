@@ -1,10 +1,10 @@
-package com.aio.client.gui.hud;
+package com.akarus.client.gui.hud;
 
-import com.aio.client.AioClient;
-import com.aio.client.module.Module;
-import com.aio.client.module.ModuleManager;
-import com.aio.client.module.impl.HudInfoModule;
-import com.aio.client.util.RenderUtils;
+import com.akarus.client.AkarusClient;
+import com.akarus.client.module.Module;
+import com.akarus.client.module.ModuleManager;
+import com.akarus.client.module.impl.HudInfoModule;
+import com.akarus.client.util.RenderUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Font;
@@ -42,7 +42,7 @@ public final class HudRenderer {
 
 	public static void register() {
 		HudElementRegistry.addLast(
-				Identifier.fromNamespaceAndPath(AioClient.MOD_ID, "overlay"),
+				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "overlay"),
 				HudRenderer::render);
 	}
 
@@ -67,7 +67,7 @@ public final class HudRenderer {
 
 		// Водяной знак: название и версия, переливающиеся по радуге
 		if (hud.showWatermark()) {
-			drawRainbow(graphics, font, AioClient.MOD_NAME + " " + AioClient.MOD_VERSION, x, y, time);
+			drawRainbow(graphics, font, AkarusClient.MOD_NAME + " " + AkarusClient.MOD_VERSION, x, y, time);
 			y += font.lineHeight + LINE_GAP + 3;
 		}
 

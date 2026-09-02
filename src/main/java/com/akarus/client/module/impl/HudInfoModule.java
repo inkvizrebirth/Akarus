@@ -1,8 +1,8 @@
-package com.aio.client.module.impl;
+package com.akarus.client.module.impl;
 
-import com.aio.client.module.Module;
-import com.aio.client.module.ModuleCategory;
-import com.aio.client.settings.BooleanSetting;
+import com.akarus.client.module.Module;
+import com.akarus.client.module.ModuleCategory;
+import com.akarus.client.settings.BooleanSetting;
 import org.lwjgl.glfw.GLFW;
 
 /**

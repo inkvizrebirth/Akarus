@@ -1,6 +1,6 @@
-# AIO Client
+# Akarus
 
-Стартовый каркас клиентского мода (мод-клиента) для **Minecraft 26.2** на **Fabric**.
+Каркас клиентского мода (мод-клиента) **Akarus** для **Minecraft 26.2** на **Fabric**.
 
 Внутри уже есть три вещи, с которых обычно начинают такой проект:
 
@@ -17,6 +17,24 @@ HUD в игре выглядит так:
 > Мокапы выше сгенерированы скриптом `tools/preview_render.py` — он повторяет геометрию и цвета
 > кода, но рисует их через Pillow, поэтому это «примерная» картинка, а не скриншот из игры.
 
+## Где взять готовый jar
+
+Собрать можно двумя способами:
+
+1. **GitHub Actions (рекомендуется, если локально нет JDK 25 или нет доступа к Gradle):**
+   открыть вкладку **Actions** → workflow **build** → **Run workflow** → после завершения
+   скачать артефакт `akarus` из секции Artifacts.
+   Готовые сборки с тегом `v*` дополнительно публикуются в разделе **Releases**
+   (`akarus-0.1.0.jar`).
+2. **Локально:**
+
+```bash
+./gradlew build          # собрать мод, jar появится в build/libs/
+./gradlew runClient      # запустить игру с модом из папки run/
+```
+
+Готовый `akarus-0.1.0.jar` кладём в папку `mods` клиента с Fabric Loader 0.19.3 и Fabric API.
+
 ## Требования
 
 | Что | Версия |
@@ -24,19 +42,11 @@ HUD в игре выглядит так:
 | Minecraft (Java Edition) | 26.2 |
 | Fabric Loader | 0.19.3 |
 | Fabric API | 0.158.0+26.2 |
-| JDK | 25 |
+| JDK | **25** (иначе будет ошибка `release version 25 not supported`) |
 | Gradle | 9.5.1 (через `gradlew`) |
 
-## Сборка и запуск
-
-```bash
-./gradlew build          # собрать мод, jar появится в build/libs/
-./gradlew runClient      # запустить игру с модом из папки run/
-```
-
-Готовый `aio-client-0.1.0.jar` кладём в папку `mods` клиента с Fabric Loader 0.19.3 и Fabric API.
-
-Первый запуск скачивает Minecraft, маппинги и Fabric API — нужен интернет и минутка терпения.
+JDK 25: [Adoptium Temurin 25](https://adoptium.net/temurin/releases/?version=25).
+Первый запуск сборки скачивает Minecraft, маппинги и Fabric API — нужен интернет.
 
 ## Управление
 
@@ -49,14 +59,14 @@ HUD в игре выглядит так:
 | В меню: прокрутка списка | колесо мыши |
 | В меню: переместить окно | перетаскивание за шапку |
 
-Клавиши меняются в стандартных настройках управления Minecraft, категория **«AIO Client»**.
+Клавиши меняются в стандартных настройках управления Minecraft, категория **«Akarus»**.
 
 ## Что где лежит
 
 ```
-src/main/java/com/aio/client/
-├── AioClient.java               — точка входа, регистрация всего, клавиша меню
-├── config/ConfigManager.java    — сохранение настроек в config/aio-client.json
+src/main/java/com/akarus/client/
+├── AkarusClient.java            — точка входа, регистрация всего, клавиша меню
+├── config/ConfigManager.java    — сохранение настроек в config/akarus.json
 ├── gui/
 │   ├── ClickGuiScreen.java      — окно ClickGUI (категории, модули, настройки)
 │   └── hud/HudRenderer.java     — отрисовка HUD через Fabric HUD API
