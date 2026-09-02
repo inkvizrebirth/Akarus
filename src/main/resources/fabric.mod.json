@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "aio-client",
+  "version": "${version}",
+  "name": "AIO Client",
+  "description": "Каркас клиента для Minecraft 26.2: ClickGUI, HUD и система модулей.",
+  "authors": [
+    "inkvizrebirth"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "environment": "client",
+  "icon": "assets/aio-client/icon.png",
+  "entrypoints": {
+    "client": [
+      "com.aio.client.AioClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19",
+    "minecraft": "26.2",
+    "fabric-api": "*"
+  }
+}
