@@ -22,10 +22,11 @@ HUD в игре выглядит так:
 Собрать можно двумя способами:
 
 1. **GitHub Actions (рекомендуется, если локально нет JDK 25 или нет доступа к Gradle):**
-   открыть вкладку **Actions** → workflow **build** → **Run workflow** → после завершения
-   скачать артефакт `akarus` из секции Artifacts.
-   Готовые сборки с тегом `v*` дополнительно публикуются в разделе **Releases**
-   (`akarus-0.1.0.jar`).
+   готовый jar лежит в [Releases](https://github.com/inkvizrebirth/AIO-Client/releases) —
+   например [Akarus v0.1.0](https://github.com/inkvizrebirth/AIO-Client/releases/tag/v0.1.0),
+   файл `akarus-0.1.0.jar`.
+   Либо: вкладка **Actions** → workflow **build** → **Run workflow** → после завершения
+   скачать артефакт `akarus` из секции Artifacts (там же всегда лежит `akarus-build-log` с логом сборки).
 2. **Локально:**
 
 ```bash
