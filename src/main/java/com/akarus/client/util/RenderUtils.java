@@ -116,6 +116,35 @@ public final class RenderUtils {
 		return (int) Math.round(Math.sqrt(Math.max(0, r * r - dy * dy)));
 	}
 
+	/** Залитый круг — используется для эффекта волны по клику. */
+	public static void fillCircle(GuiGraphicsExtractor graphics, float centerX, float centerY, float radius, int color) {
+		if (radius <= 0.5f) {
+			return;
+		}
+		int r = (int) Math.ceil(radius);
+		float r2 = radius * radius;
+		for (int dy = -r; dy <= r; dy++) {
+			float chord = (float) Math.sqrt(Math.max(0.0f, r2 - dy * dy));
+			int y = (int) Math.floor(centerY + dy);
+			graphics.fill((int) (centerX - chord), y, (int) (centerX + chord), y + 1, color);
+		}
+	}
+
+	/**
+	 * Мягкая многослойная тень: несколько скруглённых прямоугольников,
+	 * каждый чуть больше предыдущего и с меньшей прозрачностью.
+	 */
+	public static void drawSoftShadow(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius, int layers) {
+		for (int i = layers; i >= 1; i--) {
+			float t = i / (float) layers;
+			int grow = (int) (t * 10.0f);
+			int alpha = (int) (7.0f + 26.0f * (1.0f - t));
+			// тень немного смещена вниз — так панель «приподнимается» над миром
+			fillRounded(graphics, x - grow, y - grow / 2 + 2, width + grow * 2, height + grow + 2,
+					radius + grow / 2, withAlpha(0xFF000000, alpha / 255.0f));
+		}
+	}
+
 	/** Скруглённая «рамка»: рисуется внешний прямоугольник, а поверх него — внутренний. */
 	public static void fillRoundedBorder(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius,
 			int borderColor, int fillColor) {

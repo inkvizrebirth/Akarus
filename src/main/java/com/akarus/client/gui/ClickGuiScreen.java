@@ -24,11 +24,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ClickGUI — собственное меню клиента.
+ * ClickGUI — собственное меню клиента Akarus.
  *
- * Всё рисуется вручную через {@link GuiGraphicsExtractor}, поэтому внешний вид
- * полностью наш: панель можно перетаскивать за шапку, категории слева,
- * модули и их настройки справа, плюс плавные анимации.
+ * Всё рисуется вручную через {@link GuiGraphicsExtractor}: тёмная панель с мягкой тенью,
+ * размытый фон, «волна» в месте клика и плавные анимации.
  */
 public class ClickGuiScreen extends Screen {
 
@@ -43,23 +42,31 @@ public class ClickGuiScreen extends Screen {
 	private static final int SETTING_ROW_HEIGHT = 16;
 	private static final int PADDING = 7;
 	private static final int FOOTER_HEIGHT = 14;
-	private static final int PANEL_RADIUS = 8;
+	private static final int PANEL_RADIUS = 10;
 
 	private static final int TOGGLE_WIDTH = 30;
 	private static final int TOGGLE_HEIGHT = 12;
 	private static final int SETTING_TOGGLE_WIDTH = 24;
 	private static final int SETTING_TOGGLE_HEIGHT = 10;
 
-	// --- Цвета (ARGB) ---
-	private static final int PANEL_BORDER = 0xFF2B2B36;
-	private static final int PANEL_TOP = 0xF61C1C26;
-	private static final int PANEL_BOTTOM = 0xF612121A;
-	private static final int LIST_BACKGROUND = 0x4A0E0E15;
-	private static final int ROW_BACKGROUND = 0xD815151D;
-	private static final int ROW_BORDER = 0x18FFFFFF;
-	private static final int TEXT_PRIMARY = 0xFFF4F4F9;
-	private static final int TEXT_SECONDARY = 0xFFB8B8C6;
-	private static final int TEXT_DIM = 0xFF75758A;
+	private static final int RIPPLE_DURATION = 520;
+	private static final int SHADOW_LAYERS = 5;
+
+	// --- Цвета: всё в чёрных тонах, акцент берётся из категории ---
+	private static final int BACKGROUND_DIM = 0xA6000000;
+	private static final int PANEL_OUTLINE = 0xFF1C1C20;
+	private static final int PANEL_TOP = 0xF6151518;
+	private static final int PANEL_BOTTOM = 0xF809090B;
+	private static final int LIST_BACKGROUND = 0x59000000;
+	private static final int ROW_BACKGROUND = 0xB8101013;
+	private static final int ROW_BORDER = 0x12FFFFFF;
+	private static final int SHEEN = 0x0CFFFFFF;
+	private static final int TEXT_PRIMARY = 0xFFF6F6F8;
+	private static final int TEXT_SECONDARY = 0xFFA6A6B2;
+	private static final int TEXT_DIM = 0xFF6B6B78;
+
+	/** Размытие можно вызывать только один раз за кадр — если игра не даёт, отключаем его. */
+	private static boolean blurSupported = true;
 
 	// --- Состояние ---
 	private ModuleCategory selected = ModuleCategory.HUD;
@@ -77,6 +84,7 @@ public class ClickGuiScreen extends Screen {
 
 	private final Map<String, Float> hoverAnimations = new HashMap<>();
 	private final Map<String, Float> toggleAnimations = new HashMap<>();
+	private final List<Ripple> ripples = new ArrayList<>();
 	private float openAnimation;
 
 	private long lastFrameMillis;
@@ -106,6 +114,34 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	// ------------------------------------------------------------------
+	// Фон: затемнение + размытие
+	// ------------------------------------------------------------------
+
+	/**
+	 * Переопределяем стандартный фон экрана.
+	 *
+	 * Важно: игру нельзя просить размыть кадр дважды — {@code blurBeforeThisStratum()}
+	 * бросает IllegalStateException при повторном вызове. Поэтому затемняем и размываем
+	 * мир именно здесь, а не в extractRenderState.
+	 */
+	@Override
+	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+		graphics.fill(0, 0, this.width, this.height, RenderUtils.withAlpha(BACKGROUND_DIM, 0.35f + 0.65f * openAnimation));
+
+		if (blurSupported) {
+			try {
+				graphics.blurBeforeThisStratum();
+			} catch (IllegalStateException exception) {
+				blurSupported = false;
+				AkarusClient.LOGGER.warn("Размытие недоступно в этом кадре — отключаем блюр", exception);
+			}
+		}
+
+		// Субтитры рисует ванильный HUD, не забываем про них
+		this.minecraft.gui.hud.extractDeferredSubtitles();
+	}
+
+	// ------------------------------------------------------------------
 	// Отрисовка
 	// ------------------------------------------------------------------
 
@@ -118,46 +154,42 @@ public class ClickGuiScreen extends Screen {
 		int y = Math.round(guiY);
 		int accent = selected.getAccent();
 
-		// Затемняем мир, а затем размываем всё, что отрисовано ниже
-		graphics.fill(0, 0, this.width, this.height, RenderUtils.withAlpha(0xFF000000, 0.45f * openAnimation));
-		graphics.nextStratum();
-		graphics.blurBeforeThisStratum();
-
 		// Небольшое «выезжание» окна при открытии
 		graphics.pose().pushMatrix();
-		float scale = 0.94f + 0.06f * openAnimation;
+		float scale = 0.96f + 0.04f * openAnimation;
 		float centerX = x + GUI_WIDTH / 2.0f;
 		float centerY = y + GUI_HEIGHT / 2.0f;
 		graphics.pose().translate(centerX, centerY);
 		graphics.pose().scale(scale, scale);
 		graphics.pose().translate(-centerX, -centerY);
 
-		drawShadow(graphics, x, y);
+		RenderUtils.drawSoftShadow(graphics, x, y, GUI_WIDTH, GUI_HEIGHT, PANEL_RADIUS, SHADOW_LAYERS);
 		drawPanel(graphics, x, y, accent);
 		drawCategories(graphics, x, y, mouseX, mouseY);
 		drawModules(graphics, x, y, mouseX, mouseY, accent);
 		drawHint(graphics, x, y);
 
+		// Волна по клику в любом месте панели
+		drawRipples(graphics, new Hitbox(x, y, GUI_WIDTH, GUI_HEIGHT), accent);
+
 		graphics.pose().popMatrix();
 	}
 
-	private void drawShadow(GuiGraphicsExtractor graphics, int x, int y) {
-		RenderUtils.fillRounded(graphics, x + 3, y + 5, GUI_WIDTH, GUI_HEIGHT, PANEL_RADIUS, 0x40000000);
-		RenderUtils.fillRounded(graphics, x + 2, y + 3, GUI_WIDTH, GUI_HEIGHT, PANEL_RADIUS, 0x28000000);
-	}
-
 	private void drawPanel(GuiGraphicsExtractor graphics, int x, int y, int accent) {
-		// Фон: рамка + двухтоновый вертикальный градиент
-		RenderUtils.fillRounded(graphics, x, y, GUI_WIDTH, GUI_HEIGHT, PANEL_RADIUS, PANEL_BORDER);
+		// Рамка и двухтоновый фон: сверху чуть светлее, снизу — почти чёрный
+		RenderUtils.fillRounded(graphics, x, y, GUI_WIDTH, GUI_HEIGHT, PANEL_RADIUS, PANEL_OUTLINE);
 		RenderUtils.fillRounded(graphics, x + 1, y + 1, GUI_WIDTH - 2, GUI_HEIGHT - 2, PANEL_RADIUS - 1, PANEL_TOP);
 		RenderUtils.fillRoundedBottom(graphics, x + 1, y + (GUI_HEIGHT - 2) / 2, GUI_WIDTH - 2, (GUI_HEIGHT - 2) / 2,
 				PANEL_RADIUS - 1, PANEL_BOTTOM);
 
-		// Шапка: подложка с оттенком акцентного цвета и цветная полоса снизу
-		int headerColor = RenderUtils.mix(PANEL_TOP, accent, 0.18f);
+		// Тонкий блик по верхней кромке — эффект стекла
+		graphics.fill(x + PANEL_RADIUS, y + 1, x + GUI_WIDTH - PANEL_RADIUS, y + 2, SHEEN);
+
+		// Шапка: подложка с оттенком акцента + акцентная линия снизу
+		int headerColor = RenderUtils.mix(PANEL_TOP, accent, 0.16f);
 		RenderUtils.fillRoundedTop(graphics, x + 1, y + 1, GUI_WIDTH - 2, HEADER_HEIGHT - 1, PANEL_RADIUS - 1, headerColor);
-		graphics.fillGradient(x + 1, y + HEADER_HEIGHT - 1, x + GUI_WIDTH - 1, y + HEADER_HEIGHT + 1,
-				RenderUtils.withAlpha(accent, 0.12f), accent);
+		graphics.fillGradient(x + 1, y + HEADER_HEIGHT - 2, x + GUI_WIDTH - 1, y + HEADER_HEIGHT,
+				RenderUtils.withAlpha(accent, 0.10f), RenderUtils.withAlpha(accent, 0.85f));
 
 		Font font = this.font;
 		int titleY = y + (HEADER_HEIGHT - font.lineHeight) / 2;
@@ -175,24 +207,26 @@ public class ClickGuiScreen extends Screen {
 		int rowY = y + HEADER_HEIGHT + PADDING;
 
 		for (ModuleCategory category : ModuleCategory.values()) {
+			Hitbox box = new Hitbox(rowX, rowY, CATEGORY_WIDTH, CATEGORY_ROW_HEIGHT);
 			boolean isSelected = category == selected;
-			float hover = hoverProgress("category:" + category.name(),
-					isInside(mouseX, mouseY, rowX, rowY, CATEGORY_WIDTH, CATEGORY_ROW_HEIGHT));
+			float hover = hoverProgress("category:" + category.name(), box.contains(mouseX, mouseY));
 			int accent = category.getAccent();
 
-			int background = isSelected
-					? RenderUtils.mix(RenderUtils.withAlpha(accent, 0.55f), accent, 0.35f + 0.25f * hover)
-					: RenderUtils.withAlpha(0xFFFFFFFF, 0.05f * hover);
-
-			RenderUtils.fillRounded(graphics, rowX, rowY, CATEGORY_WIDTH, CATEGORY_ROW_HEIGHT, 6, background);
+			// Фон: чёрная «пилюля», у выбранной категории — с акцентной подсветкой
+			int background = RenderUtils.mix(RenderUtils.withAlpha(0xFF000000, 0.55f), accent,
+					isSelected ? 0.26f + 0.10f * hover : 0.06f * hover);
+			RenderUtils.fillRounded(graphics, box.x(), box.y(), box.width(), box.height(), 6, background);
 
 			if (isSelected) {
-				graphics.fill(rowX, rowY + 4, rowX + 2, rowY + CATEGORY_ROW_HEIGHT - 4, accent);
+				// акцентная полоска слева
+				graphics.fill(box.x(), box.y() + 5, box.x() + 2, box.y() + box.height() - 5, accent);
 			}
 
-			int textColor = isSelected ? TEXT_PRIMARY : TEXT_SECONDARY;
-			graphics.text(font, category.getDisplayName(), rowX + 11,
-					rowY + (CATEGORY_ROW_HEIGHT - font.lineHeight) / 2 + 1, textColor, false);
+			int textColor = isSelected ? TEXT_PRIMARY : RenderUtils.mix(TEXT_SECONDARY, TEXT_PRIMARY, hover);
+			graphics.text(font, category.getDisplayName(), box.x() + 11,
+					box.y() + (box.height() - font.lineHeight) / 2 + 1, textColor, false);
+
+			drawRipples(graphics, box, accent);
 
 			rowY += CATEGORY_ROW_HEIGHT + CATEGORY_GAP;
 		}
@@ -206,7 +240,7 @@ public class ClickGuiScreen extends Screen {
 
 		RenderUtils.fillRounded(graphics, listX, listY, listWidth, listHeight, 6, LIST_BACKGROUND);
 
-		// Обрезаем всё, что выходит за пределы списка
+		// Всё, что выходит за пределы списка, обрезается
 		graphics.enableScissor(listX, listY, listX + listWidth, listY + listHeight);
 
 		for (LayoutEntry entry : buildLayout()) {
@@ -226,12 +260,12 @@ public class ClickGuiScreen extends Screen {
 		int content = contentHeight();
 		if (content > listHeight) {
 			int trackX = listX + listWidth - 5;
-			RenderUtils.fillRounded(graphics, trackX, listY + 3, 3, listHeight - 6, 1, 0x22FFFFFF);
+			RenderUtils.fillRounded(graphics, trackX, listY + 3, 3, listHeight - 6, 1, 0x1AFFFFFF);
 
 			int barHeight = Math.max(18, (int) (listHeight * (listHeight / (float) content)));
 			float progress = -scroll / (float) (content - listHeight);
 			int barY = listY + (int) ((listHeight - barHeight) * progress);
-			RenderUtils.fillRounded(graphics, trackX, barY, 3, barHeight, 1, RenderUtils.withAlpha(accent, 0.85f));
+			RenderUtils.fillRounded(graphics, trackX, barY, 3, barHeight, 1, RenderUtils.withAlpha(accent, 0.9f));
 		}
 	}
 
@@ -240,21 +274,25 @@ public class ClickGuiScreen extends Screen {
 		float hover = hoverProgress("module:" + module.getId(), box.contains(mouseX, mouseY));
 		float toggle = toggleProgress(module);
 
-		int background = RenderUtils.mix(ROW_BACKGROUND, RenderUtils.withAlpha(accent, 0.55f), toggle * 0.55f);
-		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height(), 6,
-				RenderUtils.mix(ROW_BORDER, accent, toggle * 0.6f), background);
+		// Карточка модуля: тёмная подложка, акцентная рамка, подсветка при наведении
+		int background = RenderUtils.mix(ROW_BACKGROUND, RenderUtils.withAlpha(accent, 0.45f), toggle * 0.45f);
+		int border = RenderUtils.mix(ROW_BORDER, accent, toggle * 0.55f);
+		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height(), 6, border, background);
 
 		if (hover > 0.01f) {
 			RenderUtils.fillRounded(graphics, box.x() + 1, box.y() + 1, box.width() - 2, box.height() - 2, 5,
-					RenderUtils.withAlpha(0xFFFFFFFF, 0.07f * hover));
+					RenderUtils.withAlpha(0xFFFFFFFF, 0.06f * hover));
 		}
+
+		// Волна от клика — рисуется под текстом
+		drawRipples(graphics, box, accent);
 
 		int textX = box.x() + 9;
 		graphics.text(font, module.getName(), textX, box.y() + 6,
 				module.isEnabled() ? TEXT_PRIMARY : TEXT_SECONDARY, false);
 		graphics.text(font, RenderUtils.clamp(font, module.getDescription(), box.width() - 72), textX, box.y() + 20, TEXT_DIM, false);
 
-		// Тумблер включения
+		// Тумблер справа
 		RenderUtils.drawToggle(graphics, box.x() + box.width() - TOGGLE_WIDTH - 9,
 				box.y() + (box.height() - TOGGLE_HEIGHT) / 2, TOGGLE_WIDTH, TOGGLE_HEIGHT, toggle, accent);
 
@@ -270,12 +308,10 @@ public class ClickGuiScreen extends Screen {
 		float hover = hoverProgress("setting:" + setting.getId(), box.contains(mouseX, mouseY));
 		float toggle = toggleProgress(setting);
 
-		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4, 0x12FFFFFF, 0x6E111119);
+		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
+				0x10FFFFFF, RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.6f));
 
-		if (hover > 0.01f) {
-			RenderUtils.fillRounded(graphics, box.x() + 1, box.y() + 1, box.width() - 2, box.height() - 4, 3,
-					RenderUtils.withAlpha(0xFFFFFFFF, 0.06f * hover));
-		}
+		drawRipples(graphics, box, accent);
 
 		graphics.text(font, RenderUtils.clamp(font, setting.getName(), box.width() - 50), box.x() + 9,
 				box.y() + (box.height() - 2 - font.lineHeight) / 2 + 1,
@@ -290,6 +326,47 @@ public class ClickGuiScreen extends Screen {
 		String hint = "ЛКМ — включить модуль   •   ПКМ — настройки   •   колесо — прокрутка   •   шапку можно перетаскивать";
 		graphics.text(this.font, RenderUtils.clamp(this.font, hint, GUI_WIDTH - PADDING * 2),
 				x + PADDING, y + GUI_HEIGHT - PADDING - this.font.lineHeight + 1, TEXT_DIM, false);
+	}
+
+	// ------------------------------------------------------------------
+	// Волна по клику
+	// ------------------------------------------------------------------
+
+	private void addRipple(double mouseX, double mouseY, Hitbox bounds) {
+		float maxRadius = (float) Math.max(
+				Math.hypot(mouseX - bounds.x(), mouseY - bounds.y()),
+				Math.max(Math.hypot(mouseX - (bounds.x() + bounds.width()), mouseY - bounds.y()),
+						Math.max(Math.hypot(mouseX - bounds.x(), mouseY - (bounds.y() + bounds.height())),
+								Math.hypot(mouseX - (bounds.x() + bounds.width()), mouseY - (bounds.y() + bounds.height())))));
+		ripples.add(new Ripple((float) mouseX, (float) mouseY, bounds, Util.getMillis(), maxRadius + 8.0f));
+	}
+
+	private void drawRipples(GuiGraphicsExtractor graphics, Hitbox box, int accent) {
+		if (ripples.isEmpty()) {
+			return;
+		}
+
+		long now = Util.getMillis();
+		graphics.enableScissor(box.x(), box.y(), box.x() + box.width(), box.y() + box.height());
+
+		for (Ripple ripple : ripples) {
+			if (!ripple.bounds().equals(box)) {
+				continue;
+			}
+
+			float progress = Math.min((now - ripple.startTime()) / (float) RIPPLE_DURATION, 1.0f);
+			float eased = 1.0f - (float) Math.pow(1.0f - progress, 3.0f);
+			float radius = ripple.maxRadius() * eased;
+			float fade = 1.0f - progress;
+
+			// Две волны разного размера — объёмный «всплеск»
+			RenderUtils.fillCircle(graphics, ripple.x(), ripple.y(), radius,
+					RenderUtils.withAlpha(accent, 0.22f * fade));
+			RenderUtils.fillCircle(graphics, ripple.x(), ripple.y(), radius * 0.6f,
+					RenderUtils.withAlpha(accent, 0.16f * fade));
+		}
+
+		graphics.disableScissor();
 	}
 
 	// ------------------------------------------------------------------
@@ -309,6 +386,7 @@ public class ClickGuiScreen extends Screen {
 
 		openAnimation = approach(openAnimation, 1.0f);
 		scroll = approach(scroll, scrollTarget);
+		ripples.removeIf(ripple -> now - ripple.startTime() >= RIPPLE_DURATION);
 	}
 
 	private float approach(float current, float target) {
@@ -347,12 +425,18 @@ public class ClickGuiScreen extends Screen {
 		double mouseX = event.x();
 		double mouseY = event.y();
 
+		boolean insidePanel = isInside(mouseX, mouseY, guiX, guiY, GUI_WIDTH, GUI_HEIGHT);
+		Hitbox rippleBounds = insidePanel ? new Hitbox(Math.round(guiX), Math.round(guiY), GUI_WIDTH, GUI_HEIGHT) : null;
+
 		// Перетаскивание за шапку
 		if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT
 				&& isInside(mouseX, mouseY, guiX, guiY, GUI_WIDTH, HEADER_HEIGHT)) {
 			dragging = true;
 			dragOffsetX = mouseX - guiX;
 			dragOffsetY = mouseY - guiY;
+			if (rippleBounds != null) {
+				addRipple(mouseX, mouseY, rippleBounds);
+			}
 			return true;
 		}
 
@@ -374,6 +458,8 @@ public class ClickGuiScreen extends Screen {
 			if (entry.kind() != Kind.CATEGORY && !box.intersects(listX, listY, listWidth, listHeight)) {
 				continue;
 			}
+
+			addRipple(mouseX, mouseY, box);
 
 			switch (entry.kind()) {
 				case CATEGORY -> {
@@ -398,6 +484,11 @@ public class ClickGuiScreen extends Screen {
 				}
 			}
 			return true;
+		}
+
+		// Клик по пустому месту панели — просто волна
+		if (rippleBounds != null) {
+			addRipple(mouseX, mouseY, rippleBounds);
 		}
 
 		return super.mouseClicked(event, doubleClick);
@@ -526,5 +617,9 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	private record LayoutEntry(Hitbox box, Kind kind, ModuleCategory category, Module module, BooleanSetting setting) {
+	}
+
+	/** Волна, расходящаяся от места клика. */
+	private record Ripple(float x, float y, Hitbox bounds, long startTime, float maxRadius) {
 	}
 }

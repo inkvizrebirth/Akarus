@@ -33,8 +33,8 @@ public final class HudRenderer {
 	private static final int PADDING = 6;
 	private static final int LINE_GAP = 2;
 
-	private static final int PANEL_BACKGROUND = 0xB40D0D12;
-	private static final int PANEL_BORDER = 0x33FFFFFF;
+	private static final int PANEL_BACKGROUND = 0xB80A0A0D;
+	private static final int PANEL_BORDER = 0x2AFFFFFF;
 	private static final int TEXT_COLOR = 0xFFEDEDF5;
 
 	private HudRenderer() {
