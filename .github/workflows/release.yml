@@ -39,7 +39,16 @@ jobs:
       - name: Build
         run: |
           chmod +x ./gradlew
-          ./gradlew build --stacktrace
+          ./gradlew build --stacktrace 2>&1 | tee build.log
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: akarus-build-log
+          path: build.log
+          if-no-files-found: ignore
 
       - name: Collect jars
         run: |
