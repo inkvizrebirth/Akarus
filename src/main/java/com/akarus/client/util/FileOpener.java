@@ -30,6 +30,34 @@ public final class FileOpener {
 		open(folder == null ? null : folder.toFile());
 	}
 
+	/** Открыть ссылку в браузере по умолчанию (Telegram, Modrinth…). */
+	public static void openUrl(String url) {
+		if (url == null || url.isBlank()) {
+			return;
+		}
+		String os = System.getProperty("os.name", "").toLowerCase();
+		try {
+			ProcessBuilder builder;
+			if (os.contains("win")) {
+				builder = new ProcessBuilder("cmd", "/c", "start", "", url);
+			} else if (os.contains("mac") || os.contains("darwin")) {
+				builder = new ProcessBuilder("open", url);
+			} else {
+				builder = new ProcessBuilder("xdg-open", url);
+			}
+			builder.redirectErrorStream(true);
+			Process process = builder.start();
+			Thread.ofVirtual().start(() -> {
+				try {
+					process.getInputStream().transferTo(java.io.OutputStream.nullOutputStream());
+				} catch (Exception ignored) {
+				}
+			});
+		} catch (Exception exception) {
+			AkarusClient.LOGGER.warn("Не удалось открыть ссылку {} браузером", url, exception);
+		}
+	}
+
 	private static void open(File target) {
 		if (target == null || !target.exists()) {
 			return;

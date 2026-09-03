@@ -184,12 +184,12 @@ public class AutoTotemModule extends Module {
 		boolean holding = isHoldingTotem(player);
 
 		// ── нужна ли защита прямо сейчас ──────────────────────────────
-		float incoming = prediction.get() ? predictIncomingDamage(client, player) : 0.0f;
+		float incoming = prediction.isEnabled() ? predictIncomingDamage(client, player) : 0.0f;
 		float effectiveHealth = player.getHealth() + player.getAbsorptionAmount();
 		boolean critical = effectiveHealth <= healthLine.get();
 		boolean burst = incoming >= Math.max(4.0f, player.getHealth());
 		boolean predictedDeath = incoming > 0.0f && effectiveHealth - incoming <= healthLine.get();
-		boolean holdWhileHostile = alwaysHold.get() && hostileNearby && !holding;
+		boolean holdWhileHostile = alwaysHold.isEnabled() && hostileNearby && !holding;
 		boolean danger = critical || burst || predictedDeath || holdWhileHostile;
 
 		if (danger) {
@@ -232,7 +232,7 @@ public class AutoTotemModule extends Module {
 
 	/** Стоит ли подождать окончания анимации использования. Турбо не ждёт. */
 	private boolean shouldWaitForUse(LocalPlayer player) {
-		return respectEating.get() && !mode.is(MODE_TURBO) && player.isUsingItem();
+		return respectEating.isEnabled() && !mode.is(MODE_TURBO) && player.isUsingItem();
 	}
 
 	private void runPhase(Minecraft client, LocalPlayer player) {
@@ -287,7 +287,7 @@ public class AutoTotemModule extends Module {
 			}
 			case SWAP -> {
 				swapOffhand(client, player);
-				if (alertSound.get()) {
+				if (alertSound.isEnabled()) {
 					client.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_PLING, 1.1F));
 				}
 				phase = Phase.HELD;
@@ -434,7 +434,7 @@ public class AutoTotemModule extends Module {
 			}
 		}
 
-		if (antiProjectiles.get()) {
+		if (antiProjectiles.isEnabled()) {
 			float projectile = incomingProjectileDamage(client, player);
 			if (projectile > worst) {
 				worst = projectile;
@@ -452,12 +452,12 @@ public class AutoTotemModule extends Module {
 		double[] velocity = velocityOf(enemy);
 
 		// 1) замах + почти вплотную — удар через 0-2 тика, это уже не «может быть»
-		if (antiMelee.get() && distance < 4.6 && enemy.swinging) {
+		if (antiMelee.isEnabled() && distance < 4.6 && enemy.swinging) {
 			return estimatedMeleeDamage(enemy, true);
 		}
 
 		// 2) сближается под прицелом: входит в радиус мили раньше конца окна
-		if (antiMelee.get() && distance < 9.0 && velocity != null) {
+		if (antiMelee.isEnabled() && distance < 9.0 && velocity != null) {
 			Vec3 toUs = player.getEyePosition().subtract(enemy.getEyePosition());
 			double speedSq = velocity[0] * velocity[0] + velocity[1] * velocity[1] + velocity[2] * velocity[2];
 			double towards = speedSq > 1.0e-8
@@ -474,7 +474,7 @@ public class AutoTotemModule extends Module {
 		}
 
 		// 3) молаут-смэш: сверху, быстро вниз, горизонталь близко, булава в руке
-		if (antiFallingSmash.get()) {
+		if (antiFallingSmash.isEnabled()) {
 			boolean holdingMace = enemy.getItemInHand(InteractionHand.MAIN_HAND).getItem() == Items.MACE
 					|| enemy.getOffhandItem().getItem() == Items.MACE;
 			if (holdingMace) {

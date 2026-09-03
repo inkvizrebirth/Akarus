@@ -3,6 +3,7 @@ package com.akarus.client;
 import com.akarus.client.config.ConfigManager;
 import com.akarus.client.gui.ClickGuiScreen;
 import com.akarus.client.gui.hud.HudRenderer;
+import com.akarus.client.gui.screens.AkarusScreens;
 import com.akarus.client.module.ModuleManager;
 import com.akarus.client.module.impl.AutoWalkModule;
 import com.akarus.client.module.impl.FreeCamModule;
@@ -42,6 +43,7 @@ public class AkarusClient implements ClientModInitializer {
 		ConfigManager.load();
 		ModuleManager.init();
 		HudRenderer.register();
+		AkarusScreens.register();
 
 		// Клавиша открытия меню — правый Shift
 		clickGuiKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(

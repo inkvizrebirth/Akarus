@@ -26,6 +26,10 @@ import java.util.Random;
  */
 public class MediaPlayerModule extends Module {
 
+	private static final Random RANDOM = new Random();
+
+	private final MusicPlayer player = new MusicPlayer();
+
 	public static final String LOOP_OFF = "off";
 	public static final String LOOP_ONE = "one";
 	public static final String LOOP_ALL = "all";
@@ -58,8 +62,6 @@ public class MediaPlayerModule extends Module {
 
 	private static final Random RANDOM = new Random();
 
-	private final MusicPlayer player = new MusicPlayer();
-
 	/** Для авто-рескана: меняем список только когда папка реально тронута. */
 	private long watchedModified = -1L;
 	private int scanCooldown;
@@ -78,7 +80,7 @@ public class MediaPlayerModule extends Module {
 			player.rescan(directory, false);
 		}
 		player.setVolume(volume.get() / 100.0f);
-		if (autoStart.get() && player.hasTrack()) {
+		if (autoStart.isEnabled() && player.hasTrack()) {
 			player.play();
 		}
 	}
@@ -114,7 +116,7 @@ public class MediaPlayerModule extends Module {
 		// Пауза при открытом меню/скрине, если включено
 		net.minecraft.client.Minecraft client = net.minecraft.client.Minecraft.getInstance();
 		boolean inMenu = client != null && client.gui != null && client.gui.screen() != null;
-		if (pauseInMenu.get()) {
+		if (pauseInMenu.isEnabled()) {
 			if (inMenu && !wasUsingMenu && player.isPlaying()) {
 				player.pause();
 			}
@@ -126,7 +128,7 @@ public class MediaPlayerModule extends Module {
 			if (loopMode.is(LOOP_ONE)) {
 				player.restart();
 			} else if (loopMode.is(LOOP_ALL)) {
-				if (shuffle.get() && player.trackCount() > 1) {
+				if (shuffle.isEnabled() && player.trackCount() > 1) {
 					int current = player.currentIndex();
 					int next = RANDOM.nextInt(player.trackCount());
 					if (next == current) {
@@ -186,7 +188,7 @@ public class MediaPlayerModule extends Module {
 	}
 
 	public boolean showsHudCard() {
-		return showInHud.get();
+		return showInHud.isEnabled();
 	}
 
 	public boolean isPlaying() {

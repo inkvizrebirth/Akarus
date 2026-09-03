@@ -329,30 +329,22 @@ public final class MusicPlayer {
 
 	private void loadOnWorker(File file, int myGeneration, boolean start) {
 		Clip newClip = null;
+		AudioInputStream converted = null;
 		try (AudioInputStream source = AudioSystem.getAudioInputStream(file)) {
-			AudioFormat format = source.getFormat();
-			AudioInputStream stream = source;
-
-			if (!AudioSystem.isFormatSupported(format)) {
-				AudioFormat pcm = new AudioFormat(
-						AudioFormat.Encoding.PCM_SIGNED,
-						Math.max(8000.0f, format.getSampleRate()),
-						16,
-						Math.max(1, format.getChannels()),
-						Math.max(1, format.getChannels()) * 2,
-						Math.max(8000.0f, format.getSampleRate()) * Math.max(1, format.getChannels()),
-						false);
-				AudioInputStream converted = AudioSystem.getAudioInputStream(pcm, source);
-				if (converted == null) {
-					throw new javax.sound.sampled.UnsupportedAudioFileException();
-				}
-				stream = converted;
-			}
-
 			newClip = AudioSystem.getClip();
-			newClip.open(stream);
-			if (stream != source) {
-				stream.close();
+			try {
+				newClip.open(source);
+			} catch (Exception direct) {
+				// не-PCM (alaw/ulaw/imadpcm) — пробуем конвертацию в 16-bit PCM
+				AudioFormat base = source.getFormat();
+				int channels = Math.max(1, base.getChannels());
+				float rate = Math.max(8000.0f, base.getSampleRate());
+				AudioFormat pcm = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
+						rate, 16, channels, channels * 2, rate * channels, false);
+				converted = AudioSystem.getAudioInputStream(pcm, source);
+				newClip.open(converted);
+				converted.close();
+				converted = null;
 			}
 
 			newClip.addLineListener(event -> {
@@ -367,6 +359,7 @@ public final class MusicPlayer {
 
 			synchronized (lock) {
 				if (generation != myGeneration) {
+					closeQuietly(newClip, converted);
 					return; // за это время трек сменили/остановили
 				}
 				clip = newClip;
@@ -379,12 +372,7 @@ public final class MusicPlayer {
 			newClip = null; // ответственность теперь на игровом потоке
 			AkarusClient.LOGGER.info("Медиаплеер: загружен {}", file.getName());
 		} catch (Exception exception) {
-			if (newClip != null) {
-				try {
-					newClip.close();
-				} catch (Exception ignored) {
-				}
-			}
+			closeQuietly(newClip, converted);
 			String message = exception.getMessage();
 			String reason = message == null || message.isBlank()
 					? exception.getClass().getSimpleName()
@@ -396,6 +384,21 @@ public final class MusicPlayer {
 				}
 			}
 			AkarusClient.LOGGER.warn("Медиаплеер: не удалось открыть {}", file, exception);
+		}
+	}
+
+	private static void closeQuietly(Clip clip, AudioInputStream stream) {
+		if (stream != null) {
+			try {
+				stream.close();
+			} catch (Exception ignored) {
+			}
+		}
+		if (clip != null) {
+			try {
+				clip.close();
+			} catch (Exception ignored) {
+			}
 		}
 	}
 
