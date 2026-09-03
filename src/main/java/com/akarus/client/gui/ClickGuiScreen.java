@@ -1404,6 +1404,8 @@ public class ClickGuiScreen extends Screen {
 		}
 
 		if (setting instanceof BlockListSetting blockList && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+			// Тот же ключ, что в drawBlockListRow: id модуля + id настройки
+			String key = (entry.module() == null ? "" : entry.module().getId() + ":") + setting.getId();
 			boolean open = key.equals(focusedBlockList);
 
 			if (open) {
