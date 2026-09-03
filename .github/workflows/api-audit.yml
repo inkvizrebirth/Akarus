@@ -171,3 +171,4 @@ jobs:
           git add api-audit-result.txt || true
           git commit -m "ci: результат аудита API 26.2" || exit 0
           git push
+
