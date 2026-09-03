@@ -1,11 +1,15 @@
 name: api-audit
 
 # Одноразовый аудит имён Minecraft 26.2: локально нет доступа к maven'ам,
-# поэтому сверяем реальные сигнатуры прямо на CI. Запускается вручную.
+# поэтому сверяем реальные сигнатуры прямо на CI и коммитим результат в файл.
 on:
   workflow_dispatch:
   push:
     branches: [arena/01a066bd-akarus]
+    paths: ['.github/workflows/api-audit.yml']
+
+permissions:
+  contents: write
 
 jobs:
   audit:
@@ -23,10 +27,7 @@ jobs:
       - name: Resolve Minecraft
         run: |
           chmod +x ./gradlew
-          # Сборка упадёт на ошибках компиляции — нам нужен только скачанный jar
           ./gradlew compileJava --stacktrace > build.log 2>&1 || true
-          echo "=== loom jars ==="
-          find ~/.gradle/caches/fabric-loom -name '*.jar' 2>/dev/null | grep -v sources | sort | head -40
 
       - name: Inspect API
         run: |
@@ -36,36 +37,39 @@ jobs:
           done
           echo "MC_JAR=$MC"
           test -n "$MC"
+          {
+            echo "MC_JAR=$MC"
+            echo; echo "=== классы мобов/врагов/манекенов ==="
+            unzip -l "$MC" | grep -iE 'entity/(Enemy|Monster|Mob|LivingEntity|player/Player)\.class|ArmorStand|MobCategory|EntityClassification'
+            echo; echo "=== Entity ==="
+            javap -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'setRot|setYRot|setXRot|getYRot|getXRot|getEyePosition|distanceTo|isInvisible|isSpectator|isAlive|getUUID|getType'
+            echo; echo "=== LivingEntity ==="
+            javap -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'hasLineOfSight|swing|isUsingItem|getHealth'
+            echo; echo "=== Player ==="
+            javap -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | grep -iE 'getAttackStrengthScale|getHealth'
+            echo; echo "=== ClientLevel ==="
+            javap -cp "$MC" net.minecraft.client.multiplayer.ClientLevel 2>&1 | grep -iE 'entities|getEntities'
+            echo; echo "=== Level ==="
+            javap -cp "$MC" net.minecraft.world.level.Level 2>&1 | grep -iE 'entities'
+            echo; echo "=== Camera ==="
+            javap -cp "$MC" net.minecraft.client.Camera 2>&1 | grep -iE 'setPosition|setRotation|isDetached|alignWithEntity|detached'
+            echo; echo "=== MouseHandler ==="
+            javap -cp "$MC" net.minecraft.client.MouseHandler 2>&1 | grep -iE 'turn|isRightPressed|xpos|ypos'
+            echo; echo "=== MultiPlayerGameMode.attack ==="
+            javap -cp "$MC" net.minecraft.client.multiplayer.MultiPlayerGameMode 2>&1 | grep -iE 'attack'
+            echo; echo "=== EntityType ==="
+            javap -cp "$MC" net.minecraft.world.entity.EntityType 2>&1 | grep -iE 'category|classification'
+            echo; echo "=== KeyMapping ==="
+            javap -cp "$MC" net.minecraft.client.KeyMapping 2>&1 | grep -iE 'setKey|resetMapping|consumeClick|isDown|setDown'
+            echo; echo "=== LocalPlayer getYRot? (через Player) ==="
+            javap -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | grep -iE 'getYRot|getXRot|setYRot|setXRot'
+          } > api-audit-result.txt
+          cat api-audit-result.txt
 
-          echo "=== классы про мобов/врагов ==="
-          unzip -l "$MC" | grep -iE 'entity/(Enemy|Monster|Mob|LivingEntity)\.class|ArmorStand|MobCategory|EntityClassification|entity/decoration/'
-
-          echo "=== net.minecraft.world.entity.Entity ==="
-          javap -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'setRot|setYRot|setXRot|getYRot|getXRot|getEyePosition|distanceTo|isInvisible|isSpectator|isAlive|getUUID|getType|level\('
-
-          echo "=== LivingEntity ==="
-          javap -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'hasLineOfSight|swing|isUsingItem|getHealth'
-
-          echo "=== Player ==="
-          javap -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | grep -iE 'getAttackStrengthScale|getHealth'
-
-          echo "=== ClientLevel ==="
-          javap -cp "$MC" net.minecraft.client.multiplayer.ClientLevel 2>&1 | grep -iE 'entitiesForRendering|getEntities|entitiesForListing'
-
-          echo "=== Level ==="
-          javap -cp "$MC" net.minecraft.world.level.Level 2>&1 | grep -iE 'entitiesForRendering|getEntities'
-
-          echo "=== Camera ==="
-          javap -cp "$MC" net.minecraft.client.Camera 2>&1 | grep -iE 'setPosition|setRotation|isDetached|alignWithEntity|detached'
-
-          echo "=== MouseHandler ==="
-          javap -cp "$MC" net.minecraft.client.MouseHandler 2>&1 | grep -iE 'turn|isRightPressed|xpos|ypos'
-
-          echo "=== MultiPlayerGameMode.attack ==="
-          javap -cp "$MC" net.minecraft.client.multiplayer.MultiPlayerGameMode 2>&1 | grep -iE 'attack'
-
-          echo "=== EntityType ==="
-          javap -cp "$MC" net.minecraft.world.entity.EntityType 2>&1 | grep -iE 'category|classification'
-
-          echo "=== KeyMapping ==="
-          javap -cp "$MC" net.minecraft.client.KeyMapping 2>&1 | grep -iE 'setKey|resetMapping|consumeClick|isDown|setDown'
+      - name: Commit result
+        run: |
+          git config user.name "arena-ai-coding-agent"
+          git config user.email "arena-ai-coding-agent@users.noreply.github.com"
+          git add api-audit-result.txt
+          git commit -m "ci: результат аудита API 26.2" || exit 0
+          git push
