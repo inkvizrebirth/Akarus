@@ -23,11 +23,11 @@
 MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 === классы мобов/врагов/манекенов ===
-        0  2026-09-03 12:20   assets/minecraft/textures/entity/armorstand/
+        0  2026-09-03 12:24   assets/minecraft/textures/entity/armorstand/
       809  1980-02-01 00:00   assets/minecraft/textures/entity/armorstand/armorstand.png
-        0  2026-09-03 12:20   net/minecraft/client/model/object/armorstand/
-      320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
+        0  2026-09-03 12:24   net/minecraft/client/model/object/armorstand/
      6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
+      320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
      5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
     11516  1980-02-01 00:00   net/minecraft/client/renderer/entity/ArmorStandRenderer.class
      1224  1980-02-01 00:00   net/minecraft/client/renderer/entity/state/ArmorStandRenderState.class
@@ -35,8 +35,8 @@ MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/mine
      3925  1980-02-01 00:00   net/minecraft/world/entity/MobCategory.class
     71991  1980-02-01 00:00   net/minecraft/world/entity/Mob.class
    157622  1980-02-01 00:00   net/minecraft/world/entity/LivingEntity.class
-    31215  1980-02-01 00:00   net/minecraft/world/entity/decoration/ArmorStand.class
      5673  1980-02-01 00:00   net/minecraft/world/entity/decoration/ArmorStand$ArmorStandPose.class
+    31215  1980-02-01 00:00   net/minecraft/world/entity/decoration/ArmorStand.class
     84438  1980-02-01 00:00   net/minecraft/world/entity/player/Player.class
      5444  1980-02-01 00:00   net/minecraft/world/item/ArmorStandItem.class
 
@@ -464,6 +464,106 @@ public class net.minecraft.world.item.BucketItem extends net.minecraft.world.ite
   public net.minecraft.world.level.material.Fluid getType();
   public boolean isSource();
   public boolean isSourceOfType(net.minecraft.world.level.material.Fluid);
+
+=== MultiPlayerGameMode (полный) ===
+  private int carriedIndex;
+  private void ensureHasSentCarriedItem();
+  public void handleContainerInput(int, int, int, net.minecraft.world.inventory.ContainerInput, net.minecraft.world.entity.player.Player);
+  public void handleInventoryButtonClick(int, int);
+  public boolean isServerControlledInventory();
+  public void handleSlotStateChanged(int, int, boolean);
+
+=== классы оверлеев ===
+     3595  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay$1.class
+     7316  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay.class
+    21742  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay.class
+     3361  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay$1.class
+     4652  1980-02-01 00:00   net/minecraft/client/gui/components/IMEPreeditOverlay.class
+     1473  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay$HealthState.class
+     2498  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay$ScoreDisplayEntry.class
+     5001  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$Subtitle.class
+    21670  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay.class
+     7576  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay.class
+     2015  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$SoundPlayedAt.class
+     2687  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay$LogoTexture.class
+     8761  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay.class
+      632  1980-02-01 00:00   net/minecraft/client/gui/screens/Overlay.class
+     1522  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayScreen$1.class
+     4421  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayTabButton.class
+    22448  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayScreen.class
+     6490  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayCraftingRecipeButton.class
+     3112  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayRecipeButton$Pos.class
+     4694  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayRecipeButton.class
+     3959  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlaySmeltingRecipeButton.class
+     7848  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent.class
+     2000  1980-02-01 00:00   net/minecraft/client/particle/FireworkParticles$OverlayParticle.class
+     2221  1980-02-01 00:00   net/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay.class
+     2219  1980-02-01 00:00   net/minecraft/client/renderer/texture/OverlayTexture.class
+      403  1980-02-01 00:00   assets/minecraft/blockstates/attached_pumpkin_stem.json
+      375  1980-02-01 00:00   assets/minecraft/blockstates/carved_pumpkin.json
+       80  1980-02-01 00:00   assets/minecraft/blockstates/pumpkin.json
+      622  1980-02-01 00:00   assets/minecraft/blockstates/pumpkin_stem.json
+       97  1980-02-01 00:00   assets/minecraft/items/carved_pumpkin.json
+       90  1980-02-01 00:00   assets/minecraft/items/pumpkin.json
+       93  1980-02-01 00:00   assets/minecraft/items/pumpkin_pie.json
+       95  1980-02-01 00:00   assets/minecraft/items/pumpkin_seeds.json
+      166  1980-02-01 00:00   assets/minecraft/models/block/attached_pumpkin_stem.json
+      197  1980-02-01 00:00   assets/minecraft/models/block/carved_pumpkin.json
+      326  1980-02-01 00:00   assets/minecraft/models/block/pumpkin.json
+      110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage0.json
+      110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage1.json
+      110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage2.json
+      110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage3.json
+grep: write error: Broken pipe
+
+=== FogRenderer ===
+Compiled from "FogRenderer.java"
+public class net.minecraft.client.renderer.fog.FogRenderer implements java.lang.AutoCloseable {
+  public static final int FOG_UBO_SIZE;
+  private static final java.util.List<net.minecraft.client.renderer.fog.environment.FogEnvironment> FOG_ENVIRONMENTS;
+  private static boolean fogEnabled;
+  private final com.mojang.blaze3d.buffers.GpuBuffer emptyBuffer;
+  private final net.minecraft.client.renderer.MappableRingBuffer regularBuffer;
+  public net.minecraft.client.renderer.fog.FogRenderer();
+  public void close();
+  public void endFrame();
+  public com.mojang.blaze3d.buffers.GpuBufferSlice getBuffer(net.minecraft.client.renderer.fog.FogRenderer$FogMode);
+  private void computeFogColor(net.minecraft.client.Camera, float, net.minecraft.client.multiplayer.ClientLevel, int, float, org.joml.Vector4f);
+  public static boolean toggleFog();
+  public net.minecraft.client.renderer.fog.FogData setupFog(net.minecraft.client.Camera, int, net.minecraft.client.DeltaTracker, float, net.minecraft.client.multiplayer.ClientLevel);
+  public void updateBuffer(net.minecraft.client.renderer.fog.FogData);
+  private net.minecraft.world.level.material.FogType getFogType(net.minecraft.client.Camera);
+  private void updateBuffer(java.nio.ByteBuffer, int, org.joml.Vector4f, float, float, float, float, float, float);
+  private static java.lang.String lambda$new$1();
+  private static java.lang.String lambda$new$0();
+  static {};
+}
+
+=== nausea-классы ===
+       40  1980-02-01 00:00   assets/minecraft/textures/misc/nausea.png.mcmeta
+    12935  1980-02-01 00:00   assets/minecraft/textures/misc/nausea.png
+      169  1980-02-01 00:00   assets/minecraft/textures/mob_effect/nausea.png
+
+=== Camera (fov) ===
+  public static final float BASE_HUD_FOV;
+  private float fovModifier;
+  private float oldFovModifier;
+  private float fov;
+  private float hudFov;
+  private void tickFov();
+  private float calculateFov(float);
+  private float calculateHudFov(float);
+  private float modifyFovBasedOnDeathOrFluid(float, float);
+  public float getFov();
+
+=== ClientPacketListener (carried) ===
+
+=== LocalPlayer (connection) ===
+  public final net.minecraft.client.multiplayer.ClientPacketListener connection;
+
+=== MobEffects (nausea/darkness/blindness) ===
+  public static final net.minecraft.core.Registry<net.minecraft.world.effect.MobEffect> MOB_EFFECT;
+     9655  1980-02-01 00:00   net/minecraft/world/effect/MobEffects.class
 
 === EntityType ===
   public net.minecraft.world.entity.EntityType(net.minecraft.world.entity.EntityType$EntityFactory<T>, net.minecraft.world.entity.MobCategory, boolean, boolean, boolean, boolean, net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>, net.minecraft.world.entity.EntityDimensions, float, int, int, java.lang.String, java.util.Optional<net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>>, net.minecraft.world.flag.FeatureFlagSet, boolean);
