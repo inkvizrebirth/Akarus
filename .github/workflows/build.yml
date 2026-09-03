@@ -23,6 +23,18 @@ jobs:
       - name: Show tool versions
         run: java -version
 
+      - name: Fetch ViaFabricPlus for bundling
+        run: |
+          mkdir -p libs
+          # свежий релизный jar VFP (актуальный под 26.2) берём из GitHub releases;
+          # при проблемах с API — прямой запасной путь к известному тегу
+          url=$(curl -fsSL --max-time 20 https://api.github.com/repos/ViaVersion/ViaFabricPlus/releases/latest             | grep -oE 'https://github.com/[^"]+/releases/download/[^"]+\.jar'             | grep -vE 'sources|javadoc|dev' | head -1 || true)
+          if [ -z "$url" ]; then
+            url="https://github.com/ViaVersion/ViaFabricPlus/releases/download/4.6.3/ViaFabricPlus-4.6.3.jar"
+          fi
+          echo "Скачиваю: $url"
+          curl -fL --retry 3 --max-time 180 -o libs/ViaFabricPlus.jar "$url"             && ls -la libs/ || echo "::warning::ViaFabricPlus не скачалась — собираем без встроенной виа"
+
       - name: Build
         run: |
           chmod +x ./gradlew
@@ -54,6 +66,8 @@ jobs:
           echo "--- ссылка на конфиг миксинов в fabric.mod.json ---"
           unzip -p "$JAR" fabric.mod.json | grep -q 'akarus\.mixins\.json' || { echo "::error::fabric.mod.json не объявляет mixins!"; exit 1; }
           echo "OK: fabric.mod.json ссылается на akarus.mixins.json"
+          echo "--- nested jars (ViaFabricPlus) ---"
+          unzip -l "$JAR" | grep -E 'META-INF/jars/.*\.jar' || echo "::warning::VFP не вшита (libs/ViaFabricPlus.jar отсутствовал на сборке)"; true
           echo "--- refmap / intermediary (информационно) ---"
           # В Minecraft 26.2 нет intermediary-маппингов (26.2.tiny отсутствует в
           # FabricMC/intermediary), а runtime использует официальные имена Mojang,

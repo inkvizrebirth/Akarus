@@ -93,7 +93,8 @@ class Canvas:
                         lambda d, ox, oy: d.text((x * SCALE + ox, y * SCALE + oy), value, font=font, fill=color))
 
     def text_width(self, value, size=LINE_HEIGHT):
-        return int(self.font(size).getlength(value))
+        # логические пиксели (не SCALE-физические): координаты в canvas.* умножаются на SCALE
+        return max(1, round(self.font(size).getlength(value) / SCALE))
 
     def blur(self, radius):
         """Настоящее размытие — так в мокапе выглядит blurBeforeThisStratum()."""
@@ -490,12 +491,18 @@ def render_hud(path):
 
     x, y = 6, 6
 
-    # Водяной знак: радуга по символам
-    cursor = x
-    for index, symbol in enumerate("Akarus 0.4.0"):
-        canvas.text(cursor, y, symbol, hsb(index * 0.035, 0.75, 1.0))
+    # Водяной знак: чёрная пилюля, радужный текст
+    brand = "Akarus 0.7.0"
+    pill_w = canvas.text_width(brand) + 26
+    pill_h = LINE_HEIGHT + 8
+    canvas.rrect(x, y, pill_w, pill_h, 5, argb(0xE0070708))
+    canvas.rect(x, y, pill_w, 1, argb(0x1FFFFFFF))
+    canvas.rect(x + 6, y + pill_h // 2 - 2, 4, 4, hsb(0.0, 0.75, 1.0))
+    cursor = x + 15
+    for index, symbol in enumerate(brand):
+        canvas.text(cursor, y + 4, symbol, hsb(index * 0.035, 0.75, 1.0))
         cursor += canvas.text_width(symbol)
-    y += LINE_HEIGHT + 5
+    y += pill_h + 5
 
     lines = ["FPS: 144", "XYZ: 128 64 -255", "Направление: Север (-Z)", "Пинг: 42 мс"]
     width = max(canvas.text_width(line) for line in lines) + 15
@@ -533,6 +540,205 @@ def render_hud(path):
     # «Дышащая» точка справа
     canvas.rect(panel_x + panel_w - 12, panel_y + 10, 4, 4, with_alpha(accent, 0.9))
 
+    # Медиа-карточка (MediaPlayer) — правый нижний угол
+    draw_media_card(canvas, 560, 220, "netherlands indie.wav")
+
+    canvas.save(path)
+
+
+def draw_media_card(canvas, screen_w, screen_h, track, playing=True):
+    accent = 0xFF5CE1E6
+    w, h = 150, 34 + LINE_HEIGHT
+    x, y = screen_w - w - 6, screen_h - h - 6
+    canvas.rrect(x, y, w, h, 6, argb(0xD2080809))
+    canvas.rrect(x - 1, y - 1, w + 2, h + 2, 7, argb(0x2AFFFFFF))
+    canvas.rrect(x, y, w, h, 6, argb(0xD2080809))
+    icon = "\u25B6" if playing else "\u275A\u275A"
+    canvas.text(x + 8, y + 7, icon, with_alpha(accent, 0.95 if playing else 0.5))
+    canvas.text(x + 20, y + 7, track, argb(0xFFEDEDF5))
+    bar_x, bar_y, bar_w = x + 8, y + 7 + LINE_HEIGHT + 4, w - 16
+    canvas.rrect(bar_x, bar_y, bar_w, 4, 2, argb(0x33FFFFFF))
+    fill = int(bar_w * 0.42)
+    if fill > 4:
+        canvas.rrect(bar_x, bar_y, fill, 4, 2, with_alpha(accent, 0.9))
+    canvas.text(bar_x, bar_y + 7, "1:23 / 3:20", argb(0xFFA6A6B2))
+    eq_x = x + w - 8 - (7 * 3 - 1)
+    heights = [4, 7, 3, 9, 5, 8, 2]
+    for i, bh in enumerate(heights):
+        canvas.rect(eq_x + i * 3, bar_y + 9 + 6 - bh, 2, bh,
+                    with_alpha(accent, 0.25 + 0.7 * (bh / 9.0)))
+
+
+
+
+def render_menu(path):
+    """Главное меню: шейдерный фон + дрейф, логотип, колонка кнопок (как AkarusMenuScreen)."""
+    bg_path = os.path.join(OUT_DIR, "mainmenu-background-source.png")
+    W, H = 640, 360
+    canvas = Canvas(W, H, argb(0xFF0A0A0C))
+    if os.path.exists(bg_path):
+        bg = Image.open(bg_path).convert("RGBA")
+        bg = bg.resize((W * SCALE, H * SCALE))
+        canvas.img.paste(bg, (0, 0))
+        canvas._draw = ImageDraw.Draw(canvas.img)
+    # затемнение
+    overlay = Image.new("RGBA", (canvas.w, canvas.h), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    od.rectangle([0, 0, canvas.w, canvas.h], fill=(5, 5, 6, 170))
+    canvas.img.alpha_composite(overlay)
+    canvas._draw = ImageDraw.Draw(canvas.img)
+
+    accent = 0xFF5CE1E6
+    logo = "A K A R U S"
+    lw = canvas.text_width(logo)
+    ly = H // 4 - 22
+    canvas.text(W // 2 - lw // 2, ly, logo, argb(0xFFF4F4FA))
+    bar_w = int(lw * 0.85)
+    canvas.rect(W // 2 - bar_w // 2, ly + LINE_HEIGHT + 4, bar_w, 1, with_alpha(accent, 0.8))
+    tag = "клиент для Minecraft 26.2 \u00b7 Fabric"
+    canvas.text(W // 2 - canvas.text_width(tag) // 2, ly + LINE_HEIGHT + 10, tag, argb(0xFF9E9EAE))
+
+    buttons = [
+        ("\u041e\u0434\u0438\u043d\u043e\u0447\u043d\u0430\u044f \u0438\u0433\u0440\u0430", "\u043c\u0438\u0440\u044b \u0438 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u044f"),
+        ("\u0421\u0435\u0442\u0435\u0432\u0430\u044f \u0438\u0433\u0440\u0430", "\u0441\u0435\u0440\u0432\u0435\u0440\u044b \u0438 \u0432\u0435\u0440\u0441\u0438\u0438"),
+        ("\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438", "\u0438\u0433\u0440\u0430 \u00b7 \u0432\u0438\u0434\u0435\u043e \u00b7 \u043a\u043b\u0430\u0432\u0438\u0448\u0438"),
+        ("ClickGUI", "\u043c\u043e\u0434\u0443\u043b\u0438"),
+        ("Telegram", "@inkviz01"),
+        ("\u0412\u044b\u0445\u043e\u0434", ""),
+    ]
+    bw, bh, gap = 192, 22, 6
+    total = len(buttons) * bh + (len(buttons) - 1) * gap
+    bx = W // 2 - bw // 2
+    by = H - total - 34
+    hover_i = 1
+    for i, (label, hint) in enumerate(buttons):
+        hov = 0.75 if i == hover_i else 0.0
+        canvas.rrect(bx, by, bw, bh, 8, argb(0x2AFFFFFF) if hov == 0 else argb(0x66FFFFFF))
+        canvas.rrect(bx, by, bw, bh, 8, argb(0xF4121215) if hov == 0 else argb(0xF61C1C22))
+        if hov:
+            canvas.rect(bx + 8, by, bw - 16, 1, with_alpha(accent, 0.9))
+            canvas.rect(bx, by + 3, 2, bh - 6, with_alpha(accent, 1.0))
+        canvas.text(bx + 12, by + (bh - LINE_HEIGHT) // 2, label, argb(0xFFFFFFFF if hov else 0xFFE8E8F0))
+        if hint:
+            canvas.text(bx + bw - 12 - canvas.text_width(hint), by + (bh - LINE_HEIGHT) // 2,
+                        hint, with_alpha(0xFFA6A6B2, 0.9))
+        by += bh + gap
+    canvas.text(6, H - 10, "Akarus 0.7.0   \u00b7   Minecraft 26.2", argb(0xFF80808C))
+    canvas.save(path)
+
+
+def render_settings(path):
+    """AkarusSettingsScreen — список настроек чёрным стеклом."""
+    W, H = 560, 330
+    canvas = Canvas(W, H, argb(0xFF0B0B0D))
+    canvas.vgradient(0, 0, W, H // 2, argb(0xFF16161A), argb(0xFF0A0A0C))
+    accent = 0xFF8A6CFF
+
+    title = "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438"
+    canvas.text(W // 2 - canvas.text_width(title) // 2, 20, title, argb(0xFFF4F4FA))
+    pw, rh, gap = 340, 22, 3
+    x = W // 2 - pw // 2
+    y0 = 52
+    rows = [
+        ("\u0414\u0430\u043b\u044c\u043d\u043e\u0441\u0442\u044c \u043f\u0440\u043e\u0440\u0438\u0441\u043e\u0432\u043a\u0438", "slider", 0.61, "18 \u0447\u0430\u043d\u043a."),
+        ("\u041c\u0430\u043a\u0441\u0438\u043c\u0443\u043c FPS", "slider", 0.94, "240"),
+        ("Mipmap", "slider", 1.0, "4 \u0443\u0440."),
+        ("\u0427\u0443\u0432\u0441\u0442\u0432\u0438\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u044c \u043c\u044b\u0448\u0438", "slider", 0.5, "50 %"),
+        ("\u0422\u0435\u043d\u0438 \u0441\u0443\u0449\u043d\u043e\u0441\u0442\u0435\u0439", "toggle", 1, ""),
+        ("\u0412\u0438\u043d\u044c\u0435\u0442\u043a\u0430", "toggle", 0, ""),
+        ("\u041f\u043e\u043a\u0430\u0447\u0438\u0432\u0430\u043d\u0438\u0435 \u043a\u0430\u043c\u0435\u0440\u044b", "toggle", 1, ""),
+        ("\u041e\u0431\u043b\u0430\u043a\u0430", "cycle", 0, "\u041e\u0431\u043b\u0430\u043a\u0430"),
+        ("\u041a\u0430\u0447\u0435\u0441\u0442\u0432\u043e \u0433\u0440\u0430\u0444\u0438\u043a\u0438", "cycle", 0, "\u0414\u0435\u0442\u0430\u043b\u044c\u043d\u043e"),
+        ("\u041d\u0430\u0437\u043d\u0430\u0447\u0438\u0442\u044c \u043a\u043b\u0430\u0432\u0438\u0448\u0438", "action", 0, "\u2192"),
+    ]
+    list_h = len(rows) * (rh + gap) - gap
+    canvas.rrect(x - 10, y0 - 12, pw + 20, list_h + 24, 10, argb(0x26FFFFFF))
+    canvas.rrect(x - 9, y0 - 11, pw + 18, list_h + 22, 9, argb(0xF4121215))
+    canvas.rect(x, y0 - 12 + 6, pw + 1, 0, with_alpha(accent, 0.8))
+    y = y0
+    for i, (label, kind, val, text) in enumerate(rows):
+        if i == 3:
+            canvas.rect(x - 6, y - 1, pw + 12, rh - 1, argb(0x0FFFFFFF))
+        canvas.text(x + 6, y + (rh - LINE_HEIGHT) // 2, label, argb(0xFFE8E8F0))
+        if kind == "toggle":
+            tx, ty = x + pw - 8 - 26, y + (rh - 11) // 2
+            canvas.rrect(tx, ty, 26, 11, 5, argb(0x33FFFFFF))
+            knob_x = tx + 1 if not val else tx + 26 - 12
+            canvas.rrect(knob_x, ty + 1, 11, 9, 4, with_alpha(accent, 0.95))
+            if val:
+                canvas.rrect(tx + 2, ty + 2, 22, 7, 3, with_alpha(accent, 0.45))
+        elif kind == "slider":
+            sw = 96
+            sx = x + pw - 12 - sw - canvas.text_width(text) - 8
+            sy = y + (rh - 4) // 2
+            canvas.rrect(sx, sy, sw, 4, 2, argb(0x33FFFFFF))
+            fill = max(4, int(sw * val))
+            canvas.rrect(sx, sy, fill, 4, 2, with_alpha(accent, 0.9))
+            canvas.text(sx + sw + 8, y + (rh - LINE_HEIGHT) // 2, text, argb(0xFFB9B9C6))
+        else:
+            canvas.text(x + pw - 10 - canvas.text_width(text), y + (rh - LINE_HEIGHT) // 2,
+                        text, with_alpha(accent, 0.95) if kind == "cycle" else argb(0xFFA6A6B2))
+        y += rh + gap
+    canvas.save(path)
+
+
+def render_totem(path):
+    """AutoTotem: момент «предсказал смэш — надел тотем» — мокап строки HUD + панели модуля."""
+    W, H = 560, 250
+    canvas = Canvas(W, H, argb(0xFF000000))
+    canvas.vgradient(0, 0, W, 150, argb(0xFF20242E), argb(0xFF0E1014))
+    canvas.vgradient(0, 150, W, 100, argb(0xFF27351F), argb(0xFF141B10))
+
+    accent = 0xFFFF5C7A  # COMBAT
+
+    # панель модуля как в ClickGUI (раскрытый AutoTotem)
+    pw, x, y = 240, 16, 16
+    rows = [
+        ("\u0420\u0435\u0436\u0438\u043c", "legit"),
+        ("\u0421\u0442\u0430\u0432\u0438\u0442\u044c \u043f\u0440\u0438 HP \u2264", "6"),
+        ("\u041f\u0440\u0435\u0434\u0441\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c \u0443\u0440\u043e\u043d", "toggle1"),
+        ("\u041e\u043a\u043d\u043e \u043f\u0440\u0435\u0434\u0441\u043a\u0430\u0437\u0430\u043d\u0438\u044f", "8 \u0442\u0438\u043a\u043e\u0432"),
+        ("\u0414\u0430\u043b\u044c\u043d\u043e\u0441\u0442\u044c \u0443\u0433\u0440\u043e\u0437\u044b", "16"),
+        ("\u041a\u0440\u0430\u0448: \u043f\u0438\u043a\u0438\u0440\u0443\u044e\u0449\u0430\u044f \u0431\u0443\u043b\u0430\u0432\u0430", "toggle1"),
+        ("\u0421\u043d\u0430\u0439\u043f\u0435\u0440: \u0441\u043d\u0430\u0440\u044f\u0434\u044b", "toggle1"),
+        ("\u0421\u043d\u0438\u043c\u0430\u0442\u044c \u043f\u043e\u0441\u043b\u0435", "60 \u0442\u0438\u043a\u0438"),
+    ]
+    ph = 26 + len(rows) * 17 + 10
+    canvas.rrect(x - 1, y - 1, pw + 2, ph + 2, 11, argb(0x2AFFFFFF))
+    canvas.rrect(x, y, pw, ph, 10, argb(0xF6101013))
+    canvas.rect(x + 8, y, pw - 16, 1, with_alpha(accent, 0.9))
+    canvas.text(x + 10, y + 7, "AutoTotem", argb(0xFFFFFFFF))
+    canvas.rrect(x + pw - 34, y + 6, 24, 10, 5, with_alpha(accent, 0.9))
+    canvas.rrect(x + pw - 23, y + 7, 12, 8, 4, argb(0xFFFFFFFF))
+    ry = y + 26
+    for label, val in rows:
+        canvas.text(x + 10, ry + 4, label, argb(0xFFD6D6DE))
+        if val.startswith("toggle"):
+            tx = x + pw - 8 - 24
+            canvas.rrect(tx, ry + 3, 24, 10, 5, argb(0x33FFFFFF))
+            canvas.rrect(tx + 1, ry + 4, 11, 8, 4, argb(0xFFEDEDF5))
+            canvas.rrect(tx + 12, ry + 3, 11, 10, 5, with_alpha(accent, 0.9))
+        else:
+            canvas.text(x + pw - 10 - canvas.text_width(val), ry + 4, val, with_alpha(accent, 0.95))
+        ry += 17
+
+    # справа сверху — «момент предсказания»: враг с булавой сверху нас, строка HUD
+    hx, hy = W - 240, 16
+    status = "\u0443\u0433\u0440\u043e\u0437\u0430: mace \u2248 17 HP"
+    sw = canvas.text_width(status) + 20
+    canvas.rrect(hx, hy, sw, 22, 6, argb(0xE6070708))
+    canvas.rrect(hx, hy, sw, 1, 0, with_alpha(accent, 0.9))
+    canvas.rect(hx + 6, hy + 7, 8, 8, with_alpha(accent, 0.6 + 0.4))
+    canvas.text(hx + 20, hy + 7, status, argb(0xFFFFD7DD))
+    canvas.save(path)
+
+
+def render_media(path):
+    """MediaPlayer: карточка на HUD + строки управления в ClickGUI."""
+    W, H = 560, 230
+    canvas = Canvas(W, H, argb(0xFF000000))
+    canvas.vgradient(0, 0, W, 130, argb(0xFF101418), argb(0xFF05060A))
+    draw_media_card(canvas, W, H, "netherlands indie.wav")
     canvas.save(path)
 
 
@@ -541,4 +747,8 @@ if __name__ == "__main__":
     render_hud(os.path.join(OUT_DIR, "preview-hud.png"))
     render_render_tab(os.path.join(OUT_DIR, "preview-render.png"))
     render_hands(os.path.join(OUT_DIR, "preview-hands.png"))
+    render_menu(os.path.join(OUT_DIR, "preview-mainmenu.png"))
+    render_settings(os.path.join(OUT_DIR, "preview-settings.png"))
+    render_totem(os.path.join(OUT_DIR, "preview-autototem.png"))
+    render_media(os.path.join(OUT_DIR, "preview-media.png"))
     print("Мокапы сохранены:", os.path.abspath(OUT_DIR))

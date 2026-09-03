@@ -12,5 +12,7 @@
   "key.akarus.no_blind": "Модуль: NoBlind",
   "key.akarus.no_fall_damage": "Модуль: NoFallDamage",
   "key.akarus.hand_shader": "Модуль: Обводка рук",
-  "key.akarus.view_model": "Модуль: ViewModel"
+  "key.akarus.view_model": "Модуль: ViewModel",
+  "key.akarus.auto_totem": "Модуль: AutoTotem",
+  "key.akarus.media_player": "Модуль: MediaPlayer"
 }

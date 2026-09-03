@@ -111,6 +111,33 @@ public class KillAuraModule extends Module {
 			ModeSetting.option(SPRINT_FAST, "Быстрый"),
 			ModeSetting.option(SPRINT_LEGIT, "Легитный"));
 
+	// ------------------------------------------------------------------
+	// Лимиты: когда аура обязана держать паузу
+	// ------------------------------------------------------------------
+
+	/** Не прерывать еду: аура ждёт, пока игрок закончит есть/пить. */
+	private final BooleanSetting limitEating = bool("limit_eating", "Лимит: не бить, когда ешь", true);
+
+	/** Не прерывать тотем: удар снимает анимацию тотема — смерть. Пауза до конца использования. */
+	private final BooleanSetting limitTotem = bool("limit_totem", "Лимит: не прерывать тотем", true);
+
+	/** Бить только когда в основной руке реальное оружие. */
+	private final BooleanSetting limitWeapon = bool("limit_weapon", "Лимит: только с оружием в руке", false);
+
+	/** Не атаковать, пока находимся под водой (нулевой урон там почти всегда). */
+	private final BooleanSetting limitWater = bool("limit_water", "Лимит: не бить под водой", false);
+
+	/** Не атаковать в прыжке/падении — удар без опоры слабее, а античит любит это проверять. */
+	private final BooleanSetting limitFalling = bool("limit_falling", "Лимит: не бить в прыжке", false);
+
+	/** При критическом HP аура отступает вместо боя (порог — «HP для отступления»). */
+	private final BooleanSetting limitLowHealth = bool("limit_low_health", "Лимит: отступать при малом HP", false);
+	private final IntSetting lowHealthLine = intSetting("low_health_line", "HP для отступления", 4, 1, 19);
+
+	/** Не опускать щит ради удара: чисто защитный режим, бьём только не под блоком. */
+	private final BooleanSetting limitKeepBlock = bool("limit_keep_block", "Лимит: не опускать щит", false);
+
+
 	private static final Random RANDOM = new Random();
 
 	/** До скольки градусов считаем, что прицел наведён (легитный режим). */
@@ -209,10 +236,15 @@ public class KillAuraModule extends Module {
 			return;
 		}
 
-		// В меню и чате не воюем. Использование предмета — тоже пауза, КРОМЕ щита:
-		// пока держим щит Авто-Блоком, isUsingItem() истинен, и прерывать себя нельзя
-		if (client.gui != null && client.gui.screen() != null
-				|| player.isUsingItem() && !player.isBlocking()) {
+		// В меню и чате не воюем
+		if (client.gui != null && client.gui.screen() != null) {
+			releaseMovement();
+			return;
+		}
+
+		// Использование предмета — пауза, КРОМЕ щита: пока держим щит Авто-Блоком,
+		// isUsingItem() истинен, и прерывать себя нельзя. Еда и тотем — по лимитам.
+		if (itemUsePausesAttack(player)) {
 			releaseMovement();
 			return;
 		}
@@ -329,10 +361,16 @@ public class KillAuraModule extends Module {
 			}
 
 			boolean basicReady = attackDelay == 0 && aimReady && rayHits
-					&& player.getAttackStrengthScale(0.0F) >= 0.93F;
+					&& player.getAttackStrengthScale(0.0F) >= 0.93F
+					// «Никогда»-лимиты: оружие в руке, вода, прыжок, малое HP
+					&& limitsAllow(player);
 			// С Авто-Блоком первый удар — только реакция на замах врага (или враг сам
-			// вне зоны блока); без него — как только прицел и сила готовы
+			// вне зоны блока); без него — как только прицел и сила готовы.
+			// Лимит «не опускать щит» отключает контратаку из-под блока совсем.
 			boolean provoked = !wantBlock || !player.isBlocking() || enemyJustSwung;
+			if (limitKeepBlock.isEnabled() && player.isBlocking()) {
+				provoked = false;
+			}
 			if (basicReady && provoked) {
 				beginAttackSequence(client, player, target);
 			} else if (attackDelay > 0) {
@@ -380,6 +418,58 @@ public class KillAuraModule extends Module {
 				}
 			}
 		}
+	}
+
+	// ------------------------------------------------------------------
+	// Лимиты
+	// ------------------------------------------------------------------
+
+	/**
+	 * Прерывает ли текущее использование предмета атаку по нашим лимитам.
+	 *
+	 * Щит — нет (с ним живёт Авто-Блок). Тотем — только с «не прерывать тотем»:
+	 * удар обрывает анимацию, и возрождающий предмет не сработает. Еду «не бить,
+	 * когда ешь» можно отключить — тогда аура будет есть и воевать одновременно,
+	 * как это делают speed-билды, но каждое прерывание съедает прогресс приёма пищи.
+	 */
+	private boolean itemUsePausesAttack(LocalPlayer player) {
+		if (!player.isUsingItem() || player.isBlocking()) {
+			return false;
+		}
+		boolean totem = player.getItemInHand(InteractionHand.MAIN_HAND).getItem() == Items.TOTEM_OF_UNDYING
+				|| player.getItemInHand(InteractionHand.OFF_HAND).getItem() == Items.TOTEM_OF_UNDYING;
+		if (totem) {
+			return limitTotem.isEnabled();
+		}
+		return limitEating.isEnabled();
+	}
+
+	/** «Никогда»-лимиты удара: что в руке, где мы и сколько у нас HP. */
+	private boolean limitsAllow(LocalPlayer player) {
+		if (limitWeapon.isEnabled() && !isWeaponInHand(player)) {
+			return false;
+		}
+		if (limitWater.isEnabled() && player.isInWater()) {
+			return false;
+		}
+		if (limitFalling.isEnabled() && !player.onGround() && player.fallDistance > 0.5F) {
+			return false;
+		}
+		if (limitLowHealth.isEnabled() && player.getHealth() <= lowHealthLine.get()) {
+			return false;
+		}
+		return true;
+	}
+
+	/** Оружием считаем мечи, топоры, булаву-маце, трезубец и дальнобой (стрелять в упор тоже «бой»). */
+	private static boolean isWeaponInHand(LocalPlayer player) {
+		var item = player.getItemInHand(InteractionHand.MAIN_HAND).getItem();
+		return item == Items.WOODEN_SWORD || item == Items.STONE_SWORD || item == Items.IRON_SWORD
+				|| item == Items.GOLDEN_SWORD || item == Items.DIAMOND_SWORD || item == Items.NETHERITE_SWORD
+				|| item == Items.WOODEN_AXE || item == Items.STONE_AXE || item == Items.IRON_AXE
+				|| item == Items.GOLDEN_AXE || item == Items.DIAMOND_AXE || item == Items.NETHERITE_AXE
+				|| item == Items.MACE || item == Items.HEAVY_CORE || item == Items.TRIDENT
+				|| item == Items.BOW || item == Items.CROSSBOW;
 	}
 
 	// ------------------------------------------------------------------

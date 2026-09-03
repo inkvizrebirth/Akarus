@@ -8,6 +8,7 @@ import com.akarus.client.module.impl.AutoWalkModule;
 import com.akarus.client.module.impl.FreeCamModule;
 import com.akarus.client.module.impl.FreeLookModule;
 import com.akarus.client.module.impl.HudInfoModule;
+import com.akarus.client.module.impl.MediaPlayerModule;
 import com.akarus.client.util.RenderUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.DeltaTracker;
@@ -25,6 +26,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Отрисовка своего HUD.
@@ -41,6 +43,9 @@ public final class HudRenderer {
 	private static final int PANEL_BACKGROUND = 0xB80A0A0D;
 	private static final int PANEL_BORDER = 0x2AFFFFFF;
 	private static final int TEXT_COLOR = 0xFFEDEDF5;
+
+	/** Счётчики появления модулей в списке (0..10 тиков фейда). */
+	private static final Map<String, Integer> MODULE_ALPHA = new java.util.HashMap<>();
 
 	private HudRenderer() {
 	}
@@ -60,6 +65,100 @@ public final class HudRenderer {
 		HudElementRegistry.addLast(
 				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "free_cam"),
 				HudRenderer::renderFreeCam);
+
+		// Карточка медиаплеера: свой правый нижний угол, чтобы не сталкиваться
+		// с инфопанелью и списком модулей
+		HudElementRegistry.addLast(
+				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "media"),
+				HudRenderer::renderMedia);
+	}
+
+	/**
+	 * Карточка MediaPlayer: трек, прогресс, время и эквалайзер.
+	 *
+	 * Рисуем и в меню (карточка — часть интерфейса, играет музыка или нет — не важно),
+	 * но прячем при F1. Панель всегда «чёрное стекло»: мягкая тень, скругления,
+	 * акцентная полоска прогресса.
+	 */
+	private static void renderMedia(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.player == null || client.level == null || client.gui.hud.isHidden()) {
+			return;
+		}
+		MediaPlayerModule media = ModuleManager.find(MediaPlayerModule.class);
+		if (media == null || !media.isEnabled() || !media.showsHudCard()) {
+			return;
+		}
+
+		Font font = client.font;
+		int screenWidth = client.getWindow().getGuiScaledWidth();
+		int screenHeight = client.getWindow().getGuiScaledHeight();
+
+		int width = Math.min(150, screenWidth - 24);
+		int height = 34 + font.lineHeight;
+		int x = screenWidth - width - 6;
+		int y = screenHeight - height - 6;
+
+		int accent = ModuleCategory.HUD.getAccent();
+		long time = Util.getMillis();
+
+		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 4);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6, PANEL_BORDER, 0xD2080809);
+
+		String title;
+		String subtitle;
+		boolean playing = media.isPlaying();
+
+		if (media.hasError()) {
+			title = "Ошибка звука";
+			subtitle = RenderUtils.clamp(font, media.errorText(), width - 16);
+		} else if (media.hasTrack()) {
+			title = RenderUtils.clamp(font, stripExtension(media.currentName()), width - 24 - font.width(playing ? "▶" : "❚❚"));
+			long position = media.positionMillis();
+			long duration = Math.max(1L, media.durationMillis());
+			subtitle = formatTime(position) + " / " + formatTime(duration);
+		} else {
+			title = "Медиаплеер";
+			subtitle = media.trackCount() > 0 ? "Трек не выбран" : "Папка akarus/media пуста";
+		}
+
+		// Заголовок с иконкой состояния
+		graphics.text(font, playing ? "\u25B6" : "\u275A\u275A", x + 8, y + 7, RenderUtils.withAlpha(accent, playing ? 0.95f : 0.5f), true);
+		graphics.text(font, title, x + 20, y + 7, TEXT_COLOR, true);
+
+		// Полоска прогресса: тонкая, с бегущим бликом во время воспроизведения
+		int barX = x + 8;
+		int barY = y + 7 + font.lineHeight + 4;
+		int barWidth = width - 16;
+		float progress = media.hasTrack() && media.durationMillis() > 0
+				? Math.min(1.0f, (float) media.positionMillis() / (float) media.durationMillis())
+				: 0.0f;
+		RenderUtils.drawSlider(graphics, barX, barY, barWidth, 4, progress, accent);
+
+		graphics.text(font, subtitle, x + 8, barY + 7, 0xFFA6A6B2, true);
+
+		// Мини-эквалайзер: семь штрихов, живых только когда играет
+		int barsX = x + width - 8 - (7 * 3 - 1);
+		int barsY = barY + 7;
+		for (int bar = 0; bar < 7; bar++) {
+			float wave = playing
+					? 0.5f + 0.5f * (float) Math.sin(time / (140.0 + bar * 47.0) + bar * 1.7)
+					: 0.15f;
+			int barHeight = 2 + Math.round(wave * 8.0f);
+			graphics.fill(barsX + bar * 3, barsY + 9 - barHeight,
+					barsX + bar * 3 + 2, barsY + 9,
+					RenderUtils.withAlpha(accent, 0.25f + 0.7f * wave));
+		}
+	}
+
+	private static String stripExtension(String name) {
+		int dot = name.lastIndexOf('.');
+		return dot > 0 ? name.substring(0, dot) : name;
+	}
+
+	private static String formatTime(long millis) {
+		long seconds = Math.max(0L, millis / 1000L);
+		return String.format(java.util.Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60);
 	}
 
 	/**
@@ -205,10 +304,20 @@ public final class HudRenderer {
 		int x = MARGIN;
 		int y = MARGIN;
 
-		// Водяной знак: название и версия, переливающиеся по радуге
+		// Водяной знак: чёрная пилюля с радужным текстом и «дышащей» точкой
 		if (hud.showWatermark()) {
-			drawRainbow(graphics, font, AkarusClient.MOD_NAME + " " + AkarusClient.MOD_VERSION, x, y, time);
-			y += font.lineHeight + LINE_GAP + 3;
+			String brand = AkarusClient.MOD_NAME + " " + AkarusClient.MOD_VERSION;
+			int pillW = font.width(brand) + 26;
+			int pillH = font.lineHeight + 8;
+			RenderUtils.drawSoftShadow(graphics, x, y, pillW, pillH, 5, 3);
+			RenderUtils.fillRounded(graphics, x, y, pillW, pillH, 5, 0xE0070708);
+			RenderUtils.fillRounded(graphics, x, y, pillW, 1, 0, 0x1FFFFFFF);
+			float pulse = 0.4f + 0.6f * (float) Math.abs(Math.sin(time / 900.0));
+			graphics.fill(x + 6, y + pillH / 2 - 2, x + 10, y + pillH / 2 + 2, RenderUtils.rainbow(time, 0.0f));
+			int dot = RenderUtils.withAlpha(0xFFFFFFFF, 0.10f + 0.18f * pulse);
+			graphics.fill(x + pillW - 12, y + pillH / 2 - 3, x + pillW - 4, y + pillH / 2 + 3, dot);
+			drawRainbow(graphics, font, brand, x + 15, y + 4, time);
+			y += pillH + 5;
 		}
 
 		// Информационные строки
@@ -232,24 +341,25 @@ public final class HudRenderer {
 			for (String line : lines) {
 				width = Math.max(width, font.width(line));
 			}
-			width += PADDING * 2 + 3;
+			width += PADDING * 2 + 9;
 			int height = lines.size() * (font.lineHeight + LINE_GAP) - LINE_GAP + PADDING * 2;
 
-			// Панелька с акцентной полосой слева
+			// Панелька: тень, чёрное стекло, акцентная полоса слева со скроллом цвета
+			RenderUtils.drawSoftShadow(graphics, x, y, width, height, 4, 3);
 			RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 4, PANEL_BORDER, PANEL_BACKGROUND);
 			graphics.fillGradient(x + 1, y + 3, x + 3, y + height - 3,
 					RenderUtils.rainbow(time, 0.0f), RenderUtils.rainbow(time, 0.18f));
 
 			int textY = y + PADDING;
 			for (String line : lines) {
-				graphics.text(font, line, x + PADDING + 3, textY, TEXT_COLOR, true);
+				graphics.text(font, line, x + PADDING + 6, textY, TEXT_COLOR, true);
 				textY += font.lineHeight + LINE_GAP;
 			}
 
 			y += height + 5;
 		}
 
-		// Список включённых модулей: чем длиннее название, тем выше строка
+		// Список включённых модулей: плавное появление, лёгкий заезд, уход с фейдом
 		if (hud.showModuleList()) {
 			List<Module> active = ModuleManager.getAll().stream()
 					.filter(Module::isEnabled)
@@ -257,13 +367,50 @@ public final class HudRenderer {
 							.thenComparing(Module::getName))
 					.toList();
 
+			// обновляем прозрачности; ушедшие модули доживают на месте до нуля
+			for (Module module : active) {
+				MODULE_ALPHA.merge(module.getName(), 0, Math::max);
+			}
+			List<String> gone = new ArrayList<>();
+			for (Map.Entry<String, Integer> entry : MODULE_ALPHA.entrySet()) {
+				boolean stillActive = active.stream().anyMatch(m -> m.getName().equals(entry.getKey()));
+				int steps = Math.max(0, Math.min(10, entry.getValue() + (stillActive ? 1 : -1)));
+				entry.setValue(steps);
+				if (!stillActive && steps <= 0) {
+					gone.add(entry.getKey());
+				}
+			}
+			gone.forEach(MODULE_ALPHA::remove);
+
 			int index = 0;
 			for (Module module : active) {
-				graphics.text(font, module.getName(), x, y, RenderUtils.rainbow(time, index * 0.08f), true);
+				drawModuleLine(graphics, font, x, y, time, index, module.getName(), true);
+				y += font.lineHeight + LINE_GAP;
+				index++;
+			}
+			// доигравшие уход
+			for (String name : List.copyOf(MODULE_ALPHA.keySet())) {
+				if (active.stream().anyMatch(m -> m.getName().equals(name))) {
+					continue;
+				}
+				drawModuleLine(graphics, font, x, y, time, index, name, false);
 				y += font.lineHeight + LINE_GAP;
 				index++;
 			}
 		}
+	}
+
+	/** Строка модуля с easing: alpha 0..1 по счётчику появления, сдвиг при заезде. */
+	private static void drawModuleLine(GuiGraphicsExtractor graphics, Font font, int x, int y,
+	                                    long time, int index, String name, boolean active) {
+		int alphaSteps = MODULE_ALPHA.getOrDefault(name, 10);
+		float a = Math.max(0.0f, Math.min(1.0f, alphaSteps / 10.0f));
+		//ease для плавности: квадратичный вход
+		float eased = a * a * (3.0f - 2.0f * a);
+		int shift = Math.round((1.0f - eased) * 6.0f);
+		int baseColor = RenderUtils.rainbow(time, index * 0.08f);
+		int color = (baseColor & 0x00FFFFFF) | (Math.round(255 * eased) << 24);
+		graphics.text(font, name, x + shift, y, color, true);
 	}
 
 	/** Текст, у которого каждый символ своего цвета — классический «радужный» водяной знак. */

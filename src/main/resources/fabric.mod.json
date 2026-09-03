@@ -3,12 +3,12 @@
   "id": "akarus",
   "version": "${version}",
   "name": "Akarus",
-  "description": "Каркас клиента для Minecraft 26.2: ClickGUI, HUD и система модулей.",
+  "description": "Клиентский мод для Minecraft 26.2: свои меню, HUD, модули, музыкальный плеер и встроенный ViaFabricPlus.",
   "authors": [
     "inkvizrebirth"
   ],
   "contact": {},
-  "license": "MIT",
+  "license": "CC0-1.0",
   "environment": "client",
   "icon": "assets/akarus/icon.png",
   "mixins": [

@@ -38,3 +38,6 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+
+# встроенные nested-моды (скачиваются CI перед сборкой)
+libs/

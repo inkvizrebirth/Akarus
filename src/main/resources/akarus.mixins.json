@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "com.akarus.client.mixin",
   "client": [
+    "AkarusGuiMixin",
     "AvatarRendererMixin",
     "CameraMixin",
     "EntityMixin",
@@ -11,7 +12,8 @@
     "ItemInHandRendererMixin",
     "KeyboardInputMixin",
     "MouseHandlerMixin",
-    "SubmitNodeCollectionMixin"
+    "SubmitNodeCollectionMixin",
+    "AkarusScreenAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
