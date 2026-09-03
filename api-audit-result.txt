@@ -23,12 +23,12 @@
 MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 === классы мобов/врагов/манекенов ===
-        0  2026-09-03 11:39   assets/minecraft/textures/entity/armorstand/
+        0  2026-09-03 11:42   assets/minecraft/textures/entity/armorstand/
       809  1980-02-01 00:00   assets/minecraft/textures/entity/armorstand/armorstand.png
-        0  2026-09-03 11:39   net/minecraft/client/model/object/armorstand/
+        0  2026-09-03 11:42   net/minecraft/client/model/object/armorstand/
      6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
-      320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
      5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
+      320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
     11516  1980-02-01 00:00   net/minecraft/client/renderer/entity/ArmorStandRenderer.class
      1224  1980-02-01 00:00   net/minecraft/client/renderer/entity/state/ArmorStandRenderState.class
      2859  1980-02-01 00:00   net/minecraft/util/datafix/fixes/EntityArmorStandSilentFix.class
@@ -196,6 +196,181 @@ MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/mine
   public final net.minecraft.client.KeyMapping keySprint;
   public final net.minecraft.client.KeyMapping keyUse;
   public final net.minecraft.client.KeyMapping keyAttack;
+
+=== Player (items/hands/slots, шире) ===
+  public static final int ENDER_SLOT_OFFSET;
+  public static final int HELD_ITEM_SLOT;
+  public static final int CRAFTING_SLOT_OFFSET;
+  protected net.minecraft.world.inventory.PlayerEnderChestContainer enderChestInventory;
+  public final net.minecraft.world.inventory.InventoryMenu inventoryMenu;
+  public net.minecraft.world.inventory.AbstractContainerMenu containerMenu;
+  protected net.minecraft.world.item.ItemCooldowns createItemCooldowns();
+  public void handleEntityEvent(byte);
+  public void handleShoulderEntities();
+  public void startAutoSpinAttack(int, float, net.minecraft.world.item.ItemStack);
+  public net.minecraft.world.item.ItemStack getWeaponItem();
+  protected void destroyVanishingCursedItems();
+  public void handleCreativeModeItemDrop(net.minecraft.world.item.ItemStack);
+  public net.minecraft.world.entity.item.ItemEntity drop(net.minecraft.world.item.ItemStack, boolean);
+  protected void blockUsingItem(net.minecraft.server.level.ServerLevel, net.minecraft.world.entity.LivingEntity, net.minecraft.world.damagesource.DamageSource, float);
+  public void openHorseInventory(net.minecraft.world.entity.animal.equine.AbstractHorse, net.minecraft.world.Container);
+  public void openNautilusInventory(net.minecraft.world.entity.animal.nautilus.AbstractNautilus, net.minecraft.world.Container);
+  public void sendMerchantOffers(int, net.minecraft.world.item.trading.MerchantOffers, int, int, boolean, boolean);
+  public void openItemGui(net.minecraft.world.item.ItemStack, net.minecraft.world.InteractionHand);
+  public net.minecraft.world.InteractionResult interactOn(net.minecraft.world.entity.Entity, net.minecraft.world.InteractionHand, net.minecraft.world.phys.Vec3);
+  public boolean stabAttack(net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.entity.Entity, float, boolean, boolean, boolean);
+  public net.minecraft.world.entity.player.Inventory getInventory();
+  public boolean hasInfiniteMaterials();
+  public void updateTutorialInventoryAction(net.minecraft.world.item.ItemStack, net.minecraft.world.item.ItemStack, net.minecraft.world.inventory.ClickAction);
+  public boolean canDropItems();
+  public int awardRecipes(java.util.Collection<net.minecraft.world.item.crafting.RecipeHolder<?>>);
+  public void triggerRecipeCrafted(net.minecraft.world.item.crafting.RecipeHolder<?>, java.util.List<net.minecraft.world.item.ItemStack>);
+  public void awardRecipesByKey(java.util.List<net.minecraft.resources.ResourceKey<net.minecraft.world.item.crafting.Recipe<?>>>);
+  public int resetRecipes(java.util.Collection<net.minecraft.world.item.crafting.RecipeHolder<?>>);
+  public void onEnchantmentPerformed(net.minecraft.world.item.ItemStack, int);
+  public boolean mayUseItemAt(net.minecraft.core.BlockPos, net.minecraft.core.Direction, net.minecraft.world.item.ItemStack);
+  public net.minecraft.world.inventory.PlayerEnderChestContainer getEnderChestInventory();
+  protected boolean doesEmitEquipEvent(net.minecraft.world.entity.EquipmentSlot);
+  public boolean addItem(net.minecraft.world.item.ItemStack);
+  public net.minecraft.world.entity.SlotAccess getSlot(int);
+  public float getCurrentItemAttackStrengthDelay();
+  public boolean cannotAttackWithItem(net.minecraft.world.item.ItemStack, int);
+  public float getItemSwapScale(float);
+  public net.minecraft.world.item.ItemCooldowns getCooldowns();
+  public net.minecraft.world.item.ItemStack getProjectile(net.minecraft.world.item.ItemStack);
+  public boolean isWithinAttackRange(net.minecraft.world.item.ItemStack, net.minecraft.world.phys.AABB, double);
+  public net.minecraft.world.item.component.ResolvableProfile getProfile();
+
+=== LivingEntity (items/hands/slots) ===
+  public static final int EQUIPMENT_SLOT_OFFSET;
+  public static final int ARMOR_SLOT_OFFSET;
+  protected static final int LIVING_ENTITY_FLAG_OFF_HAND;
+  public static final java.util.function.Predicate<net.minecraft.world.entity.LivingEntity> PLAYER_NOT_WEARING_DISGUISE_ITEM;
+  public net.minecraft.world.InteractionHand swingingArm;
+  protected int itemSwapTicker;
+  protected final net.minecraft.world.entity.InterpolationHandler interpolation;
+  protected net.minecraft.world.item.ItemStack useItem;
+  protected int useItemRemaining;
+  protected net.minecraft.world.item.ItemStack autoSpinAttackItemStack;
+  protected boolean doesEmitEquipEvent(net.minecraft.world.entity.EquipmentSlot);
+  public void onEquipItem(net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.item.ItemStack, net.minecraft.world.item.ItemStack);
+  protected net.minecraft.core.Holder<net.minecraft.sounds.SoundEvent> getEquipSound(net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.item.ItemStack, net.minecraft.world.item.equipment.Equippable);
+  public net.minecraft.world.entity.item.ItemEntity drop(net.minecraft.world.item.ItemStack, boolean, boolean);
+  public float applyItemBlocking(net.minecraft.server.level.ServerLevel, net.minecraft.world.damagesource.DamageSource, float);
+  protected void blockUsingItem(net.minecraft.server.level.ServerLevel, net.minecraft.world.entity.LivingEntity, net.minecraft.world.damagesource.DamageSource, float);
+  protected void blockedByItem(net.minecraft.world.entity.LivingEntity, net.minecraft.world.damagesource.DamageSource, float);
+  protected void handleKillingBlow();
+  public void dropFromLootTable(net.minecraft.server.level.ServerLevel, net.minecraft.world.damagesource.DamageSource, boolean, net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>, java.util.function.Consumer<net.minecraft.world.item.ItemStack>);
+  public boolean dropFromEntityInteractLootTable(net.minecraft.server.level.ServerLevel, net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>, net.minecraft.world.entity.Entity, net.minecraft.world.item.ItemInstance, java.util.function.BiConsumer<net.minecraft.server.level.ServerLevel, net.minecraft.world.item.ItemStack>);
+  public boolean dropFromGiftLootTable(net.minecraft.server.level.ServerLevel, net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>, java.util.function.BiConsumer<net.minecraft.server.level.ServerLevel, net.minecraft.world.item.ItemStack>);
+  protected void dropFromShearingLootTable(net.minecraft.server.level.ServerLevel, net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>, net.minecraft.world.item.ItemInstance, java.util.function.BiConsumer<net.minecraft.server.level.ServerLevel, net.minecraft.world.item.ItemStack>);
+  protected boolean dropFromLootTable(net.minecraft.server.level.ServerLevel, net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>, java.util.function.Function<net.minecraft.world.level.storage.loot.LootParams$Builder, net.minecraft.world.level.storage.loot.LootParams>, java.util.function.BiConsumer<net.minecraft.server.level.ServerLevel, net.minecraft.world.item.ItemStack>);
+  public java.util.Map<net.minecraft.world.item.enchantment.Enchantment, java.util.Set<net.minecraft.world.item.enchantment.effects.EnchantmentLocationBasedEffect>> activeLocationDependentEnchantments(net.minecraft.world.entity.EquipmentSlot);
+  protected void doHurtEquipment(net.minecraft.world.damagesource.DamageSource, float, net.minecraft.world.entity.EquipmentSlot...);
+  public void swing(net.minecraft.world.InteractionHand);
+  public void swing(net.minecraft.world.InteractionHand, boolean);
+  public void handleDamageEvent(net.minecraft.world.damagesource.DamageSource);
+  public void handleEntityEvent(byte);
+  public net.minecraft.world.item.ItemStack getMainHandItem();
+  public net.minecraft.world.item.ItemStack getOffhandItem();
+  public net.minecraft.world.item.ItemStack getItemHeldByArm(net.minecraft.world.entity.HumanoidArm);
+  public net.minecraft.world.item.ItemStack getWeaponItem();
+  public net.minecraft.world.item.component.AttackRange getAttackRangeWith(net.minecraft.world.item.ItemStack);
+  public net.minecraft.world.item.ItemStack getActiveItem();
+  public boolean isHolding(net.minecraft.world.item.Item);
+  public boolean isHolding(java.util.function.Predicate<net.minecraft.world.item.ItemStack>);
+  public net.minecraft.world.item.ItemStack getItemInHand(net.minecraft.world.InteractionHand);
+  public void setItemInHand(net.minecraft.world.InteractionHand, net.minecraft.world.item.ItemStack);
+  public boolean hasItemInSlot(net.minecraft.world.entity.EquipmentSlot);
+  public boolean canUseSlot(net.minecraft.world.entity.EquipmentSlot);
+  public net.minecraft.world.item.ItemStack getItemBySlot(net.minecraft.world.entity.EquipmentSlot);
+  public void setItemSlot(net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.item.ItemStack);
+  public boolean stabAttack(net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.entity.Entity, float, boolean, boolean, boolean);
+  protected java.util.Map<net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.item.ItemStack> collectEquipmentChanges(java.util.Map<net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.item.ItemStack>);
+  public boolean equipmentHasChanged(net.minecraft.world.item.ItemStack, net.minecraft.world.item.ItemStack);
+  public net.minecraft.world.entity.InterpolationHandler getInterpolation();
+  public void onItemPickup(net.minecraft.world.entity.item.ItemEntity);
+  public boolean isUsingItem();
+  public net.minecraft.world.InteractionHand getUsedItemHand();
+  protected void updateUsingItem(net.minecraft.world.item.ItemStack);
+  public void startUsingItem(net.minecraft.world.InteractionHand);
+  public void spawnItemParticles(net.minecraft.world.item.ItemStack, int);
+  protected void completeUsingItem();
+  public void handleExtraItemsCreatedOnUse(net.minecraft.world.item.ItemStack);
+  public net.minecraft.world.item.ItemStack getUseItem();
+  public int getUseItemRemainingTicks();
+  public int getTicksUsingItem();
+  public float getTicksUsingItem(float);
+  public void releaseUsingItem();
+  public void stopUsingItem();
+  public net.minecraft.world.item.ItemStack getItemBlockingWith();
+  public net.minecraft.world.item.ItemStack getProjectile(net.minecraft.world.item.ItemStack);
+  public void onEquippedItemBroken(net.minecraft.world.item.Item, net.minecraft.world.entity.EquipmentSlot);
+  public final boolean canEquipWithDispenser(net.minecraft.world.item.ItemStack);
+  protected boolean canDispenserEquipIntoSlot(net.minecraft.world.entity.EquipmentSlot);
+  public net.minecraft.world.entity.EquipmentSlot getEquipmentSlotForItem(net.minecraft.world.item.ItemStack);
+  public boolean isEquippableInSlot(net.minecraft.world.item.ItemStack, net.minecraft.world.entity.EquipmentSlot);
+  public net.minecraft.world.entity.SlotAccess getSlot(int);
+  public boolean hasInfiniteMaterials();
+  public static boolean canGlideUsing(net.minecraft.world.item.ItemStack, net.minecraft.world.entity.EquipmentSlot);
+
+=== EquipmentUser ===
+Compiled from "EquipmentUser.java"
+public interface net.minecraft.world.entity.EquipmentUser {
+  public abstract void setItemSlot(net.minecraft.world.entity.EquipmentSlot, net.minecraft.world.item.ItemStack);
+  public abstract net.minecraft.world.item.ItemStack getItemBySlot(net.minecraft.world.entity.EquipmentSlot);
+  public abstract void setDropChance(net.minecraft.world.entity.EquipmentSlot, float);
+  public default void equip(net.minecraft.world.entity.EquipmentTable, net.minecraft.world.level.storage.loot.LootParams);
+  public default void equip(net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>, net.minecraft.world.level.storage.loot.LootParams, java.util.Map<net.minecraft.world.entity.EquipmentSlot, java.lang.Float>);
+  public default void equip(net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>, net.minecraft.world.level.storage.loot.LootParams, long, java.util.Map<net.minecraft.world.entity.EquipmentSlot, java.lang.Float>);
+  public default net.minecraft.world.entity.EquipmentSlot resolveSlot(net.minecraft.world.item.ItemStack, java.util.List<net.minecraft.world.entity.EquipmentSlot>);
+}
+
+=== EquipmentSlot ===
+  public static final net.minecraft.world.entity.EquipmentSlot MAINHAND;
+  public static final net.minecraft.world.entity.EquipmentSlot OFFHAND;
+  public static final net.minecraft.world.entity.EquipmentSlot FEET;
+  public static final net.minecraft.world.entity.EquipmentSlot LEGS;
+  public static final net.minecraft.world.entity.EquipmentSlot CHEST;
+  public static final net.minecraft.world.entity.EquipmentSlot HEAD;
+  public static final net.minecraft.world.entity.EquipmentSlot BODY;
+  public static final net.minecraft.world.entity.EquipmentSlot SADDLE;
+  public static final int NO_COUNT_LIMIT;
+  public static final java.util.List<net.minecraft.world.entity.EquipmentSlot> VALUES;
+  public static final java.util.function.IntFunction<net.minecraft.world.entity.EquipmentSlot> BY_ID;
+  public static final net.minecraft.util.StringRepresentable$EnumCodec<net.minecraft.world.entity.EquipmentSlot> CODEC;
+  public static final net.minecraft.network.codec.StreamCodec<io.netty.buffer.ByteBuf, net.minecraft.world.entity.EquipmentSlot> STREAM_CODEC;
+  public static net.minecraft.world.entity.EquipmentSlot[] values();
+  public static net.minecraft.world.entity.EquipmentSlot valueOf(java.lang.String);
+  public static net.minecraft.world.entity.EquipmentSlot byName(java.lang.String);
+  static {};
+
+=== Inventory ===
+  public static final int SLOT_OFFHAND;
+  public int getSelectedSlot();
+  public void setSelectedSlot(int);
+  public net.minecraft.world.item.ItemStack getSelectedItem();
+  public net.minecraft.world.item.ItemStack setSelectedItem(net.minecraft.world.item.ItemStack);
+  public net.minecraft.world.item.ItemStack getItem(int);
+  public net.minecraft.world.item.ItemStack removeFromSelected(boolean);
+
+=== ItemCooldowns ===
+Compiled from "ItemCooldowns.java"
+public class net.minecraft.world.item.ItemCooldowns {
+  public net.minecraft.world.item.ItemCooldowns();
+  public boolean isOnCooldown(net.minecraft.world.item.ItemStack);
+  public float getCooldownPercent(net.minecraft.world.item.ItemStack, float);
+  public net.minecraft.resources.Identifier getCooldownGroup(net.minecraft.world.item.ItemStack);
+  public void addCooldown(net.minecraft.world.item.ItemStack, int);
+  public void addCooldown(net.minecraft.resources.Identifier, int);
+  public void removeCooldown(net.minecraft.resources.Identifier);
+  protected void onCooldownStarted(net.minecraft.resources.Identifier, int);
+  protected void onCooldownEnded(net.minecraft.resources.Identifier);
+
+=== Entity (water/lava) ===
+  public boolean isInWater();
+  public boolean isInWaterOrRain();
+  public boolean isInLava();
 
 === EntityType ===
   public net.minecraft.world.entity.EntityType(net.minecraft.world.entity.EntityType$EntityFactory<T>, net.minecraft.world.entity.MobCategory, boolean, boolean, boolean, boolean, net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>, net.minecraft.world.entity.EntityDimensions, float, int, int, java.lang.String, java.util.Optional<net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>>, net.minecraft.world.flag.FeatureFlagSet, boolean);
