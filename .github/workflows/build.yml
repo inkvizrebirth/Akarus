@@ -51,18 +51,13 @@ jobs:
           unzip -p "$JAR" akarus.mixins.json || { echo "::error::НЕТ akarus.mixins.json!"; exit 1; }
           echo "--- refmap (информационно: в Loom 1.17 его нет, имена переписаны в байткод) ---"
           unzip -l "$JAR" | grep -E '\.refmap\.json' || echo "refmap отсутствует — это норма для Loom 1.17"
-          echo "--- intermediary-имена в байткоде миксинов (доказательство remap) ---"
-          mkdir -p /tmp/mx && cd /tmp/mx
-          unzip -o -q "$JAR" 'com/akarus/client/mixin/*.class' || echo "unzip extract failed"
-          MATCHES=$(strings com/akarus/client/mixin/*.class 2>&1 | grep -oE 'method_[0-9]+|class_[0-9]+' | sort -u | head -20)
-          echo "$MATCHES"
-          { echo "Intermediary-имена в байткоде миксинов:"; echo "$MATCHES" | sed 's/^/  /'; } \
-            | while IFS= read -r line; do echo "::notice::${line}"; done || true
-          if [ -n "$MATCHES" ]; then
-            echo "OK: имена миксинов переписаны в intermediary"
-          else
-            echo "::error::В байткоде миксинов нет intermediary-имён — remap не выполнен!"
-          fi
+          echo "--- ссылка на конфиг миксинов в fabric.mod.json ---"
+          unzip -p "$JAR" fabric.mod.json | grep -o '"mixins"[^]]*]' || { echo "::error::fabric.mod.json не объявляет mixins!"; exit 1; }
+          echo "--- refmap / intermediary (информационно) ---"
+          # В Minecraft 26.2 нет intermediary-маппингов (26.2.tiny отсутствует в
+          # FabricMC/intermediary), а runtime использует официальные имена Mojang,
+          # поэтому ни refmap, ни method_/class_ в jar быть не должно — это норма.
+          unzip -l "$JAR" | grep -E '\.refmap\.json' && echo "refmap найден" || echo "refmap отсутствует (норма для 26.2)"
 
       - name: Upload build log
         if: always()
