@@ -175,7 +175,7 @@ public final class HandOutlineRenderer {
 				// Наружным полосам хватает половины направлений: под мягким спадом
 				// прозрачности «шестиугольник» не отличить от круга, а вдвое дешевле
 				for (int direction = 0; direction < DIRECTIONS; direction += 2) {
-					submitArmCopy(arm, poseStack, collector, spec,
+					submitArmCopy(arm, poseStack, collector, spec, unitsPerPixel,
 							DIRECTION_X[direction] * spread, DIRECTION_Y[direction] * spread,
 							colorFor(spec, direction, fade));
 				}
