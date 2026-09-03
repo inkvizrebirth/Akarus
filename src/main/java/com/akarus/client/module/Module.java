@@ -92,6 +92,22 @@ public abstract class Module {
 		return setting;
 	}
 
+	protected IntSetting intSetting(String id, String name, int value, int min, int max) {
+		IntSetting setting = new IntSetting(id, name, value, min, max);
+		settings.add(setting);
+		return setting;
+	}
+
+	protected StringSetting textSetting(String id, String name, String value) {
+		StringSetting setting = new StringSetting(id, name, value);
+		settings.add(setting);
+		return setting;
+	}
+
+	/** Вызывается после изменения любой настройки модуля в меню. */
+	public void onSettingsChanged() {
+	}
+
 	public List<Setting<?>> getSettings() {
 		return settings;
 	}

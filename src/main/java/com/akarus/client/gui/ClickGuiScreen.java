@@ -6,11 +6,15 @@ import com.akarus.client.module.Module;
 import com.akarus.client.module.ModuleCategory;
 import com.akarus.client.module.ModuleManager;
 import com.akarus.client.settings.BooleanSetting;
+import com.akarus.client.settings.IntSetting;
 import com.akarus.client.settings.Setting;
+import com.akarus.client.settings.StringSetting;
 import com.akarus.client.util.RenderUtils;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
@@ -28,6 +32,7 @@ import java.util.Map;
  *
  * Всё рисуется вручную через {@link GuiGraphicsExtractor}: тёмная панель с мягкой тенью,
  * размытый фон, «волна» в месте клика и плавные анимации.
+ * Поддерживаются переключатели, слайдеры (числа) и текстовые поля.
  */
 public class ClickGuiScreen extends Screen {
 
@@ -39,7 +44,9 @@ public class ClickGuiScreen extends Screen {
 	private static final int CATEGORY_ROW_HEIGHT = 22;
 	private static final int CATEGORY_GAP = 4;
 	private static final int MODULE_ROW_HEIGHT = 34;
-	private static final int SETTING_ROW_HEIGHT = 16;
+	private static final int TOGGLE_ROW_HEIGHT = 16;
+	private static final int SLIDER_ROW_HEIGHT = 26;
+	private static final int TEXT_ROW_HEIGHT = 20;
 	private static final int PADDING = 7;
 	private static final int FOOTER_HEIGHT = 14;
 	private static final int PANEL_RADIUS = 10;
@@ -81,6 +88,12 @@ public class ClickGuiScreen extends Screen {
 
 	private float scroll;
 	private float scrollTarget;
+
+	private Setting<?> focusedSetting;
+	private Module focusedModule;
+	private boolean focusedDirty;
+	private IntSetting draggingSetting;
+	private Module draggingModule;
 
 	private final Map<String, Float> hoverAnimations = new HashMap<>();
 	private final Map<String, Float> toggleAnimations = new HashMap<>();
@@ -303,7 +316,21 @@ public class ClickGuiScreen extends Screen {
 		}
 	}
 
-	private void drawSettingRow(GuiGraphicsExtractor graphics, BooleanSetting setting, Hitbox box, int accent, int mouseX, int mouseY) {
+	// ------------------------------------------------------------------
+	// Настройки: переключатель / слайдер / текстовое поле
+	// ------------------------------------------------------------------
+
+	private void drawSettingRow(GuiGraphicsExtractor graphics, Setting<?> setting, Hitbox box, int accent, int mouseX, int mouseY) {
+		if (setting instanceof IntSetting intSetting) {
+			drawSliderRow(graphics, intSetting, box, accent, mouseX, mouseY);
+		} else if (setting instanceof StringSetting stringSetting) {
+			drawTextRow(graphics, stringSetting, box, accent, mouseX, mouseY);
+		} else if (setting instanceof BooleanSetting booleanSetting) {
+			drawToggleRow(graphics, booleanSetting, box, accent, mouseX, mouseY);
+		}
+	}
+
+	private void drawToggleRow(GuiGraphicsExtractor graphics, BooleanSetting setting, Hitbox box, int accent, int mouseX, int mouseY) {
 		Font font = this.font;
 		float hover = hoverProgress("setting:" + setting.getId(), box.contains(mouseX, mouseY));
 		float toggle = toggleProgress(setting);
@@ -320,6 +347,63 @@ public class ClickGuiScreen extends Screen {
 		RenderUtils.drawToggle(graphics, box.x() + box.width() - SETTING_TOGGLE_WIDTH - 8,
 				box.y() + (box.height() - 2 - SETTING_TOGGLE_HEIGHT) / 2, SETTING_TOGGLE_WIDTH, SETTING_TOGGLE_HEIGHT,
 				toggle, accent);
+	}
+
+	private void drawSliderRow(GuiGraphicsExtractor graphics, IntSetting setting, Hitbox box, int accent, int mouseX, int mouseY) {
+		Font font = this.font;
+		boolean active = setting == draggingSetting;
+		float hover = hoverProgress("setting:" + setting.getId(), box.contains(mouseX, mouseY) || active);
+
+		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
+				RenderUtils.mix(0x10FFFFFF, accent, hover * 0.35f),
+				RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.6f));
+
+		int textY = box.y() + 4;
+		graphics.text(font, setting.getName(), box.x() + 9, textY, TEXT_SECONDARY, false);
+
+		String value = String.valueOf(setting.get());
+		graphics.text(font, value, box.x() + box.width() - 9 - font.width(value), textY, TEXT_PRIMARY, false);
+
+		int trackX = box.x() + 9;
+		int trackY = box.y() + box.height() - 10;
+		int trackWidth = box.width() - 18;
+
+		RenderUtils.fillRounded(graphics, trackX, trackY, trackWidth, 3, 1, 0x26FFFFFF);
+
+		float progress = setting.getNormalized();
+		RenderUtils.fillRounded(graphics, trackX, trackY, Math.max(2, (int) (trackWidth * progress)), 3, 1, accent);
+		RenderUtils.fillRounded(graphics, (int) (trackX + (trackWidth - 6) * progress), trackY - 2, 6, 7, 3, 0xFFF2F2F7);
+
+		drawRipples(graphics, box, accent);
+	}
+
+	private void drawTextRow(GuiGraphicsExtractor graphics, StringSetting setting, Hitbox box, int accent, int mouseX, int mouseY) {
+		Font font = this.font;
+		boolean focused = setting == focusedSetting;
+		float hover = hoverProgress("setting:" + setting.getId(), box.contains(mouseX, mouseY) || focused);
+
+		int border = focused ? accent : RenderUtils.mix(0x10FFFFFF, accent, hover * 0.35f);
+		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4, border,
+				RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.6f));
+
+		int textY = box.y() + (box.height() - 2 - font.lineHeight) / 2 + 1;
+		int textX = box.x() + 9;
+
+		String value = setting.get();
+		int labelSpace = 42;
+		String shown = RenderUtils.clamp(font, value.isEmpty() && !focused ? "—" : value, box.width() - 18 - labelSpace);
+		graphics.text(font, shown, textX, textY, focused ? TEXT_PRIMARY : TEXT_SECONDARY, false);
+
+		String label = RenderUtils.clamp(font, setting.getName(), labelSpace);
+		graphics.text(font, label, box.x() + box.width() - 9 - font.width(label), textY, TEXT_DIM, false);
+
+		// Мигающий курсор в конце строки
+		if (focused && (Util.getMillis() / 500L) % 2 == 0) {
+			int cursorX = textX + font.width(shown) + 1;
+			graphics.fill(cursorX, textY - 1, cursorX + 1, textY + font.lineHeight - 1, accent);
+		}
+
+		drawRipples(graphics, box, accent);
 	}
 
 	private void drawHint(GuiGraphicsExtractor graphics, int x, int y) {
@@ -434,6 +518,7 @@ public class ClickGuiScreen extends Screen {
 			dragging = true;
 			dragOffsetX = mouseX - guiX;
 			dragOffsetY = mouseY - guiY;
+			clearFocus();
 			if (rippleBounds != null) {
 				addRipple(mouseX, mouseY, rippleBounds);
 			}
@@ -448,6 +533,9 @@ public class ClickGuiScreen extends Screen {
 		int listY = Math.round(guiY) + HEADER_HEIGHT + PADDING;
 		int listWidth = GUI_WIDTH - CATEGORY_WIDTH - PADDING * 3;
 		int listHeight = GUI_HEIGHT - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
+
+		// Клик в любом месте снимает фокус с текстового поля (и применяет ввод)
+		clearFocus();
 
 		for (LayoutEntry entry : buildLayout()) {
 			Hitbox box = entry.box();
@@ -477,11 +565,7 @@ public class ClickGuiScreen extends Screen {
 					}
 					playClick();
 				}
-				case SETTING -> {
-					entry.setting().toggle();
-					ConfigManager.save();
-					playClick();
-				}
+				case SETTING -> handleSettingClick(entry, box, mouseX, event.button());
 			}
 			return true;
 		}
@@ -494,23 +578,90 @@ public class ClickGuiScreen extends Screen {
 		return super.mouseClicked(event, doubleClick);
 	}
 
+	private void handleSettingClick(LayoutEntry entry, Hitbox box, double mouseX, int button) {
+		Setting<?> setting = entry.setting();
+
+		if (setting instanceof IntSetting intSetting && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+			draggingSetting = intSetting;
+			draggingModule = entry.module();
+			updateSlider(intSetting, box, mouseX);
+			playClick();
+			return;
+		}
+
+		if (setting instanceof StringSetting stringSetting && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+			if (focusedSetting != stringSetting) {
+				focusedSetting = stringSetting;
+				focusedModule = entry.module();
+				focusedDirty = false;
+			}
+			playClick();
+			return;
+		}
+
+		if (setting instanceof BooleanSetting booleanSetting && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+			booleanSetting.toggle();
+			entry.module().onSettingsChanged();
+			ConfigManager.save();
+			playClick();
+		}
+	}
+
+	private void updateSlider(IntSetting setting, Hitbox box, double mouseX) {
+		int trackX = box.x() + 9;
+		int trackWidth = box.width() - 18;
+		setting.setNormalized((float) ((mouseX - trackX) / trackWidth));
+	}
+
+	private void clearFocus() {
+		if (focusedModule != null && focusedDirty) {
+			focusedModule.onSettingsChanged();
+			ConfigManager.save();
+		}
+		focusedSetting = null;
+		focusedModule = null;
+		focusedDirty = false;
+	}
+
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+		if (draggingSetting != null) {
+			for (LayoutEntry entry : buildLayout()) {
+				if (entry.kind() == Kind.SETTING && entry.setting() == draggingSetting) {
+					updateSlider(draggingSetting, entry.box(), event.x());
+					break;
+				}
+			}
+			return true;
+		}
+
 		if (dragging) {
 			guiX = (float) (event.x() - dragOffsetX);
 			guiY = (float) (event.y() - dragOffsetY);
 			clampPanel();
 			return true;
 		}
+
 		return super.mouseDragged(event, deltaX, deltaY);
 	}
 
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
+		if (draggingSetting != null) {
+			if (draggingModule != null) {
+				draggingModule.onSettingsChanged();
+				ConfigManager.save();
+			}
+			draggingSetting = null;
+			draggingModule = null;
+			return true;
+		}
+
 		if (dragging) {
 			dragging = false;
 			return true;
 		}
+
 		return super.mouseReleased(event);
 	}
 
@@ -523,7 +674,42 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	@Override
+	public boolean charTyped(CharacterEvent event) {
+		if (focusedSetting instanceof StringSetting stringSetting && event.isAllowedChatCharacter()) {
+			stringSetting.set(stringSetting.get() + event.codepointAsString());
+			focusedDirty = true;
+			return true;
+		}
+		return super.charTyped(event);
+	}
+
+	@Override
+	public boolean keyPressed(KeyEvent event) {
+		if (focusedSetting instanceof StringSetting stringSetting) {
+			if (event.key() == GLFW.GLFW_KEY_BACKSPACE) {
+				String text = stringSetting.get();
+				if (!text.isEmpty()) {
+					stringSetting.set(text.substring(0, text.length() - 1));
+					focusedDirty = true;
+				}
+				return true;
+			}
+
+			if (event.key() == GLFW.GLFW_KEY_ESCAPE || event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
+				clearFocus();
+				return true;
+			}
+
+			// Пока печатаем, остальные клавиши до игры не доходят
+			return true;
+		}
+
+		return super.keyPressed(event);
+	}
+
+	@Override
 	public void onClose() {
+		clearFocus();
 		ConfigManager.save();
 		super.onClose();
 	}
@@ -562,11 +748,10 @@ public class ClickGuiScreen extends Screen {
 
 			if (module == expanded) {
 				for (Setting<?> setting : module.getSettings()) {
-					if (setting instanceof BooleanSetting booleanSetting) {
-						layout.add(new LayoutEntry(new Hitbox(listX + 10, rowY, listWidth - 20, SETTING_ROW_HEIGHT),
-								Kind.SETTING, null, module, booleanSetting));
-						rowY += SETTING_ROW_HEIGHT;
-					}
+					int height = settingHeight(setting);
+					layout.add(new LayoutEntry(new Hitbox(listX + 10, rowY, listWidth - 20, height),
+							Kind.SETTING, null, module, setting));
+					rowY += height;
 				}
 			}
 		}
@@ -574,12 +759,24 @@ public class ClickGuiScreen extends Screen {
 		return layout;
 	}
 
+	private static int settingHeight(Setting<?> setting) {
+		if (setting instanceof IntSetting) {
+			return SLIDER_ROW_HEIGHT;
+		}
+		if (setting instanceof StringSetting) {
+			return TEXT_ROW_HEIGHT;
+		}
+		return TOGGLE_ROW_HEIGHT;
+	}
+
 	private int contentHeight() {
 		int height = 0;
 		for (Module module : ModuleManager.getByCategory(selected)) {
 			height += MODULE_ROW_HEIGHT;
 			if (module == expanded) {
-				height += module.getSettings().size() * SETTING_ROW_HEIGHT;
+				for (Setting<?> setting : module.getSettings()) {
+					height += settingHeight(setting);
+				}
 			}
 		}
 		return height;
@@ -616,7 +813,7 @@ public class ClickGuiScreen extends Screen {
 		}
 	}
 
-	private record LayoutEntry(Hitbox box, Kind kind, ModuleCategory category, Module module, BooleanSetting setting) {
+	private record LayoutEntry(Hitbox box, Kind kind, ModuleCategory category, Module module, Setting<?> setting) {
 	}
 
 	/** Волна, расходящаяся от места клика. */

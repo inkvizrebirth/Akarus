@@ -125,17 +125,26 @@ CATEGORY_ROW_HEIGHT = 22
 CATEGORY_GAP = 4
 MODULE_ROW_HEIGHT = 34
 SETTING_ROW_HEIGHT = 16
+SLIDER_ROW_HEIGHT = 26
+TEXT_ROW_HEIGHT = 20
 PADDING = 7
 FOOTER_HEIGHT = 14
 PANEL_RADIUS = 10
 SHADOW_LAYERS = 5
 
 CATEGORIES = [
-    ("HUD", 0xFF5CE1E6, True),
+    ("HUD", 0xFF5CE1E6, False),
     ("Рендер", 0xFF8A6CFF, False),
     ("Движение", 0xFFFFB86C, False),
     ("Бой", 0xFFFF5C7A, False),
-    ("Прочее", 0xFF8DE06C, False),
+    ("Прочее", 0xFF8DE06C, True),
+]
+
+# Настройки AutoMine: текстовое поле, слайдер и переключатель
+AUTOMINE_SETTINGS = [
+    ("text", "Блок", "diamond_ore"),
+    ("slider", "Сколько", 0),
+    ("toggle", "Командами чата", False),
 ]
 
 HUD_SETTINGS = [
@@ -188,6 +197,33 @@ def draw_setting_row(canvas, x, y, w, name, enabled, accent):
     draw_toggle(canvas, x + w - 24 - 8, y + 2, 24, 10, 1.0 if enabled else 0.0, accent)
 
 
+def draw_text_row(canvas, x, y, w, name, value, accent):
+    """Текстовое поле настройки (фокус: рамка акцентного цвета и курсор)."""
+    canvas.rrect(x, y, w, TEXT_ROW_HEIGHT - 2, 4, argb(accent))
+    canvas.rrect(x + 1, y + 1, w - 2, TEXT_ROW_HEIGHT - 4, 3, mix(argb(0x80000000), argb(0x14FFFFFF), 0.6))
+    text_y = y + (TEXT_ROW_HEIGHT - 2 - LINE_HEIGHT) // 2 + 1
+    canvas.text(x + 9, text_y, value, argb(TEXT_PRIMARY))
+    label = name
+    canvas.text(x + w - 9 - canvas.text_width(label), text_y, label, argb(TEXT_DIM))
+    canvas.rect(x + 9 + canvas.text_width(value) + 1, text_y - 1, 1, LINE_HEIGHT - 1, argb(accent))
+
+
+def draw_slider_row(canvas, x, y, w, name, value, value_max, accent):
+    """Слайдер числовой настройки."""
+    canvas.rrect(x, y, w, SLIDER_ROW_HEIGHT - 2, 4, argb(0x10FFFFFF))
+    canvas.rrect(x + 1, y + 1, w - 2, SLIDER_ROW_HEIGHT - 4, 3, mix(argb(0x80000000), argb(0x14FFFFFF), 0.6))
+    canvas.text(x + 9, y + 4, name, argb(TEXT_SECONDARY))
+    text = str(value)
+    canvas.text(x + w - 9 - canvas.text_width(text), y + 4, text, argb(TEXT_PRIMARY))
+
+    track_x = x + 9
+    track_y = y + SLIDER_ROW_HEIGHT - 10
+    track_w = w - 18
+    canvas.rrect(track_x, track_y, track_w, 3, 1, argb(0x26FFFFFF))
+    canvas.rrect(track_x, track_y, max(2, track_w // 4), 3, 1, argb(accent))
+    canvas.rrect(track_x + track_w // 4 - 3, track_y - 2, 6, 7, 3, argb(0xFFF2F2F7))
+
+
 def render_clickgui(path):
     canvas = Canvas(640, 400, argb(0xFF12121A))
 
@@ -203,7 +239,7 @@ def render_clickgui(path):
 
     x = (640 - GUI_WIDTH) // 2
     y = (400 - GUI_HEIGHT) // 2
-    accent = 0xFF5CE1E6
+    accent = 0xFF8DE06C
 
     # Мягкая тень
     draw_soft_shadow(canvas, x, y, GUI_WIDTH, GUI_HEIGHT, PANEL_RADIUS, SHADOW_LAYERS)
@@ -245,16 +281,23 @@ def render_clickgui(path):
     list_h = GUI_HEIGHT - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT
     canvas.rrect(list_x, list_y, list_w, list_h, 6, argb(LIST_BACKGROUND))
 
-    draw_module_row(canvas, list_x, list_y, list_w, "HUD-инфо",
-                    "Показывает FPS, координаты, пинг и активные модули", True, accent, 1.0, True)
+    draw_module_row(canvas, list_x, list_y, list_w, "AutoMine",
+                    "Автоматическая добыча блоков через Baritone", True, accent, 1.0, True)
 
     # Волна по клику — как будто только что нажали на строку модуля
     draw_ripple(canvas, list_x + 120, list_y + 17, 46, accent, 0.75)
 
     settings_y = list_y + MODULE_ROW_HEIGHT
-    for setting_name, setting_enabled in HUD_SETTINGS:
-        draw_setting_row(canvas, list_x + 10, settings_y, list_w - 20, setting_name, setting_enabled, accent)
-        settings_y += SETTING_ROW_HEIGHT
+    for kind, name, value in AUTOMINE_SETTINGS:
+        if kind == "text":
+            draw_text_row(canvas, list_x + 10, settings_y, list_w - 20, name, value, accent)
+            settings_y += TEXT_ROW_HEIGHT
+        elif kind == "slider":
+            draw_slider_row(canvas, list_x + 10, settings_y, list_w - 20, name, value, 512, accent)
+            settings_y += SLIDER_ROW_HEIGHT
+        else:
+            draw_setting_row(canvas, list_x + 10, settings_y, list_w - 20, name, value, accent)
+            settings_y += SETTING_ROW_HEIGHT
 
     # Полоса прокрутки
     canvas.rrect(list_x + list_w - 5, list_y + 3, 3, list_h - 6, 1, argb(0x1AFFFFFF))
@@ -301,7 +344,7 @@ def render_hud(path):
     y += height + 5
 
     # Список активных модулей
-    for index, module_name in enumerate(["HUD-инфо"]):
+    for index, module_name in enumerate(["AutoMine", "FreeCam"]):
         canvas.text(x, y, module_name, hsb(index * 0.08, 0.75, 1.0))
         y += LINE_HEIGHT + 2
 

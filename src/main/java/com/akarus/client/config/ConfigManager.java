@@ -4,7 +4,9 @@ import com.akarus.client.AkarusClient;
 import com.akarus.client.module.Module;
 import com.akarus.client.module.ModuleManager;
 import com.akarus.client.settings.BooleanSetting;
+import com.akarus.client.settings.IntSetting;
 import com.akarus.client.settings.Setting;
+import com.akarus.client.settings.StringSetting;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -87,8 +89,17 @@ public final class ConfigManager {
 				continue;
 			}
 
-			if (setting instanceof BooleanSetting) {
-				setRaw(setting, value.getAsBoolean());
+			// Конфиг редактируется руками, поэтому значения применяем «мягко»
+			try {
+				if (setting instanceof BooleanSetting) {
+					setRaw(setting, value.getAsBoolean());
+				} else if (setting instanceof IntSetting intSetting) {
+					intSetting.set((int) Math.round(value.getAsDouble()));
+				} else if (setting instanceof StringSetting stringSetting) {
+					stringSetting.set(value.getAsString());
+				}
+			} catch (RuntimeException exception) {
+				AkarusClient.LOGGER.warn("Не удалось применить настройку {}.{}", module.getId(), setting.getId(), exception);
 			}
 		}
 	}

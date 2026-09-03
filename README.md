@@ -2,12 +2,10 @@
 
 Каркас клиентского мода (мод-клиента) **Akarus** для **Minecraft 26.2** на **Fabric**.
 
-Внутри уже есть три вещи, с которых обычно начинают такой проект:
-
 - **ClickGUI** — собственное меню в чёрных тонах: размытый фон, мягкая многослойная тень,
-  «волна» в месте клика, плавные анимации, категории, тумблеры и настройки модулей;
+  «волна» в месте клика, плавные анимации, категории, тумблеры, слайдеры и текстовые поля;
 - **система модулей** — включение/выключение, свои клавиши, настройки, сохранение в JSON;
-- **демонстрационный модуль HUD-инфо** — FPS, координаты, направление, пинг, водяной знак и список активных модулей.
+- **модули**: HUD-инфо, **FreeCam** (реальный полёт сквозь блоки) и **AutoMine** (добыча через Baritone).
 
 ![ClickGUI](docs/preview-clickgui.png)
 
@@ -20,12 +18,10 @@ HUD в игре выглядит так:
 
 ## Где взять готовый jar
 
-Собрать можно двумя способами:
-
 1. **GitHub Actions (рекомендуется, если локально нет JDK 25 или нет доступа к Gradle):**
    готовый jar лежит в [Releases](https://github.com/inkvizrebirth/AIO-Client/releases) —
-   например [Akarus v0.1.0](https://github.com/inkvizrebirth/AIO-Client/releases/tag/v0.1.0),
-   файл `akarus-0.1.0.jar`.
+   например [Akarus v0.2.0](https://github.com/inkvizrebirth/AIO-Client/releases/tag/v0.2.0),
+   файл `akarus-0.2.0.jar`.
    Либо: вкладка **Actions** → workflow **build** → **Run workflow** → после завершения
    скачать артефакт `akarus` из секции Artifacts (там же всегда лежит `akarus-build-log` с логом сборки).
 2. **Локально:**
@@ -35,7 +31,7 @@ HUD в игре выглядит так:
 ./gradlew runClient      # запустить игру с модом из папки run/
 ```
 
-Готовый `akarus-0.1.0.jar` кладём в папку `mods` клиента с Fabric Loader 0.19.3 и Fabric API.
+Готовый jar кладём в папку `mods` клиента с Fabric Loader 0.19.3 и Fabric API.
 
 ## Требования
 
@@ -50,14 +46,55 @@ HUD в игре выглядит так:
 JDK 25: [Adoptium Temurin 25](https://adoptium.net/temurin/releases/?version=25).
 Первый запуск сборки скачивает Minecraft, маппинги и Fabric API — нужен интернет.
 
+## Модули
+
+| Модуль | Категория | Клавиша | Что делает |
+| --- | --- | --- | --- |
+| **HUD-инфо** | HUD | `H` | FPS, координаты, направление, пинг, водяной знак, список активных модулей |
+| **FreeCam** | Движение | `N` | Полёт сквозь блоки: игрок двигается по-настоящему, можно ломать и ставить с того места, где «камера» |
+| **AutoMine** | Прочее | `B` | Автоматическая добыча блоков через Baritone: настраивается **что** добывать и **сколько** |
+
+### FreeCam
+
+Это не классический «глаз отдельно от тела». Игрок получает `noPhysics` и режим полёта,
+то есть перемещается физически: можно подлететь к стене и ломать/ставить блоки именно там,
+куда смотришь.
+
+- **Скорость** (1–20) — скорость полёта;
+- **Ускорение на спринт** — при зажатом спринте скорость удваивается;
+- в одиночной игре состояние синхронизируется и с серверной копией игрока, поэтому рывков нет;
+- на сервере сервер может откатывать позицию — это нормально для клиентского ноклипа;
+- при выключении игрок аккуратно поднимается вверх, если застрял внутри блока.
+
+### AutoMine (Baritone)
+
+Для работы нужен установленный **Baritone** (Fabric, версия для Minecraft 26.2, например
+[baritone v1.19.0](https://github.com/cabaletta/baritone/releases) — файл `baritone-api-fabric-1.19.0.jar`
+или `baritone-standalone-fabric-1.19.0.jar`).
+
+Настройки модуля:
+
+- **Блок** — что добывать, например `diamond_ore`, `ancient_debris`, `oak_log`;
+- **Сколько** — сколько предметов получить (`0` — без ограничения);
+- **Командами чата** — использовать чат-команды Baritone (`#mine 16 diamond_ore`) вместо API.
+  Полезно, если API не ответил; при выключении модуля отправляется `#stop`.
+
+Интеграция сделана через reflection (`BaritoneAPI → getPrimaryBaritone → getMineProcess → mineByName`),
+поэтому Akarus собирается и работает **без** Baritone — просто AutoMine при включении скажет,
+что Baritone не найден, и выключится.
+
 ## Управление
 
 | Действие | Клавиша |
 | --- | --- |
 | Открыть меню клиента | **Правый Shift** |
-| Включить/выключить HUD-инфо | **H** |
+| HUD-инфо | **H** |
+| FreeCam | **N** |
+| AutoMine | **B** |
 | В меню: переключить модуль | ЛКМ по строке |
 | В меню: открыть настройки модуля | ПКМ по строке |
+| В меню: слайдер | тянуть ЛКМ |
+| В меню: текстовое поле | ЛКМ — фокус, печатать, Enter/ESC — снять фокус |
 | В меню: прокрутка списка | колесо мыши |
 | В меню: переместить окно | перетаскивание за шапку |
 
@@ -67,18 +104,19 @@ JDK 25: [Adoptium Temurin 25](https://adoptium.net/temurin/releases/?version=25)
 
 ```
 src/main/java/com/akarus/client/
-├── AkarusClient.java            — точка входа, регистрация всего, клавиша меню
-├── config/ConfigManager.java    — сохранение настроек в config/akarus.json
+├── AkarusClient.java             — точка входа, регистрация всего, клавиша меню
+├── baritone/BaritoneBridge.java  — мост к Baritone (reflection + чат-команды)
+├── config/ConfigManager.java     — сохранение настроек в config/akarus.json
 ├── gui/
-│   ├── ClickGuiScreen.java      — окно ClickGUI (категории, модули, настройки)
-│   └── hud/HudRenderer.java     — отрисовка HUD через Fabric HUD API
+│   ├── ClickGuiScreen.java       — окно ClickGUI (категории, модули, настройки)
+│   └── hud/HudRenderer.java      — отрисовка HUD через Fabric HUD API
 ├── module/
-│   ├── Module.java              — базовый класс модуля
-│   ├── ModuleCategory.java      — категории (вкладки) модулей
-│   ├── ModuleManager.java       — реестр модулей, обработка клавиш и тиков
-│   └── impl/HudInfoModule.java  — демонстрационный модуль HUD-инфо
-├── settings/                    — настройки модулей (пока булевы)
-└── util/RenderUtils.java        — скруглённые прямоугольники, градиенты, тумблеры
+│   ├── Module.java               — базовый класс модуля
+│   ├── ModuleCategory.java       — категории (вкладки) модулей
+│   ├── ModuleManager.java        — реестр модулей, обработка клавиш и тиков
+│   └── impl/                     — сами модули: HudInfo, FreeCam, AutoMine
+├── settings/                     — настройки: булевы (тумблер), числа (слайдер), строки (поле)
+└── util/RenderUtils.java         — скруглённые прямоугольники, тень, градиенты, волна
 ```
 
 ## Как добавить свой модуль
@@ -87,16 +125,21 @@ src/main/java/com/akarus/client/
 
 ```java
 public class ZoomModule extends Module {
-    private final BooleanSetting smooth = bool("smooth", "Плавное приближение", true);
+    private final IntSetting fov = intSetting("fov", "Сила приближения", 30, 5, 90);
+    private final StringSetting mode = textSetting("mode", "Режим", "smooth");
 
     public ZoomModule() {
-        super("zoom", "Зум", "Приближает обзор при зажатой клавише",
-                ModuleCategory.RENDER, GLFW.GLFW_KEY_Z);
+        super("zoom", "Зум", "Приближает обзор", ModuleCategory.RENDER, GLFW.GLFW_KEY_Z);
     }
 
     @Override
     public void tick() {
         // логика модуля, пока он включён
+    }
+
+    @Override
+    public void onSettingsChanged() {
+        // вызывается после изменения любой настройки в меню
     }
 }
 ```
@@ -105,6 +148,8 @@ public class ZoomModule extends Module {
 
 ```java
 register(new HudInfoModule());
+register(new FreeCamModule());
+register(new AutoMineModule());
 register(new ZoomModule());
 ```
 
@@ -112,18 +157,17 @@ register(new ZoomModule());
 
 ## Планы на ближайшие шаги
 
-- настройки-слайдеры (числа) и выбор из списка;
+- выбор блока для AutoMine списком (а не строкой) и подсказки при вводе;
 - перетаскивание и масштабирование элементов HUD мышью;
-- привязка клавиш прямо внутри ClickGUI;
-- перемещение элементов HUD мышью;
 - темы оформления и свои цвета акцента;
-- новые модули (рендер, движение, бой).
+- новые модули (рендер, бой).
 
 ## Полезные ссылки
 
 - [Fabric для Minecraft 26.2](https://fabricmc.net/2026/06/15/262.html) — что изменилось в API;
 - [Fabric Docs](https://docs.fabricmc.net/develop) — официальная документация;
-- [Пример мода от Fabric](https://github.com/FabricMC/fabric-example-mod) — основа `build.gradle`.
+- [Пример мода от Fabric](https://github.com/FabricMC/fabric-example-mod) — основа `build.gradle`;
+- [Baritone](https://github.com/cabaletta/baritone) — путь и автодобыча.
 
 ## Лицензия
 

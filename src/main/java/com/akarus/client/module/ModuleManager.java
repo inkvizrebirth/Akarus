@@ -2,6 +2,8 @@ package com.akarus.client.module;
 
 import com.akarus.client.AkarusClient;
 import com.akarus.client.config.ConfigManager;
+import com.akarus.client.module.impl.AutoMineModule;
+import com.akarus.client.module.impl.FreeCamModule;
 import com.akarus.client.module.impl.HudInfoModule;
 
 import java.util.ArrayList;
@@ -19,6 +21,8 @@ public final class ModuleManager {
 	/** Регистрация модулей. Новые модули добавляются здесь одной строкой. */
 	public static void init() {
 		register(new HudInfoModule());
+		register(new FreeCamModule());
+		register(new AutoMineModule());
 	}
 
 	public static void register(Module module) {
