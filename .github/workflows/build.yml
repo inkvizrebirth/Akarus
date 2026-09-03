@@ -37,16 +37,6 @@ jobs:
           path: build.log
           if-no-files-found: ignore
 
-      # Диагностика: что реально лежит внутри jar (миксины и refmap)
-      - name: Показать содержимое jar
-        run: |
-          JAR=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)
-          echo "JAR=$JAR"
-          echo "::notice::ALL=$(unzip -l "$JAR" | awk '{print $4}' | grep -v '^$' | tr '\n' ' ')"
-          echo "::notice::MIXINSJSON=$(unzip -p "$JAR" akarus.mixins.json 2>/dev/null | tr -d '\n')"
-          echo "::notice::MODJSON=$(unzip -p "$JAR" fabric.mod.json 2>/dev/null | tr -d '\n')"
-          unzip -l "$JAR" | grep -iE "refmap|mixin"
-
       - name: Collect jars
         run: |
           mkdir -p out

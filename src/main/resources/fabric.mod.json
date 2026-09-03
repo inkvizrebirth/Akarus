@@ -16,9 +16,6 @@
       "com.akarus.client.AkarusClient"
     ]
   },
-  "mixins": [
-    "akarus.mixins.json"
-  ],
   "depends": {
     "fabricloader": ">=0.19",
     "minecraft": "26.2",

@@ -6,6 +6,7 @@ import com.akarus.client.module.Module;
 import com.akarus.client.module.ModuleCategory;
 import com.akarus.client.module.ModuleManager;
 import com.akarus.client.settings.BooleanSetting;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -76,50 +77,41 @@ public class AutoWalkModule extends Module {
 
 	@Override
 	public void tick() {
-		Minecraft client = Minecraft.getInstance();
-		LocalPlayer player = client.player;
-		if (player == null) {
-			return;
-		}
-
-		// Ловим именно момент нажатия правой кнопки, а не её удержание
-		boolean useDown = client.options.keyUse.isDown();
-		boolean pressed = useDown && !useWasDown;
-		useWasDown = useDown;
-
-		if (phase == Phase.CHOOSING) {
-			if (pressed) {
-				startWalking(player.blockPosition());
-			}
-			return;
-		}
-
-		if (target == null) {
-			return;
-		}
-
-		// Передумали: ПКМ возвращает в режим полёта, чтобы выбрать другую точку
-		if (pressed) {
-			BaritoneBridge.stop();
-			target = null;
-			phase = Phase.CHOOSING;
-
-			FreeCamModule freeCam = ModuleManager.getModule(FreeCamModule.class);
-			if (!freeCam.isEnabled()) {
-				freeCam.setEnabled(true);
-			}
-			notify("§7[Akarus] Снова выбираю точку — §fПКМ§7, чтобы задать цель");
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player == null || target == null) {
 			return;
 		}
 
 		// Сами проверяем, дошёл ли игрок: Baritone может молчать о конце пути
 		double distance = player.position().distanceTo(Vec3.atCenterOf(target));
-		if (distance <= 1.5) {
-			if (autoDisable.isEnabled()) {
-				notify("§a[Akarus] Пришёл: §f" + format(target));
-				setEnabled(false);
-			}
+		if (distance <= 1.5 && autoDisable.isEnabled()) {
+			notify("§a[Akarus] Пришёл: §f" + format(target));
+			setEnabled(false);
 		}
+	}
+
+	/** Правая кнопка мыши в мире: ставим точку или отменяем маршрут. */
+	private void onRightClick() {
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player == null) {
+			return;
+		}
+
+		if (phase == Phase.CHOOSING) {
+			startWalking(player.blockPosition());
+			return;
+		}
+
+		// Передумали: ПКМ возвращает в режим полёта, чтобы выбрать другую точку
+		BaritoneBridge.stop();
+		target = null;
+		phase = Phase.CHOOSING;
+
+		FreeCamModule freeCam = ModuleManager.getModule(FreeCamModule.class);
+		if (!freeCam.isEnabled()) {
+			freeCam.setEnabled(true);
+		}
+		notify("§7[Akarus] Снова выбираю точку — §fПКМ§7, чтобы задать цель");
 	}
 
 	@Override
@@ -175,17 +167,44 @@ public class AutoWalkModule extends Module {
 	}
 
 	/**
-	 * true, пока ПКМ принадлежит модулю.
+	 * Вызывается в самом начале клиентского тика — раньше, чем игра сама
+	 * обработает правую кнопку мыши ({@code Minecraft#handleKeybinds()}).
 	 *
-	 * В этот момент миксин {@code MinecraftMixin} отменяет ванильное использование
-	 * предмета, чтобы правая кнопка не ставила блоки и не съедала еду.
+	 * Пока модуль включён, ПКМ принадлежит ему: мы запоминаем нажатие и тут же
+	 * гасим его для игры, поэтому блоки не ставятся, а предметы из руки не
+	 * используются. Левая кнопка (атака) не трогается.
 	 */
-	public static boolean isInterceptingUse() {
+	public static void handleInput(Minecraft client) {
+		AutoWalkModule module;
 		try {
-			// Модуль может быть ещё не зарегистрирован — тогда ПКМ не трогаем
-			return ModuleManager.getModule(AutoWalkModule.class).isEnabled();
+			module = ModuleManager.getModule(AutoWalkModule.class);
 		} catch (RuntimeException exception) {
-			return false;
+			// Модуль ещё не зарегистрирован — ПКМ не трогаем
+			return;
+		}
+
+		if (!module.isEnabled()) {
+			return;
+		}
+
+		// В меню и инвентаре правая кнопка мыши работает как обычно
+		if (client.player == null || client.mouseHandler == null
+				|| (client.gui != null && client.gui.screen() != null)) {
+			return;
+		}
+
+		// Физическое состояние кнопки: не зависит от того, что мы дальше погасим
+		boolean pressed = client.mouseHandler.isRightPressed();
+		if (pressed && !module.useWasDown) {
+			module.onRightClick();
+		}
+		module.useWasDown = pressed;
+
+		// Гасим ПКМ до того, как его увидит игра
+		KeyMapping use = client.options.keyUse;
+		use.setDown(false);
+		while (use.consumeClick()) {
+			// клик съеден, игра его не заметит
 		}
 	}
 

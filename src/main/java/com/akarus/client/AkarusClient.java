@@ -4,6 +4,7 @@ import com.akarus.client.config.ConfigManager;
 import com.akarus.client.gui.ClickGuiScreen;
 import com.akarus.client.gui.hud.HudRenderer;
 import com.akarus.client.module.ModuleManager;
+import com.akarus.client.module.impl.AutoWalkModule;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.ClientModInitializer;
@@ -47,6 +48,10 @@ public class AkarusClient implements ClientModInitializer {
 				InputConstants.Type.KEYSYM,
 				GLFW.GLFW_KEY_RIGHT_SHIFT,
 				KEY_CATEGORY));
+
+		// Перехват ПКМ делаем в начале тика: игра обрабатывает «использовать» позже,
+		// внутри того же тика, поэтому успеваем нажатие погасить
+		ClientTickEvents.START_CLIENT_TICK.register(AutoWalkModule::handleInput);
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (clickGuiKey.consumeClick()) {
