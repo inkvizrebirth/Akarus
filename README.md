@@ -20,9 +20,9 @@ HUD в игре выглядит так:
 ## Где взять готовый jar
 
 1. **GitHub Actions (рекомендуется, если локально нет JDK 25 или нет доступа к Gradle):**
-   готовый jar лежит в [Releases](https://github.com/inkvizrebirth/AIO-Client/releases) —
-   например [Akarus v0.3.0](https://github.com/inkvizrebirth/AIO-Client/releases/tag/v0.3.0),
-   файл `akarus-0.3.0.jar`.
+   готовый jar лежит в [Releases](https://github.com/inkvizrebirth/Akarus/releases) —
+   например [Akarus v0.3.1](https://github.com/inkvizrebirth/Akarus/releases/tag/v0.3.1),
+   файл `akarus-0.3.1.jar`.
    Либо: вкладка **Actions** → workflow **build** → **Run workflow** → после завершения
    скачать артефакт `akarus` из секции Artifacts (там же всегда лежит `akarus-build-log` с логом сборки).
 2. **Локально:**
