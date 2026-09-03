@@ -5,8 +5,14 @@ import com.akarus.client.config.ConfigManager;
 import com.akarus.client.module.impl.AutoMineModule;
 import com.akarus.client.module.impl.AutoWalkModule;
 import com.akarus.client.module.impl.FreeCamModule;
+import com.akarus.client.module.impl.FreeLookModule;
 import com.akarus.client.module.impl.HandShaderModule;
 import com.akarus.client.module.impl.HudInfoModule;
+import com.akarus.client.module.impl.KillAuraModule;
+import com.akarus.client.module.impl.NoBlindModule;
+import com.akarus.client.module.impl.NoFallDamageModule;
+import com.akarus.client.module.impl.NoFovModule;
+import com.akarus.client.module.impl.SprintModule;
 import com.akarus.client.module.impl.ViewModelModule;
 
 import java.util.ArrayList;
@@ -25,8 +31,14 @@ public final class ModuleManager {
 	public static void init() {
 		register(new HudInfoModule());
 		register(new FreeCamModule());
+		register(new FreeLookModule());
 		register(new AutoMineModule());
 		register(new AutoWalkModule());
+		register(new KillAuraModule());
+		register(new SprintModule());
+		register(new NoFovModule());
+		register(new NoBlindModule());
+		register(new NoFallDamageModule());
 		register(new HandShaderModule());
 		register(new ViewModelModule());
 	}

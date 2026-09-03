@@ -6,6 +6,7 @@ import com.akarus.client.module.ModuleCategory;
 import com.akarus.client.module.ModuleManager;
 import com.akarus.client.module.impl.AutoWalkModule;
 import com.akarus.client.module.impl.FreeCamModule;
+import com.akarus.client.module.impl.FreeLookModule;
 import com.akarus.client.module.impl.HudInfoModule;
 import com.akarus.client.util.RenderUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -75,8 +76,10 @@ public final class HudRenderer {
 			return;
 		}
 
-		AutoWalkModule autoWalk = ModuleManager.getModule(AutoWalkModule.class);
-		if (!autoWalk.isEnabled()) {
+		// find, а не getModule: HUD рисуется каждый кадр, и исключение из-за
+		// незарегистрированного модуля уронило бы рендер
+		AutoWalkModule autoWalk = ModuleManager.find(AutoWalkModule.class);
+		if (autoWalk == null || !autoWalk.isEnabled()) {
 			return;
 		}
 
@@ -133,7 +136,8 @@ public final class HudRenderer {
 	 * Компактная плашка свободной камеры: где летим и как далеко от игрока.
 	 *
 	 * Пока AutoWalk включён, координаты показывает его панель — дублировать их
-	 * двумя плашками незачем.
+	 * двумя плашками незачем. FreeLook показывает свою короткую подсказку, когда
+	 * FreeCam не активен.
 	 */
 	private static void renderFreeCam(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
 		Minecraft client = Minecraft.getInstance();
@@ -141,24 +145,39 @@ public final class HudRenderer {
 			return;
 		}
 
-		FreeCamModule freeCam = ModuleManager.find(FreeCamModule.class);
-		if (freeCam == null || !freeCam.isEnabled() || !freeCam.showsHudInfo()) {
-			return;
-		}
-
 		AutoWalkModule autoWalk = ModuleManager.find(AutoWalkModule.class);
-		if (autoWalk != null && autoWalk.isEnabled()) {
+		boolean autoWalkBusy = autoWalk != null && autoWalk.isEnabled();
+
+		FreeCamModule freeCam = ModuleManager.find(FreeCamModule.class);
+		if (freeCam != null && freeCam.isEnabled() && freeCam.showsHudInfo() && !autoWalkBusy) {
+			Vec3 position = freeCam.position();
+			BlockPos block = BlockPos.containing(position);
+			String title = "FreeCam " + block.getX() + " " + block.getY() + " " + block.getZ();
+			String hint = "Игрок в " + String.format(java.util.Locale.ROOT, "%.1f", freeCam.distanceToPlayer()) + " м   •   N — выключить";
+
+			Font font = client.font;
+			int screenWidth = client.getWindow().getGuiScaledWidth();
+			int x = (screenWidth - font.width(title)) / 2;
+			int y = client.getWindow().getGuiScaledHeight() - 58;
+
+			int accent = ModuleCategory.MOVEMENT.getAccent();
+
+			graphics.text(font, title, x, y, TEXT_COLOR, true);
+			graphics.text(font, hint, x, y + font.lineHeight + 1, RenderUtils.withAlpha(accent, 0.9f), true);
 			return;
 		}
 
-		Vec3 position = freeCam.position();
-		BlockPos block = BlockPos.containing(position);
-		String title = "FreeCam " + block.getX() + " " + block.getY() + " " + block.getZ();
-		String hint = "Игрок в " + String.format(java.util.Locale.ROOT, "%.1f", freeCam.distanceToPlayer()) + " м   •   N — выключить";
+		FreeLookModule freeLook = ModuleManager.find(FreeLookModule.class);
+		if (freeLook == null || !freeLook.isEnabled() || autoWalkBusy) {
+			return;
+		}
 
+		// FreeLook: камера крутится мышью, игрок всегда в центре и играет как обычно
 		Font font = client.font;
+		String title = "FreeLook";
+		String hint = "Игрок в центре   •   выключить — " + freeLook.getBindLabel();
 		int screenWidth = client.getWindow().getGuiScaledWidth();
-		int x = (screenWidth - font.width(title)) / 2;
+		int x = (screenWidth - Math.max(font.width(title), font.width(hint))) / 2;
 		int y = client.getWindow().getGuiScaledHeight() - 58;
 
 		int accent = ModuleCategory.MOVEMENT.getAccent();
@@ -176,8 +195,8 @@ public final class HudRenderer {
 			return;
 		}
 
-		HudInfoModule hud = ModuleManager.getModule(HudInfoModule.class);
-		if (!hud.isEnabled()) {
+		HudInfoModule hud = ModuleManager.find(HudInfoModule.class);
+		if (hud == null || !hud.isEnabled()) {
 			return;
 		}
 

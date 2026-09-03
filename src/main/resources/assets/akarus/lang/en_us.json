@@ -3,8 +3,14 @@
   "key.akarus.gui": "Open client menu",
   "key.akarus.hud_info": "Module: HUD info",
   "key.akarus.free_cam": "Module: FreeCam",
+  "key.akarus.free_look": "Module: FreeLook",
   "key.akarus.auto_mine": "Module: AutoMine",
   "key.akarus.auto_walk": "Module: AutoWalk",
+  "key.akarus.kill_aura": "Module: KillAura",
+  "key.akarus.sprint": "Module: Sprint",
+  "key.akarus.no_fov": "Module: NoFOV",
+  "key.akarus.no_blind": "Module: NoBlind",
+  "key.akarus.no_fall_damage": "Module: NoFallDamage",
   "key.akarus.hand_shader": "Module: Hand outline",
   "key.akarus.view_model": "Module: ViewModel"
 }

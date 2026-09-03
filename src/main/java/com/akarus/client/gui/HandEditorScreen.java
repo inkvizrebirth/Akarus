@@ -148,6 +148,12 @@ public class HandEditorScreen extends Screen {
 
 		int rowY = buttonY + BUTTON_HEIGHT + PADDING;
 		ViewModelProfile profile = currentProfile();
+		if (profile == null) {
+			// Модуль ViewModel не зарегистрирован (инициализация не прошла) — рисуем
+			// значения по умолчанию, иначе первый же кадр редактора падал с NPE,
+			// так и не успев показать сообщение об ошибке ниже
+			profile = ViewModelProfile.createDefault();
+		}
 		for (Parameter parameter : Parameter.values()) {
 			boolean isSelected = parameter == this.selected;
 			boolean hovered = isInside(mouseX, mouseY, x + 4, rowY, PANEL_WIDTH - 8, ROW_HEIGHT - 2);

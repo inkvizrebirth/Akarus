@@ -78,10 +78,17 @@ public final class BaritoneBridge {
 	 * @param block    что добывать, например {@code diamond_ore}
 	 * @param quantity сколько предметов получить (0 — без ограничения)
 	 * @param forceChat true — сразу использовать чат-команды, минуя API
+	 * @param legit    true — легитная добыча: команда {@code #legitmine} (Baritone копает
+	 *                 «как игрок»), а мгновенные довороты к блокам очеловечивает
+	 *                 RotationHumanizer через EntityMixin
 	 */
-	public static boolean mine(String block, int quantity, boolean forceChat) {
+	public static boolean mine(String block, int quantity, boolean forceChat, boolean legit) {
 		if (!isAvailable()) {
 			return false;
+		}
+		if (legit) {
+			// Синтаксис Baritone: #legitmine [количество] <блоки...>
+			return sendChat("#legitmine " + quantity + " " + block);
 		}
 		if (!forceChat && mineViaApi(block, quantity)) {
 			return true;
@@ -427,7 +434,7 @@ public final class BaritoneBridge {
 
 	private static void notify(String message) {
 		Minecraft client = Minecraft.getInstance();
-		if (client.gui == null) {
+		if (client == null || client.gui == null) {
 			return;
 		}
 		client.gui.hud.getChat().addClientSystemMessage(Component.literal(message));

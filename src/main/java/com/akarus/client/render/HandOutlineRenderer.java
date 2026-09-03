@@ -271,6 +271,11 @@ public final class HandOutlineRenderer {
 	private static void applyScreenOffset(PoseStack poseStack, float screenXPx, float screenYPx, float unitsPerPixel) {
 		Matrix4f matrix = poseStack.last().pose();
 		SCRATCH_INVERSE.set(matrix);
+		// Вырожденную матрицу JOML инвертирует исключением, а исключение в рендере
+		// роняет игру — такую копию просто рисуем без сдвига
+		if (Math.abs(SCRATCH_INVERSE.determinant()) < 1.0e-12f) {
+			return;
+		}
 		SCRATCH_INVERSE.invert();
 		SCRATCH_INVERSE.transformDirection(screenXPx * unitsPerPixel, screenYPx * unitsPerPixel, -DEPTH_BIAS, SCRATCH_OFFSET);
 		poseStack.translate(SCRATCH_OFFSET.x, SCRATCH_OFFSET.y, SCRATCH_OFFSET.z);
@@ -315,6 +320,11 @@ public final class HandOutlineRenderer {
 		@Override
 		public void render(PoseStack.Pose pose, VertexConsumer buffer) {
 			Matrix4f inverse = new Matrix4f(pose.pose());
+			// См. applyScreenOffset: вырожденная матрица здесь — пропускаем обводку,
+			// а не роняем кадр исключением из JOML
+			if (Math.abs(inverse.determinant()) < 1.0e-12f) {
+				return;
+			}
 			inverse.invert();
 
 			if (spec.glow()) {

@@ -1,6 +1,7 @@
 package com.akarus.client.mixin;
 
 import com.akarus.client.module.impl.FreeCamModule;
+import com.akarus.client.module.impl.KillAuraModule;
 import net.minecraft.client.player.KeyboardInput;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.entity.player.Input;
@@ -42,6 +43,14 @@ public abstract class KeyboardInputMixin {
 		if (FreeCamModule.freezesInput()) {
 			this.keyPresses = Input.EMPTY;
 			this.moveVector = Vec2.ZERO;
+			return;
+		}
+
+		// «Свободная» коррекция движений киллауры: ввод разворачивается так,
+		// будто камера не наводилась аурой — W ведёт игрока по его взгляду
+		Vec2 corrected = KillAuraModule.correctedMovement(this.moveVector);
+		if (corrected != null) {
+			this.moveVector = corrected;
 		}
 	}
 }
