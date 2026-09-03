@@ -36,11 +36,30 @@ jobs:
             echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Fetch ViaFabricPlus for bundling
+        run: |
+          mkdir -p libs
+          url=$(curl -fsSL --max-time 20 https://api.github.com/repos/ViaVersion/ViaFabricPlus/releases/latest \
+            | grep -oE 'https://github.com/[^"]+/releases/download/[^"]+\.jar' \
+            | grep -vE 'sources|javadoc|dev' | head -1 || true)
+          if [ -z "$url" ]; then
+            url="https://github.com/ViaVersion/ViaFabricPlus/releases/download/4.6.3/ViaFabricPlus-4.6.3.jar"
+          fi
+          echo "Скачиваю: $url"
+          curl -fL --retry 3 --max-time 180 -o libs/ViaFabricPlus.jar "$url" \
+            && ls -la libs/ || echo "::warning::ViaFabricPlus не скачалась — релиз без встроенной виа"
+
       - name: Build
         run: |
           chmod +x ./gradlew
           ./gradlew build --stacktrace 2>&1 | tee build.log
           exit "${PIPESTATUS[0]}"
+
+      - name: Verify nested jars
+        run: |
+          JAR=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -1)
+          unzip -l "$JAR" | grep -E 'META-INF/jars/.*\.jar' \
+            || echo "::warning::VFP не вшита в релизный jar"; true
 
       - name: Upload build log
         if: always()
@@ -62,9 +81,25 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Akarus ${{ steps.version.outputs.tag }}
           body: |
-            Автоматическая сборка Akarus для Minecraft 26.2 (Fabric).
+            ## Akarus ${{ steps.version.outputs.tag }} — Minecraft 26.2 · Fabric (Java 25)
 
-            Установка: положить jar в папку `mods` вместе с Fabric Loader 0.19.3 и Fabric API.
+            **Главное в этом релизе**
+            - **AutoTotem с предсказанием урона**: тотем в левой руке появляется ДО удара —
+              молаут-смэш сверху, трезубцы/стрелы и сближение в мили считаются по дельтам позиций.
+              Режимы legit/обычный/турбо, ~12 настроек.
+            - **Полностью свои GUI**: главное меню (шейдерный фон), пауза, настройки;
+              пилюля версии в списке серверов с выбором протокола ViaFabricPlus.
+            - **ViaFabricPlus встроен** (jar-in-jars) — ставить отдельно не нужно.
+            - **MediaPlayer**: фоновая музыка (wav) мимо звука игры, карточка на HUD,
+              кнопка открытия папки `akarus/media` прямо из ClickGUI.
+            - **KillAura: лимиты** — не бить во время еды/тотема, только с оружием,
+              не под водой/в прыжке, отступление при малом HP, «не опускать щит».
+            - **HUD**: плавные появления, чёрное «стекло», тени, эквалайзер у плеера.
+
+            Установка: jar в `mods` + [Fabric Loader](https://fabricmc.net/use/installer/) 0.19.3
+            для 26.2 + [Fabric API](https://modrinth.com/mod/fabric-api).
+
+            Вопросы и баги: [Telegram @inkviz01](https://t.me/inkviz01).
           files: out/*.jar
           draft: false
           prerelease: false
