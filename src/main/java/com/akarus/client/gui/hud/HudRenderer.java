@@ -2,7 +2,9 @@ package com.akarus.client.gui.hud;
 
 import com.akarus.client.AkarusClient;
 import com.akarus.client.module.Module;
+import com.akarus.client.module.ModuleCategory;
 import com.akarus.client.module.ModuleManager;
+import com.akarus.client.module.impl.AutoWalkModule;
 import com.akarus.client.module.impl.HudInfoModule;
 import com.akarus.client.util.RenderUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -44,6 +46,66 @@ public final class HudRenderer {
 		HudElementRegistry.addLast(
 				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "overlay"),
 				HudRenderer::render);
+
+		// Координаты AutoWalk рисуются отдельным элементом: они нужны
+		// и тогда, когда сам HUD-инфо выключен
+		HudElementRegistry.addLast(
+				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "auto_walk"),
+				HudRenderer::renderAutoWalk);
+	}
+
+	/**
+	 * Панель AutoWalk внизу по центру экрана.
+	 *
+	 * Пока игрок летает фрикамом — это его текущие координаты;
+	 * как только цель задана — координаты цели и оставшееся расстояние.
+	 */
+	private static void renderAutoWalk(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+		Minecraft client = Minecraft.getInstance();
+		LocalPlayer player = client.player;
+
+		if (player == null || client.level == null || client.gui.screen() != null || client.gui.hud.isHidden()) {
+			return;
+		}
+
+		AutoWalkModule autoWalk = ModuleManager.getModule(AutoWalkModule.class);
+		if (!autoWalk.isEnabled()) {
+			return;
+		}
+
+		Font font = client.font;
+		boolean walking = autoWalk.isWalking();
+		BlockPos position = walking && autoWalk.getTarget() != null ? autoWalk.getTarget() : player.blockPosition();
+
+		String title = (walking ? "Цель: " : "FreeCam: ") + AutoWalkModule.format(position);
+		String hint = walking
+				? "Осталось " + Math.round(autoWalk.getDistance()) + " м   •   ПКМ — выбрать другую точку"
+				: "ПКМ — Baritone пойдёт сюда";
+
+		int screenWidth = client.getWindow().getGuiScaledWidth();
+		int screenHeight = client.getWindow().getGuiScaledHeight();
+
+		int width = Math.max(font.width(title), font.width(hint)) + PADDING * 2 + 3;
+		int height = font.lineHeight * 2 + LINE_GAP + PADDING * 2 + 2;
+		int x = (screenWidth - width) / 2;
+		int y = screenHeight - height - 46;
+
+		int accent = ModuleCategory.MOVEMENT.getAccent();
+
+		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 5, 4);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 5, PANEL_BORDER, PANEL_BACKGROUND);
+
+		// Акцентная полоса сверху панели и «дышащая» точка рядом с заголовком
+		graphics.fill(x + 7, y, x + width - 7, y + 1, RenderUtils.withAlpha(accent, 0.9f));
+
+		graphics.text(font, title, x + PADDING + 3, y + PADDING + 1, TEXT_COLOR, true);
+		graphics.text(font, hint, x + PADDING + 3, y + PADDING + font.lineHeight + LINE_GAP + 1, 0xFFA6A6B2, true);
+
+		long time = Util.getMillis();
+		float pulse = 0.55f + 0.45f * (float) Math.sin(time / 320.0);
+		int dotX = x + width - PADDING - 3;
+		int dotY = y + PADDING + (font.lineHeight - 4) / 2;
+		graphics.fill(dotX, dotY, dotX + 4, dotY + 4, RenderUtils.withAlpha(accent, pulse));
 	}
 
 	private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {

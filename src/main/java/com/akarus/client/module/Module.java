@@ -9,6 +9,7 @@ import com.akarus.client.settings.StringSetting;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,9 @@ public abstract class Module {
 	private final KeyMapping keyMapping;
 	private final List<Setting<?>> settings = new ArrayList<>();
 
+	/** Текущий бинд модуля. Меняется прямо из ClickGUI. */
+	private InputConstants.Key bind;
+
 	private boolean enabled;
 
 	protected Module(String id, String name, String description, ModuleCategory category, int defaultKey) {
@@ -39,11 +43,55 @@ public abstract class Module {
 		this.category = category;
 
 		// Регистрируем клавишу модуля в ванильных настройках управления
+		this.bind = InputConstants.Type.KEYSYM.getOrCreate(defaultKey);
 		this.keyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key." + AkarusClient.MOD_ID + "." + id,
 				InputConstants.Type.KEYSYM,
 				defaultKey,
 				AkarusClient.KEY_CATEGORY));
+	}
+
+	// ------------------------------------------------------------------
+	// Бинд
+	// ------------------------------------------------------------------
+
+	/** Клавиша (или кнопка мыши), на которую сейчас повешен модуль. */
+	public InputConstants.Key getBind() {
+		return bind;
+	}
+
+	/**
+	 * Назначает модулю новую клавишу.
+	 *
+	 * Помимо нашего поля обновляется и ванильная таблица биндов, иначе игра
+	 * продолжала бы реагировать на старую клавишу.
+	 */
+	public void setBind(InputConstants.Key key) {
+		this.bind = key == null ? InputConstants.UNKNOWN : key;
+		this.keyMapping.setKey(this.bind);
+		// setKey() сам не перестраивает внутреннюю таблицу соответствий — делаем это вручную
+		KeyMapping.resetMapping();
+	}
+
+	/** Имя бинда в том виде, в котором он хранится в конфиге. */
+	public String getBindName() {
+		return bind.getName();
+	}
+
+	public void setBindByName(String name) {
+		InputConstants.Key key = InputConstants.getKey(name);
+		if (key != InputConstants.UNKNOWN) {
+			setBind(key);
+		}
+	}
+
+	/** Человекочитаемое название клавиши для меню. */
+	public String getBindLabel() {
+		if (bind == InputConstants.UNKNOWN) {
+			return "—";
+		}
+		Component label = bind.getDisplayName();
+		return label == null ? "—" : label.getString();
 	}
 
 	/** Включает модуль, если он выключен — и наоборот. */

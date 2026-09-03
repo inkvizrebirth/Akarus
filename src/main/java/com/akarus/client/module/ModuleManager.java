@@ -3,6 +3,7 @@ package com.akarus.client.module;
 import com.akarus.client.AkarusClient;
 import com.akarus.client.config.ConfigManager;
 import com.akarus.client.module.impl.AutoMineModule;
+import com.akarus.client.module.impl.AutoWalkModule;
 import com.akarus.client.module.impl.FreeCamModule;
 import com.akarus.client.module.impl.HudInfoModule;
 
@@ -23,6 +24,7 @@ public final class ModuleManager {
 		register(new HudInfoModule());
 		register(new FreeCamModule());
 		register(new AutoMineModule());
+		register(new AutoWalkModule());
 	}
 
 	public static void register(Module module) {

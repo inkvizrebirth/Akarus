@@ -3,5 +3,6 @@
   "key.akarus.gui": "Open client menu",
   "key.akarus.hud_info": "Module: HUD info",
   "key.akarus.free_cam": "Module: FreeCam",
-  "key.akarus.auto_mine": "Module: AutoMine"
+  "key.akarus.auto_mine": "Module: AutoMine",
+  "key.akarus.auto_walk": "Module: AutoWalk"
 }

@@ -15,6 +15,7 @@ import java.lang.reflect.Method;
  *
  * <pre>
  * BaritoneAPI.getProvider().getPrimaryBaritone().getMineProcess().mineByName(quantity, blocks)
+ * BaritoneAPI.getProvider().getPrimaryBaritone().getCustomGoalProcess().setGoal(new GoalBlock(x, y, z)) + path()
  * BaritoneAPI.getProvider().getPrimaryBaritone().getPathingBehavior().cancelEverything()
  * </pre>
  *
@@ -50,6 +51,21 @@ public final class BaritoneBridge {
 		return mineViaChat(block, quantity);
 	}
 
+	/**
+	 * Задаёт точку назначения и запускает путь к ней.
+	 *
+	 * @param forceChat true — сразу использовать чат-команду, минуя API
+	 */
+	public static boolean goal(int x, int y, int z, boolean forceChat) {
+		if (!isAvailable()) {
+			return false;
+		}
+		if (!forceChat && goalViaApi(x, y, z)) {
+			return true;
+		}
+		return goalViaChat(x, y, z);
+	}
+
 	/** Останавливает всё, что сейчас делает Baritone. */
 	public static boolean stop() {
 		if (!isAvailable()) {
@@ -73,6 +89,44 @@ public final class BaritoneBridge {
 			return true;
 		} catch (ReflectiveOperationException | RuntimeException exception) {
 			AkarusClient.LOGGER.warn("Не удалось вызвать Baritone API, пробую чат-команду", exception);
+			return false;
+		}
+	}
+
+	private static boolean goalViaApi(int x, int y, int z) {
+		try {
+			Object baritone = getPrimaryBaritone();
+			if (baritone == null) {
+				return false;
+			}
+
+			Object process = baritone.getClass().getMethod("getCustomGoalProcess").invoke(baritone);
+
+			// GoalBlock(int x, int y, int z) — цель в виде конкретного блока
+			Class<?> goalBlockClass = Class.forName("baritone.api.pathing.goals.GoalBlock");
+			Object goal = goalBlockClass.getConstructor(int.class, int.class, int.class).newInstance(x, y, z);
+
+			Class<?> goalClass = Class.forName("baritone.api.pathing.goals.Goal");
+			process.getClass().getMethod("setGoal", goalClass).invoke(process, goal);
+			process.getClass().getMethod("path").invoke(process);
+			return true;
+		} catch (ReflectiveOperationException | RuntimeException exception) {
+			AkarusClient.LOGGER.warn("Не удалось задать цель через Baritone API, пробую чат-команду", exception);
+			return false;
+		}
+	}
+
+	/** Идёт ли Baritone прямо сейчас (для статуса в HUD). */
+	public static boolean isPathing() {
+		try {
+			Object baritone = getPrimaryBaritone();
+			if (baritone == null) {
+				return false;
+			}
+			Object pathing = baritone.getClass().getMethod("getPathingBehavior").invoke(baritone);
+			Object result = pathing.getClass().getMethod("isPathing").invoke(pathing);
+			return Boolean.TRUE.equals(result);
+		} catch (ReflectiveOperationException | RuntimeException exception) {
 			return false;
 		}
 	}
@@ -110,6 +164,11 @@ public final class BaritoneBridge {
 	private static boolean mineViaChat(String block, int quantity) {
 		// Синтаксис Baritone: mine [количество] <блоки...>
 		return sendChat("#mine " + quantity + " " + block);
+	}
+
+	private static boolean goalViaChat(int x, int y, int z) {
+		// Синтаксис Baritone: goal <x> <y> <z>
+		return sendChat("#goal " + x + " " + y + " " + z);
 	}
 
 	private static boolean stopViaChat() {

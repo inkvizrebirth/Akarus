@@ -135,9 +135,21 @@ SHADOW_LAYERS = 5
 CATEGORIES = [
     ("HUD", 0xFF5CE1E6, False),
     ("Рендер", 0xFF8A6CFF, False),
-    ("Движение", 0xFFFFB86C, False),
+    ("Движение", 0xFFFFB86C, True),
     ("Бой", 0xFFFF5C7A, False),
-    ("Прочее", 0xFF8DE06C, True),
+    ("Прочее", 0xFF8DE06C, False),
+]
+
+# Модули вкладки «Движение»: имя, описание, включён, бинд, раскрыт
+MOVEMENT_MODULES = [
+    ("FreeCam", "Полёт сквозь блоки: игрок двигается по-настоящему", True, "N", True),
+    ("AutoWalk", "Летишь фрикамом, ПКМ — Baritone идёт на координаты", True, "G", False),
+]
+
+# Настройки FreeCam: слайдер и переключатель
+FREECAM_SETTINGS = [
+    ("slider", "Скорость", 6, 1, 20),
+    ("toggle", "Ускорение на спринт", True, 0, 0),
 ]
 
 # Настройки AutoMine: текстовое поле, слайдер и переключатель
@@ -178,12 +190,15 @@ def draw_ripple(canvas, cx, cy, radius, accent, fade):
     canvas.circle(cx, cy, radius * 0.6, with_alpha(accent, 0.16 * fade))
 
 
-def draw_module_row(canvas, x, y, w, name, description, enabled, accent, toggle, expanded):
+def draw_module_row(canvas, x, y, w, name, description, enabled, accent, toggle, expanded, bind=None):
     background = mix(argb(ROW_BACKGROUND), with_alpha(accent, 0.45), toggle * 0.45)
     border = mix(argb(ROW_BORDER), argb(accent), toggle * 0.55)
     canvas.rrect(x, y, w, MODULE_ROW_HEIGHT, 6, border)
     canvas.rrect(x + 1, y + 1, w - 2, MODULE_ROW_HEIGHT - 2, 5, background)
     canvas.text(x + 9, y + 4, name, argb(TEXT_PRIMARY if enabled else TEXT_SECONDARY))
+    if bind:
+        # Бинд модуля — серым рядом с названием
+        canvas.text(x + 9 + canvas.text_width(name) + 6, y + 5, bind, argb(TEXT_DIM))
     canvas.text(x + 9, y + 17, description, argb(TEXT_DIM))
     draw_toggle(canvas, x + w - 30 - 9, y + (MODULE_ROW_HEIGHT - 12) // 2, 30, 12, toggle, accent)
     if expanded:
@@ -208,7 +223,7 @@ def draw_text_row(canvas, x, y, w, name, value, accent):
     canvas.rect(x + 9 + canvas.text_width(value) + 1, text_y - 1, 1, LINE_HEIGHT - 1, argb(accent))
 
 
-def draw_slider_row(canvas, x, y, w, name, value, value_max, accent):
+def draw_slider_row(canvas, x, y, w, name, value, value_max, accent, value_min=0):
     """Слайдер числовой настройки."""
     canvas.rrect(x, y, w, SLIDER_ROW_HEIGHT - 2, 4, argb(0x10FFFFFF))
     canvas.rrect(x + 1, y + 1, w - 2, SLIDER_ROW_HEIGHT - 4, 3, mix(argb(0x80000000), argb(0x14FFFFFF), 0.6))
@@ -219,9 +234,10 @@ def draw_slider_row(canvas, x, y, w, name, value, value_max, accent):
     track_x = x + 9
     track_y = y + SLIDER_ROW_HEIGHT - 10
     track_w = w - 18
+    progress = 0.0 if value_max <= value_min else (value - value_min) / (value_max - value_min)
     canvas.rrect(track_x, track_y, track_w, 3, 1, argb(0x26FFFFFF))
-    canvas.rrect(track_x, track_y, max(2, track_w // 4), 3, 1, argb(accent))
-    canvas.rrect(track_x + track_w // 4 - 3, track_y - 2, 6, 7, 3, argb(0xFFF2F2F7))
+    canvas.rrect(track_x, track_y, max(2, int(track_w * progress)), 3, 1, argb(accent))
+    canvas.rrect(track_x + int((track_w - 6) * progress), track_y - 2, 6, 7, 3, argb(0xFFF2F2F7))
 
 
 def render_clickgui(path):
@@ -259,7 +275,7 @@ def render_clickgui(path):
     canvas.vgradient(x + 1, y + HEADER_HEIGHT - 2, GUI_WIDTH - 2, 2, with_alpha(accent, 0.10), with_alpha(accent, 0.85))
 
     canvas.text(x + PADDING, y + 12, "Akarus", argb(TEXT_PRIMARY))
-    canvas.text(x + PADDING + canvas.text_width("Akarus") + 5, y + 13, "v0.1.0", argb(TEXT_DIM))
+    canvas.text(x + PADDING + canvas.text_width("Akarus") + 5, y + 13, "v0.3.0", argb(TEXT_DIM))
     hint = "ESC — закрыть"
     canvas.text(x + GUI_WIDTH - PADDING - canvas.text_width(hint) - 3, y + 12, hint, argb(TEXT_DIM))
 
@@ -281,23 +297,24 @@ def render_clickgui(path):
     list_h = GUI_HEIGHT - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT
     canvas.rrect(list_x, list_y, list_w, list_h, 6, argb(LIST_BACKGROUND))
 
-    draw_module_row(canvas, list_x, list_y, list_w, "AutoMine",
-                    "Автоматическая добыча блоков через Baritone", True, accent, 1.0, True)
+    row_y = list_y
+    for name, description, enabled, bind, expanded in MOVEMENT_MODULES:
+        draw_module_row(canvas, list_x, row_y, list_w, name, description, enabled, accent,
+                        1.0 if enabled else 0.0, expanded, bind)
+        row_y += MODULE_ROW_HEIGHT
+
+        if expanded:
+            for kind, setting_name, value, value_min, value_max in FREECAM_SETTINGS:
+                if kind == "slider":
+                    draw_slider_row(canvas, list_x + 10, row_y, list_w - 20, setting_name,
+                                    value, value_max, accent, value_min)
+                    row_y += SLIDER_ROW_HEIGHT
+                else:
+                    draw_setting_row(canvas, list_x + 10, row_y, list_w - 20, setting_name, value, accent)
+                    row_y += SETTING_ROW_HEIGHT
 
     # Волна по клику — как будто только что нажали на строку модуля
     draw_ripple(canvas, list_x + 120, list_y + 17, 46, accent, 0.75)
-
-    settings_y = list_y + MODULE_ROW_HEIGHT
-    for kind, name, value in AUTOMINE_SETTINGS:
-        if kind == "text":
-            draw_text_row(canvas, list_x + 10, settings_y, list_w - 20, name, value, accent)
-            settings_y += TEXT_ROW_HEIGHT
-        elif kind == "slider":
-            draw_slider_row(canvas, list_x + 10, settings_y, list_w - 20, name, value, 512, accent)
-            settings_y += SLIDER_ROW_HEIGHT
-        else:
-            draw_setting_row(canvas, list_x + 10, settings_y, list_w - 20, name, value, accent)
-            settings_y += SETTING_ROW_HEIGHT
 
     # Полоса прокрутки
     canvas.rrect(list_x + list_w - 5, list_y + 3, 3, list_h - 6, 1, argb(0x1AFFFFFF))
@@ -305,7 +322,7 @@ def render_clickgui(path):
 
     # Подсказка внизу
     canvas.text(x + PADDING, y + GUI_HEIGHT - PADDING - LINE_HEIGHT + 1,
-                "ЛКМ — включить модуль   •   ПКМ — настройки   •   колесо — прокрутка", argb(TEXT_DIM))
+                "ЛКМ — вкл/выкл   •   ПКМ — настройки   •   СКМ — бинд   •   колесо — прокрутка", argb(TEXT_DIM))
 
     canvas.save(path)
 
@@ -324,7 +341,7 @@ def render_hud(path):
 
     # Водяной знак: радуга по символам
     cursor = x
-    for index, symbol in enumerate("Akarus 0.1.0"):
+    for index, symbol in enumerate("Akarus 0.3.0"):
         canvas.text(cursor, y, symbol, hsb(index * 0.035, 0.75, 1.0))
         cursor += canvas.text_width(symbol)
     y += LINE_HEIGHT + 5
@@ -344,9 +361,26 @@ def render_hud(path):
     y += height + 5
 
     # Список активных модулей
-    for index, module_name in enumerate(["AutoMine", "FreeCam"]):
+    for index, module_name in enumerate(["AutoWalk", "FreeCam"]):
         canvas.text(x, y, module_name, hsb(index * 0.08, 0.75, 1.0))
         y += LINE_HEIGHT + 2
+
+    # Панель AutoWalk внизу по центру: координаты фрикама
+    accent = 0xFFFFB86C
+    title = "FreeCam: 128 64 -255"
+    hint = "ПКМ — Baritone пойдёт сюда"
+    panel_w = max(canvas.text_width(title), canvas.text_width(hint)) + 15
+    panel_h = LINE_HEIGHT * 2 + 2 + 12
+    panel_x = (560 - panel_w) // 2
+    panel_y = 220 - panel_h - 24
+
+    canvas.rrect(panel_x, panel_y, panel_w, panel_h, 5, argb(0x2AFFFFFF))
+    canvas.rrect(panel_x + 1, panel_y + 1, panel_w - 2, panel_h - 2, 4, argb(0xB80A0A0D))
+    canvas.rect(panel_x + 7, panel_y, panel_w - 14, 1, with_alpha(accent, 0.9))
+    canvas.text(panel_x + 9, panel_y + 7, title, argb(0xFFEDEDF5))
+    canvas.text(panel_x + 9, panel_y + 7 + LINE_HEIGHT + 2, hint, argb(0xFFA6A6B2))
+    # «Дышащая» точка справа
+    canvas.rect(panel_x + panel_w - 12, panel_y + 10, 4, 4, with_alpha(accent, 0.9))
 
     canvas.save(path)
 

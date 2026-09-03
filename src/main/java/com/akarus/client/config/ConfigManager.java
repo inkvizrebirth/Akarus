@@ -26,7 +26,7 @@ import java.nio.file.Path;
  * <pre>
  * {
  *   "modules": {
- *     "hud_info": { "enabled": true, "settings": { "fps": true, "ping": false } }
+ *     "hud_info": { "enabled": true, "bind": "key.keyboard.h", "settings": { "fps": true, "ping": false } }
  *   }
  * }
  * </pre>
@@ -78,6 +78,11 @@ public final class ConfigManager {
 			module.setEnabledSilently(data.get("enabled").getAsBoolean());
 		}
 
+		// Бинд хранится именем клавиши, например key.keyboard.n или key.mouse.middle
+		if (data.has("bind") && data.get("bind").isJsonPrimitive()) {
+			module.setBindByName(data.get("bind").getAsString());
+		}
+
 		JsonObject settings = getObject(data, "settings");
 		if (settings == null) {
 			return;
@@ -112,6 +117,7 @@ public final class ConfigManager {
 		for (Module module : ModuleManager.getAll()) {
 			JsonObject data = new JsonObject();
 			data.addProperty("enabled", module.isEnabled());
+			data.addProperty("bind", module.getBindName());
 
 			if (!module.getSettings().isEmpty()) {
 				JsonObject settings = new JsonObject();

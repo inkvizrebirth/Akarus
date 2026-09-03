@@ -10,6 +10,7 @@ import com.akarus.client.settings.IntSetting;
 import com.akarus.client.settings.Setting;
 import com.akarus.client.settings.StringSetting;
 import com.akarus.client.util.RenderUtils;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -91,6 +92,8 @@ public class ClickGuiScreen extends Screen {
 
 	private Setting<?> focusedSetting;
 	private Module focusedModule;
+	/** Модуль, который сейчас ждёт новой клавиши для бинда. */
+	private Module bindingModule;
 	private boolean focusedDirty;
 	private IntSetting draggingSetting;
 	private Module draggingModule;
@@ -181,6 +184,11 @@ public class ClickGuiScreen extends Screen {
 		drawCategories(graphics, x, y, mouseX, mouseY);
 		drawModules(graphics, x, y, mouseX, mouseY, accent);
 		drawHint(graphics, x, y);
+
+		// Плашка «нажми кнопку» рисуется поверх всего
+		if (bindingModule != null) {
+			drawBindingOverlay(graphics, x, y, accent);
+		}
 
 		// Волна по клику в любом месте панели
 		drawRipples(graphics, new Hitbox(x, y, GUI_WIDTH, GUI_HEIGHT), accent);
@@ -300,9 +308,14 @@ public class ClickGuiScreen extends Screen {
 		// Волна от клика — рисуется под текстом
 		drawRipples(graphics, box, accent);
 
+		boolean binding = bindingModule == module;
+		String bindLabel = binding ? "..." : module.getBindLabel();
+
 		int textX = box.x() + 9;
 		graphics.text(font, module.getName(), textX, box.y() + 6,
 				module.isEnabled() ? TEXT_PRIMARY : TEXT_SECONDARY, false);
+		graphics.text(font, bindLabel, textX + font.width(module.getName()) + 6, box.y() + 7,
+				binding ? accent : TEXT_DIM, false);
 		graphics.text(font, RenderUtils.clamp(font, module.getDescription(), box.width() - 72), textX, box.y() + 20, TEXT_DIM, false);
 
 		// Тумблер справа
@@ -407,9 +420,35 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	private void drawHint(GuiGraphicsExtractor graphics, int x, int y) {
-		String hint = "ЛКМ — включить модуль   •   ПКМ — настройки   •   колесо — прокрутка   •   шапку можно перетаскивать";
+		String hint = "ЛКМ — вкл/выкл   •   ПКМ — настройки   •   СКМ — бинд   •   колесо — прокрутка   •   шапку можно таскать";
 		graphics.text(this.font, RenderUtils.clamp(this.font, hint, GUI_WIDTH - PADDING * 2),
 				x + PADDING, y + GUI_HEIGHT - PADDING - this.font.lineHeight + 1, TEXT_DIM, false);
+	}
+
+	/** Плашка «нажми кнопку для бинда» поверх панели. */
+	private void drawBindingOverlay(GuiGraphicsExtractor graphics, int x, int y, int accent) {
+		Font font = this.font;
+		String title = "Нажми кнопку для бинда";
+		String subtitle = bindingModule.getName() + "   •   ESC — отмена";
+
+		int width = Math.max(font.width(title), font.width(subtitle)) + 26;
+		int height = 48;
+		int boxX = x + (GUI_WIDTH - width) / 2;
+		int boxY = y + (GUI_HEIGHT - height) / 2;
+
+		// Приглушаем список, чтобы плашка читалась
+		graphics.fill(x + 1, y + 1, x + GUI_WIDTH - 1, y + GUI_HEIGHT - 1, 0xD205050A);
+
+		RenderUtils.drawSoftShadow(graphics, boxX, boxY, width, height, 8, SHADOW_LAYERS);
+		RenderUtils.fillRounded(graphics, boxX, boxY, width, height, 8, PANEL_OUTLINE);
+		RenderUtils.fillRounded(graphics, boxX + 1, boxY + 1, width - 2, height - 2, 7, PANEL_TOP);
+
+		graphics.text(font, title, boxX + (width - font.width(title)) / 2, boxY + 11, TEXT_PRIMARY, false);
+		graphics.text(font, subtitle, boxX + (width - font.width(subtitle)) / 2, boxY + 25, TEXT_DIM, false);
+
+		// Акцентная полоска внизу плашки
+		graphics.fill(boxX + 12, boxY + height - 6, boxX + width - 12, boxY + height - 5,
+				RenderUtils.withAlpha(accent, 0.85f));
 	}
 
 	// ------------------------------------------------------------------
@@ -525,7 +564,9 @@ public class ClickGuiScreen extends Screen {
 			return true;
 		}
 
-		if (event.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT && event.button() != GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+		if (event.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT
+				&& event.button() != GLFW.GLFW_MOUSE_BUTTON_RIGHT
+				&& event.button() != GLFW.GLFW_MOUSE_BUTTON_MIDDLE) {
 			return super.mouseClicked(event, doubleClick);
 		}
 
@@ -533,6 +574,15 @@ public class ClickGuiScreen extends Screen {
 		int listY = Math.round(guiY) + HEADER_HEIGHT + PADDING;
 		int listWidth = GUI_WIDTH - CATEGORY_WIDTH - PADDING * 3;
 		int listHeight = GUI_HEIGHT - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
+
+		// Ждём бинд: любая кнопка мыши становится новым биндом модуля
+		if (bindingModule != null) {
+			bindingModule.setBind(InputConstants.Type.MOUSE.getOrCreate(event.button()));
+			bindingModule = null;
+			ConfigManager.save();
+			playClick();
+			return true;
+		}
 
 		// Клик в любом месте снимает фокус с текстового поля (и применяет ввод)
 		clearSettingFocus();
@@ -553,6 +603,7 @@ public class ClickGuiScreen extends Screen {
 				case CATEGORY -> {
 					selected = entry.category();
 					expanded = null;
+					bindingModule = null;
 					scrollTarget = 0;
 					scroll = 0;
 					playClick();
@@ -560,6 +611,10 @@ public class ClickGuiScreen extends Screen {
 				case MODULE -> {
 					if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
 						entry.module().toggle();
+					} else if (event.button() == GLFW.GLFW_MOUSE_BUTTON_MIDDLE) {
+						// Колесиком по модулю — переходим в режим ожидания клавиши
+						bindingModule = entry.module();
+						clearSettingFocus();
 					} else {
 						expanded = expanded == entry.module() ? null : entry.module();
 					}
@@ -685,6 +740,17 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
+		// Режим бинда: следующая нажатая клавиша и есть новый бинд
+		if (bindingModule != null) {
+			if (event.key() != GLFW.GLFW_KEY_ESCAPE) {
+				bindingModule.setBind(InputConstants.Type.KEYSYM.getOrCreate(event.key()));
+				ConfigManager.save();
+			}
+			bindingModule = null;
+			playClick();
+			return true;
+		}
+
 		if (focusedSetting instanceof StringSetting stringSetting) {
 			if (event.key() == GLFW.GLFW_KEY_BACKSPACE) {
 				String text = stringSetting.get();
@@ -710,6 +776,7 @@ public class ClickGuiScreen extends Screen {
 	@Override
 	public void onClose() {
 		clearSettingFocus();
+		bindingModule = null;
 		ConfigManager.save();
 		super.onClose();
 	}
