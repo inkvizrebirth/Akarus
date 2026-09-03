@@ -124,6 +124,44 @@ jobs:
             javap -p -cp "$MC" net.minecraft.resources.Identifier 2>&1 | grep -iE 'public static|fromNamespace' | head -8
             echo; echo "=== OperatingSystem open ==="
             javap -v -cp "$MC" net.minecraft.util.OperatingSystem 2>&1 | grep -B1 -A8 'open(' | head -40
+            echo; echo "=== PauseScreen ==="
+            javap -p -cp "$MC" net.minecraft.client.gui.screens.PauseScreen 2>&1 | head -30
+            echo; echo "=== TitleScreen весь ==="
+            javap -p -cp "$MC" net.minecraft.client.gui.screens.TitleScreen 2>&1 | head -44
+            echo; echo "=== worldselection/keybinds screens ==="
+            unzip -l "$MC" | grep -oE 'net/minecraft/client/gui/screens/(worldselection|controls|options/controls)/[A-Za-z]+\.class' | sort -u | head -24
+            echo; echo "=== Gui: ссылки TitleScreen/PauseScreen + setScreen ==="
+            javap -c -p -cp "$MC" net.minecraft.client.gui.Gui 2>&1 | grep -iE 'TitleScreen|PauseScreen|setScreen|private net.*Screen' | head -24
+            echo; echo "=== Minecraft: начальный экран ==="
+            javap -c -p -cp "$MC" net.minecraft.client.Minecraft 2>&1 | grep -iE 'TitleScreen|setScreenAndShow|buildInitialScreens' | head -12
+            echo; echo "=== OptionInstance public ==="
+            javap -p -cp "$MC" net.minecraft.client.OptionInstance 2>&1 | grep -E 'public' | head -26
+            echo; echo "=== Items ключевые (тотем/щит/булава/трезубец) ==="
+            javap -p -cp "$MC" net.minecraft.world.item.Items 2>&1 | grep -iE 'TOTEM|SHIELD|MACE|TRIDENT|CROSSBOW|ELYTRA|ENDER_PEARL|TIPPED' | head -10
+            echo; echo "=== Entity getDeltaMovement/getViewVector/isAlive ==="
+            javap -p -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -E 'public' | grep -iE 'getDeltaMovement|setDeltaMovement|getViewVector|isAlive|getEyePosition|getLookAngle|position\(|lastPos|getDeltaMovementClamped' | head -14
+            echo; echo "=== LivingEntity getHealth/getMaxHealth/getAbsorption/isBlocking/stopUsingItem/getUseItemRemaining ==="
+            javap -p -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -E 'public' | grep -iE 'getHealth|getMaxHealth|Absorption|isBlocking|stopUsingItem|isUsingItem|getUseItemRemaining|getMainHandItem|getOffhandItem|getItemBySlot' | head -16
+            echo; echo "=== Player getOffhandItem/isBlocking/attackStrength/getCooldowns/getAbilities ==="
+            javap -p -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | grep -E 'public' | grep -iE 'offhand|Offhand|block|attackStrength|Cooldown|Abilit|getInventory|getFood|experience' | head -16
+            echo; echo "=== SoundEvents NOTE/TOTEM/UI_BUTTON ==="
+            javap -p -cp "$MC" net.minecraft.sounds.SoundEvents 2>&1 | grep -iE 'NOTE_BLOCK_BLOCK_HARP|NOTE_BLOCK_PLING|TOTEM|UI_BUTTON|ANVIL_LAND|FIREWORK_BLAST|ENDERMAN_TELEPORT' | head -10
+            echo; echo "=== AbstractArrow getOwner/isVisible/shot ==="
+            javap -p -cp "$MC" net.minecraft.world.entity.projectile.AbstractArrow 2>&1 | grep -E 'public' | head -18
+            echo; echo "=== EntityType category ==="
+            javap -p -cp "$MC" net.minecraft.world.entity.EntityType 2>&1 | grep -iE 'category' | head -6
+            echo; echo "=== VFP-подобные: ServerList getServer/selected ==="
+            javap -p -cp "$MC" net.minecraft.client.multiplayer.ServerList 2>&1 | grep -E 'public' | head -14
+            echo; echo "=== ServerData ==="
+            javap -p -cp "$MC" net.minecraft.client.multiplayer.ServerData 2>&1 | grep -E 'public' | grep -iE 'version|getIp|name' | head -8
+            echo; echo "=== Minecraft#pauseGame & disconnect ==="
+            javap -p -cp "$MC" net.minecraft.client.Minecraft 2>&1 | grep -E 'public' | grep -iE 'pauseGame|setScreen|getSingleplayerServer|isLocalServer|stop\(' | head -8
+            echo; echo "=== WorldVersion ==="
+            javap -p -cp "$MC" net.minecraft.WorldVersion 2>&1 | head -12
+            echo; echo "=== GameConfigHandler? ==="
+            unzip -l "$MC" | grep -oE 'net/minecraft/client/[a-z]+/[A-Za-z]*Config[A-Za-z]*\.class' | sort -u | head -6
+            echo; echo "=== KeyBindsScreen конструктор ==="
+            javap -p -cp "$MC" net.minecraft.client.gui.screens.options.controls.KeyBindsScreen 2>&1 | head -8
           } > api-audit2-result.txt 2>&1
           wc -l api-audit2-result.txt
 
