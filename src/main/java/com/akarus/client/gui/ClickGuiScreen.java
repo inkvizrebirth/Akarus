@@ -41,22 +41,25 @@ import java.util.Map;
 public class ClickGuiScreen extends Screen {
 
 	// --- Геометрия ---
-	private static final int GUI_WIDTH = 480;
+	private static final int GUI_WIDTH = 500;
 	/** Максимальная высота окна: дальше список уходит в прокрутку. */
-	private static final int GUI_MAX_HEIGHT = 300;
+	private static final int GUI_MAX_HEIGHT = 310;
 	/** Минимальная высота — в ней целиком видно столбик категорий. */
 	private static final int GUI_MIN_HEIGHT = 208;
-	private static final int HEADER_HEIGHT = 34;
-	private static final int CATEGORY_WIDTH = 124;
-	private static final int CATEGORY_ROW_HEIGHT = 22;
+	private static final int HEADER_HEIGHT = 36;
+	private static final int CATEGORY_WIDTH = 128;
+	private static final int CATEGORY_ROW_HEIGHT = 24;
 	private static final int CATEGORY_GAP = 4;
-	private static final int MODULE_ROW_HEIGHT = 34;
+	private static final int MODULE_ROW_HEIGHT = 36;
 	private static final int TOGGLE_ROW_HEIGHT = 16;
 	private static final int SLIDER_ROW_HEIGHT = 26;
 	private static final int TEXT_ROW_HEIGHT = 20;
-	private static final int PADDING = 7;
-	private static final int FOOTER_HEIGHT = 14;
-	private static final int PANEL_RADIUS = 10;
+	private static final int PADDING = 8;
+	private static final int FOOTER_HEIGHT = 15;
+	private static final int PANEL_RADIUS = 12;
+
+	/** Ширина поля поиска в шапке. */
+	private static final int SEARCH_WIDTH = 112;
 
 	private static final int TOGGLE_WIDTH = 30;
 	private static final int TOGGLE_HEIGHT = 12;
@@ -68,9 +71,9 @@ public class ClickGuiScreen extends Screen {
 
 	// --- Цвета: всё в чёрных тонах, акцент берётся из категории ---
 	private static final int BACKGROUND_DIM = 0xA6000000;
-	private static final int PANEL_OUTLINE = 0xFF1C1C20;
-	private static final int PANEL_TOP = 0xF6151518;
-	private static final int PANEL_BOTTOM = 0xF809090B;
+	private static final int PANEL_OUTLINE = 0xFF232329;
+	private static final int PANEL_TOP = 0xF616161A;
+	private static final int PANEL_BOTTOM = 0xF809090C;
 	private static final int LIST_BACKGROUND = 0x59000000;
 	private static final int ROW_BACKGROUND = 0xB8101013;
 	private static final int ROW_BORDER = 0x12FFFFFF;
@@ -86,6 +89,10 @@ public class ClickGuiScreen extends Screen {
 	private ModuleCategory selected = ModuleCategory.HUD;
 	private Module expanded = null;
 
+	/** Поиск по модулям выбранной категории; пустая строка — без фильтра. */
+	private String searchQuery = "";
+	private boolean searchFocused;
+
 	private float guiX;
 	private float guiY;
 	private boolean positioned;
@@ -99,6 +106,8 @@ public class ClickGuiScreen extends Screen {
 	private float panelHeightAnim = GUI_MIN_HEIGHT;
 
 	private Setting<?> focusedSetting;
+	/** Границы поля поиска последнего кадра — для клика и курсора. */
+	private Hitbox searchBox;
 	/** То, что сейчас напечатали в поле цвета (без «#»), пока поле в фокусе. */
 	private String colorDraft = "";
 	private Module focusedModule;
@@ -139,6 +148,28 @@ public class ClickGuiScreen extends Screen {
 	 * выглядит пустой рамкой, а при раскрытых настройках список упирался бы в низ.
 	 * Значение сглаживается, поэтому раскрытие модуля не «дёргает» окно.
 	 */
+	/**
+	 * Модули выбранной категории с учётом строки поиска.
+	 * Единая точка фильтрации: её используют и отрисовка, и раскладка, и клики,
+	 * поэтому «что вижу» и «куда попадаю» не расходятся.
+	 */
+	private List<Module> modulesShown() {
+		List<Module> modules = ModuleManager.getByCategory(selected);
+		String query = searchQuery.trim().toLowerCase();
+		if (query.isEmpty()) {
+			return modules;
+		}
+		List<Module> filtered = new ArrayList<>();
+		for (Module module : modules) {
+			if (module.getName().toLowerCase().contains(query)
+					|| module.getDescription().toLowerCase().contains(query)
+					|| module.getId().toLowerCase().contains(query)) {
+				filtered.add(module);
+			}
+		}
+		return filtered;
+	}
+
 	private int panelHeight() {
 		return Math.round(panelHeightAnim);
 	}
@@ -226,20 +257,57 @@ public class ClickGuiScreen extends Screen {
 		// Тонкий блик по верхней кромке — эффект стекла
 		graphics.fill(x + PANEL_RADIUS, y + 1, x + GUI_WIDTH - PANEL_RADIUS, y + 2, SHEEN);
 
-		// Шапка: подложка с оттенком акцента + акцентная линия снизу
+		// Шапка: подложка с оттенком акцента + «полярное» сияние под линией
 		int headerColor = RenderUtils.mix(PANEL_TOP, accent, 0.16f);
 		RenderUtils.fillRoundedTop(graphics, x + 1, y + 1, GUI_WIDTH - 2, HEADER_HEIGHT - 1, PANEL_RADIUS - 1, headerColor);
-		graphics.fillGradient(x + 1, y + HEADER_HEIGHT - 2, x + GUI_WIDTH - 1, y + HEADER_HEIGHT,
-				RenderUtils.withAlpha(accent, 0.10f), RenderUtils.withAlpha(accent, 0.85f));
+
+		// Линия под шапкой: градиент акцент → акцент2, «течёт» слева направо
+		long time = Util.getMillis();
+		float flow = (time % 3600L) / 3600.0f;
+		int lineY = y + HEADER_HEIGHT - 2;
+		int second = RenderUtils.mix(accent, 0xFF45E3FF, 0.55f);
+		for (int i = 0; i < GUI_WIDTH - 2; i++) {
+			float t = i / (float) (GUI_WIDTH - 3);
+			float wave = 0.5f + 0.5f * (float) Math.sin((t * 2.2f - flow * 2.2f) * Math.PI);
+			int color = RenderUtils.mix(accent, second, t);
+			graphics.fill(x + 1 + i, lineY, x + 2 + i, lineY + 1,
+					RenderUtils.withAlpha(color, 0.35f + 0.60f * wave));
+		}
 
 		Font font = this.font;
 		int titleY = y + (HEADER_HEIGHT - font.lineHeight) / 2;
 
-		graphics.text(font, AkarusClient.MOD_NAME, x + PADDING, titleY, TEXT_PRIMARY, true);
-		graphics.text(font, "v" + AkarusClient.MOD_VERSION, x + PADDING + font.width(AkarusClient.MOD_NAME) + 5, titleY + 1, TEXT_DIM, false);
+		// Логотип DREAMCAST с разрядкой и бейдж DLC — фирменный вид клиента
+		String logo = AkarusClient.LOGO_TEXT;
+		int logoWidth = RenderUtils.trackedWidth(font, logo, 3);
+		RenderUtils.drawTracked(graphics, font, logo, x + PADDING + 1, titleY, TEXT_PRIMARY, 3);
+		int badgeX = x + PADDING + 1 + logoWidth + 6;
+		int badgeH = 10;
+		int badgeY = titleY + (font.lineHeight - badgeH) / 2;
+		RenderUtils.fillRoundedBorder(graphics, badgeX, badgeY, 20, badgeH, 3,
+				RenderUtils.mix(accent, second, 0.5f), 0xF6151518);
+		graphics.text(font, "DLC", badgeX + (20 - font.width("DLC")) / 2,
+				badgeY + (badgeH - font.lineHeight) / 2 + 1, 0xFFE8E8F0, false);
+		graphics.text(font, "v" + AkarusClient.MOD_VERSION,
+				badgeX + 26, titleY + 1, TEXT_DIM, false);
 
-		String closeHint = "ESC — закрыть";
-		graphics.text(font, closeHint, x + GUI_WIDTH - PADDING - font.width(closeHint), titleY, TEXT_DIM, false);
+		// Поле поиска в шапке: живой фильтр по модулям категории
+		int searchX = x + GUI_WIDTH - PADDING - SEARCH_WIDTH;
+		int searchY = y + (HEADER_HEIGHT - 14) / 2;
+		RenderUtils.fillRoundedBorder(graphics, searchX, searchY, SEARCH_WIDTH, 14, 7,
+				searchFocused ? accent : 0x22FFFFFF,
+				RenderUtils.mix(0x66000000, 0x14FFFFFF, searchFocused ? 0.6f : 0.2f));
+		String shown = RenderUtils.clamp(font,
+				searchQuery.isEmpty() && !searchFocused ? "" : searchQuery + (((time / 500L) % 2 == 0) ? "|" : ""),
+				SEARCH_WIDTH - 18);
+		if (searchQuery.isEmpty() && !searchFocused) {
+			graphics.text(font, "поиск…", searchX + 8, searchY + (14 - font.lineHeight) / 2 + 1, TEXT_DIM, false);
+		} else {
+			graphics.text(font, shown, searchX + 8, searchY + (14 - font.lineHeight) / 2 + 1,
+					TEXT_PRIMARY, false);
+		}
+
+		searchBox = new Hitbox(searchX, searchY, SEARCH_WIDTH, 14);
 	}
 
 	private void drawCategories(GuiGraphicsExtractor graphics, int x, int y, int mouseX, int mouseY) {
@@ -264,7 +332,11 @@ public class ClickGuiScreen extends Screen {
 			}
 
 			int textColor = isSelected ? TEXT_PRIMARY : RenderUtils.mix(TEXT_SECONDARY, TEXT_PRIMARY, hover);
-			graphics.text(font, RenderUtils.clamp(font, category.getDisplayName(), box.width() - 34), box.x() + 11,
+			// Иконка категории: красится акцентом при выборе, приглушена — без
+			graphics.text(font, category.getGlyph(), box.x() + 9,
+					box.y() + (box.height() - font.lineHeight) / 2 + 1,
+					isSelected ? accent : RenderUtils.mix(TEXT_DIM, accent, hover * 0.5f), false);
+			graphics.text(font, RenderUtils.clamp(font, category.getDisplayName(), box.width() - 44), box.x() + 19,
 					box.y() + (box.height() - font.lineHeight) / 2 + 1, textColor, false);
 
 			// Счётчик: «всего модулей», а если есть включённые — «сколько включено»
@@ -278,8 +350,14 @@ public class ClickGuiScreen extends Screen {
 			}
 			String badge = active == 0 ? String.valueOf(total) : active + "/" + total;
 			int badgeWidth = font.width(badge);
-			graphics.text(font, badge, box.x() + box.width() - 9 - badgeWidth,
-					box.y() + (box.height() - font.lineHeight) / 2 + 1,
+			int badgeX = box.x() + box.width() - 9 - badgeWidth;
+			int badgeY = box.y() + (box.height() - font.lineHeight) / 2 + 1;
+			if (active > 0) {
+				// Пилюля-подложка под счётчик включённых — «горит» акцентом
+				RenderUtils.fillRounded(graphics, badgeX - 4, badgeY - 2, font.width(badge) + 8,
+						font.lineHeight + 3, 4, RenderUtils.withAlpha(accent, 0.22f));
+			}
+			graphics.text(font, badge, badgeX, badgeY,
 					active == 0 ? TEXT_DIM : RenderUtils.withAlpha(category.getAccent(), 0.95f), false);
 
 			drawRipples(graphics, box, accent);
@@ -299,10 +377,12 @@ public class ClickGuiScreen extends Screen {
 		// Всё, что выходит за пределы списка, обрезается
 		graphics.enableScissor(listX, listY, listX + listWidth, listY + listHeight);
 
+		boolean anyDrawn = false;
 		for (LayoutEntry entry : buildLayout()) {
 			if (entry.kind() == Kind.CATEGORY) {
 				continue;
 			}
+			anyDrawn = true;
 			if (entry.kind() == Kind.MODULE) {
 				drawModuleRow(graphics, entry.module(), entry.box(), accent, mouseX, mouseY);
 			} else {
@@ -311,6 +391,12 @@ public class ClickGuiScreen extends Screen {
 		}
 
 		graphics.disableScissor();
+
+		if (!anyDrawn) {
+			String message = searchQuery.isBlank() ? "В этой категории пока пусто" : "Ничего не найдено";
+			graphics.text(font, message, listX + (listWidth - font.width(message)) / 2,
+					listY + listHeight / 2 - font.lineHeight / 2, TEXT_DIM, false);
+		}
 
 		// Полоса прокрутки
 		int content = contentHeight();
@@ -670,10 +756,24 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	private void drawHint(GuiGraphicsExtractor graphics, int x, int y) {
-		String hint = "ЛКМ — вкл/выкл   •   ПКМ — настройки   •   СКМ — бинд   •   "
-				+ "колесо — прокрутка, над числом — ±1   •   шапку можно таскать";
-		graphics.text(this.font, RenderUtils.clamp(this.font, hint, GUI_WIDTH - PADDING * 2),
+		// Слева — подсказки о кнопках мыши, справа — сколько модулей включено
+		String hint = "ЛКМ вкл · ПКМ настройки · СКМ бинд · колесо ±1";
+		graphics.text(this.font, RenderUtils.clamp(this.font, hint, GUI_WIDTH - PADDING * 2 - 86),
 				x + PADDING, y + panelHeight() - PADDING - this.font.lineHeight + 1, TEXT_DIM, false);
+
+		int enabled = 0;
+		int total = 0;
+		for (Module module : ModuleManager.getAll()) {
+			total++;
+			if (module.isEnabled()) {
+				enabled++;
+			}
+		}
+		String status = enabled + " / " + total + " активно";
+		graphics.text(this.font, status,
+				x + GUI_WIDTH - PADDING - this.font.width(status),
+				y + panelHeight() - PADDING - this.font.lineHeight + 1,
+				enabled == 0 ? TEXT_DIM : RenderUtils.withAlpha(selected.getAccent(), 0.95f), false);
 	}
 
 	/** Плашка «нажми кнопку для бинда» поверх панели. */
@@ -806,6 +906,13 @@ public class ClickGuiScreen extends Screen {
 		// Перетаскивание за шапку
 		if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT
 				&& isInside(mouseX, mouseY, guiX, guiY, GUI_WIDTH, HEADER_HEIGHT)) {
+			// Поле поиска живёт в шапке: клик по нему — фокус, а не перетаскивание
+			if (searchBox != null && searchBox.contains(mouseX, mouseY)) {
+				searchFocused = true;
+				clearSettingFocus();
+				return true;
+			}
+			searchFocused = false;
 			dragging = true;
 			dragOffsetX = mouseX - guiX;
 			dragOffsetY = mouseY - guiY;
@@ -838,6 +945,7 @@ public class ClickGuiScreen extends Screen {
 
 		// Клик в любом месте снимает фокус с текстового поля (и применяет ввод)
 		clearSettingFocus();
+		searchFocused = false;
 
 		for (LayoutEntry entry : buildLayout()) {
 			Hitbox box = entry.box();
@@ -1070,6 +1178,15 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean charTyped(CharacterEvent event) {
+		if (searchFocused) {
+			if (event.isAllowedChatCharacter() && searchQuery.length() < 40) {
+				searchQuery += event.codepointAsString();
+				scrollTarget = 0;
+				scroll = 0;
+			}
+			return true;
+		}
+
 		if (focusedSetting instanceof ColorSetting colorSetting) {
 			String typed = event.codepointAsString();
 			// В поле цвета принимают только шестнадцатеричные цифры
@@ -1091,6 +1208,20 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
+		if (searchFocused) {
+			switch (event.key()) {
+				case GLFW.GLFW_KEY_BACKSPACE -> {
+					if (!searchQuery.isEmpty()) {
+						searchQuery = searchQuery.substring(0, searchQuery.length() - 1);
+					}
+				}
+				case GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> searchFocused = false;
+				default -> {
+				}
+			}
+			return true;
+		}
+
 		// Режим бинда: следующая нажатая клавиша и есть новый бинд
 		if (bindingModule != null) {
 			if (event.key() != GLFW.GLFW_KEY_ESCAPE) {
@@ -1180,7 +1311,7 @@ public class ClickGuiScreen extends Screen {
 		int listWidth = GUI_WIDTH - CATEGORY_WIDTH - PADDING * 3;
 		int rowY = y + HEADER_HEIGHT + PADDING + Math.round(scroll);
 
-		for (Module module : ModuleManager.getByCategory(selected)) {
+		for (Module module : modulesShown()) {
 			layout.add(new LayoutEntry(new Hitbox(listX, rowY, listWidth, MODULE_ROW_HEIGHT), Kind.MODULE, null, module, null));
 			rowY += MODULE_ROW_HEIGHT;
 
@@ -1210,7 +1341,7 @@ public class ClickGuiScreen extends Screen {
 
 	private int contentHeight() {
 		int height = 0;
-		for (Module module : ModuleManager.getByCategory(selected)) {
+		for (Module module : modulesShown()) {
 			height += MODULE_ROW_HEIGHT;
 			if (module == expanded) {
 				for (Setting<?> setting : module.getSettings()) {

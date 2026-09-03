@@ -3,18 +3,20 @@ package com.akarus.client.module;
 import com.akarus.client.AkarusClient;
 import com.akarus.client.config.ConfigManager;
 import com.akarus.client.module.impl.AutoMineModule;
+import com.akarus.client.module.impl.AutoTotemModule;
 import com.akarus.client.module.impl.AutoWalkModule;
+import com.akarus.client.module.impl.EspModule;
 import com.akarus.client.module.impl.FreeCamModule;
 import com.akarus.client.module.impl.FreeLookModule;
 import com.akarus.client.module.impl.HandShaderModule;
 import com.akarus.client.module.impl.HudInfoModule;
 import com.akarus.client.module.impl.KillAuraModule;
 import com.akarus.client.module.impl.MediaPlayerModule;
-import com.akarus.client.module.impl.AutoTotemModule;
 import com.akarus.client.module.impl.NoBlindModule;
 import com.akarus.client.module.impl.NoFallDamageModule;
 import com.akarus.client.module.impl.NoFovModule;
 import com.akarus.client.module.impl.SprintModule;
+import com.akarus.client.module.impl.TrailsModule;
 import com.akarus.client.module.impl.ViewModelModule;
 
 import java.util.ArrayList;
@@ -45,6 +47,8 @@ public final class ModuleManager {
 		register(new ViewModelModule());
 		register(new AutoTotemModule());
 		register(new MediaPlayerModule());
+		register(new TrailsModule());
+		register(new EspModule());
 	}
 
 	public static void register(Module module) {

@@ -12,16 +12,19 @@ import java.util.List;
  * ViaFabricPlus — мод необязательный (мы вшиваем его релизный jar во вложенные
  * {@code META-INF/jars}, но у игрока может стоять и своя копия, и никакой). Поэтому
  * компилироваться против его классов нельзя — только рефлексия и тихая деградация:
- * без виа кнопка версии показывает нативную версию, а вместо списка — подсказку.
+ * без виа пилюля версии показывает нативную версию, а вместо списка — подсказку.
  *
- * Целевой API VFP (проверено на 4.6.3, MC 26.2):
+ * Целевой API VFP 4.6.3 (MC 26.2), проверен по исходникам:
  * <ul>
  *   <li>{@code com.viaversion.viafabricplus.protocoltranslator.ProtocolTranslator}
- *       — {@code getTargetVersion()/setTargetVersion(ProtocolVersion)};</li>
+ *       — {@code getTargetVersion()/setTargetVersion(ProtocolVersion)},
+ *       поля {@code NATIVE_VERSION} и {@code AUTO_DETECT_PROTOCOL};</li>
  *   <li>{@code com.viaversion.viaversion.api.protocol.version.ProtocolVersion}
- *       — {@code getReversedProtocols()/getProtocol(int)/getName()/getVersionString()}.</li>
+ *       — {@code getReversedProtocols()} и {@code getName()}.
+ *       Внимание: метода {@code getId()} в современных ViaVersion НЕТ — id берётся
+ *       из {@code getOriginalVersion()}, но мы вообще не возимся с числами: список
+ *       держит сами объекты ProtocolVersion и сравнивает их по ссылкам/equals.</li>
  * </ul>
- * Для старых сборок VFP (до 4.0) пробуется и старый пакет {@code de.florianmichael.…}.
  */
 public final class ViaIntegration {
 
@@ -76,23 +79,132 @@ public final class ViaIntegration {
 		}
 	}
 
-	/** Id выбранного протокола (числовой), или -1. */
-	public static int currentProtocolId() {
-		Object version = getTargetVersion();
-		if (version == null) {
-			return -1;
+	/**
+	 * Правда ли, что сейчас выбрано автоопределение (специальный объект
+	 * {@code AUTO_DETECT_PROTOCOL} с id -2). Без VFP — false.
+	 */
+	public static boolean isAutoDetect() {
+		Object current = getTargetVersion();
+		Object auto = autoDetectProtocol();
+		return current != null && auto != null && current == auto;
+	}
+
+	/**
+	 * VFP запрещает смену версии, пока открыто соединение с сервером (в том числе
+	 * одиночный мир). В таком состоянии список просто подсвечивает блокировку.
+	 */
+	public static boolean canChangeVersionNow() {
+		try {
+			Class<?> minecraft = Class.forName("net.minecraft.client.Minecraft");
+			Object client = minecraft.getMethod("getInstance").invoke(null);
+			Object connection = minecraft.getMethod("getConnection").invoke(client);
+			return connection == null;
+		} catch (ReflectiveOperationException exception) {
+			return true;
 		}
-		Object id = invoke(version, "getId");
-		return id instanceof Integer intValue ? intValue : -1;
 	}
 
-	public static String nativeProtocolLabel() {
-		Object nativeVersion = getNativeVersion();
-		String name = nativeVersion != null ? invokeString(nativeVersion, "getName") : null;
-		return name == null || name.isBlank() ? NATIVE_LABEL : name;
+	/** Публичный вариант для UI-экрана: имя + сам объект протокола + признак «текущий». */
+	public record VersionEntry(String name, Object protocol, boolean current) {
 	}
 
-	private static Object getNativeVersion() {
+	/**
+	 * Список доступных протоколов (от новых к старым), включая служебные записи
+	 * VFP вроде диапазонов версий. Никаких числовых id — только живые объекты.
+	 */
+	public static List<VersionEntry> collectVersions() {
+		List<VersionEntry> result = new ArrayList<>();
+		Class<?> protocolClass = protocolVersionClass();
+		if (protocolClass == null) {
+			return result;
+		}
+
+		Object reversed = invokeStatic(protocolClass, "getReversedProtocols");
+		if (!(reversed instanceof Iterable<?> iterable)) {
+			return result;
+		}
+
+		Object current = getTargetVersion();
+		for (Object protocol : iterable) {
+			String name = invokeString(protocol, "getName");
+			if (name == null || name.isBlank()) {
+				continue;
+			}
+			result.add(new VersionEntry(name, protocol, protocol.equals(current)));
+		}
+		return result;
+	}
+
+	/** Меняет целевой протокол (то, что делает «Via Version Selector» VFP). */
+	public static boolean setVersion(Object protocol) {
+		if (protocol == null) {
+			return false;
+		}
+		return invokeSetTargetVersion(protocol);
+	}
+
+	/** «Auto Detect» для новых серверов — специальный вариант VFP. */
+	public static boolean setAutoDetect() {
+		Object auto = autoDetectProtocol();
+		return auto != null && invokeSetTargetVersion(auto);
+	}
+
+	/** Нативный протокол клиента — «вернуть как есть» (26.2). */
+	public static boolean setNative() {
+		Object nativeVersion = nativeProtocol();
+		return nativeVersion != null && invokeSetTargetVersion(nativeVersion);
+	}
+
+	// ------------------------------------------------------------------
+	// Рефлекс-помощники
+	// ------------------------------------------------------------------
+
+	private static boolean invokeSetTargetVersion(Object protocol) {
+		Class<?> translator = protocolTranslatorClass();
+		if (translator == null) {
+			return false;
+		}
+		try {
+			// Ищем статический setTargetVersion(X), где X принимает наш протокол.
+			// Сигнатурный тип может быть и интерфейсом-предком, и самим ProtocolVersion —
+			// перебираем все объявления и берём подходящий.
+			Method fallback = null;
+			for (Method method : translator.getMethods()) {
+				if (!method.getName().equals("setTargetVersion") || method.getParameterCount() != 1) {
+					continue;
+				}
+				Class<?> parameter = method.getParameterTypes()[0];
+				if (parameter.isInstance(protocol)) {
+					method.invoke(null, protocol);
+					return true;
+				}
+				if (fallback == null && parameter.isAssignableFrom(protocol.getClass())) {
+					fallback = method;
+				}
+			}
+			if (fallback != null) {
+				fallback.invoke(null, protocol);
+				return true;
+			}
+		} catch (ReflectiveOperationException exception) {
+			AkarusClient.LOGGER.warn("Не удалось сменить версию через VFP", exception);
+		}
+		return false;
+	}
+
+	private static Object autoDetectProtocol() {
+		Class<?> translator = protocolTranslatorClass();
+		if (translator == null) {
+			return null;
+		}
+		try {
+			return translator.getField("AUTO_DETECT_PROTOCOL").get(null);
+		} catch (ReflectiveOperationException exception) {
+			return null;
+		}
+	}
+
+	private static Object nativeProtocol() {
 		Class<?> translator = protocolTranslatorClass();
 		if (translator == null) {
 			return null;
@@ -104,128 +216,15 @@ public final class ViaIntegration {
 		}
 	}
 
-	/** Публичный кортеж варианта для UI-экрана. */
-	public record VersionEntry(int id, String name, boolean current) {
-	}
-
-	/** Собирает список протоколов: сначала имена, потом id, сверка с текущим. */
-	public static List<VersionEntry> collectVersions() {
-		List<VersionEntry> result = new ArrayList<>();
-		Class<?> protocolClass = findClass("com.viaversion.viaversion.api.protocol.version.ProtocolVersion");
-		if (protocolClass == null) {
-			return result;
-		}
-
-		Object reversed = invokeStatic(protocolClass, "getReversedProtocols");
-		if (!(reversed instanceof Iterable<?> iterable)) {
-			return result;
-		}
-
-		Object current = getTargetVersion();
-		Object currentId = current != null ? invoke(current, "getId") : null;
-
-		for (Object protocol : iterable) {
-			String name = invokeString(protocol, "getName");
-			if (name == null) {
-				name = invokeString(protocol, "getVersionString");
-			}
-			Object id = invoke(protocol, "getId");
-			if (name == null || name.isBlank() || !(id instanceof Integer protocolId)) {
-				continue;
-			}
-			result.add(new VersionEntry(protocolId, name, id.equals(currentId)));
-		}
-		return result;
-	}
-
-	/** Возвращает протокол по id (для выбора) или null. */
-	public static Object resolveProtocol(int id) {
-		Class<?> protocolClass = findClass("com.viaversion.viaversion.api.protocol.version.ProtocolVersion");
-		if (protocolClass == null) {
-			return null;
-		}
-		Object resolved = invokeStaticWithArg(protocolClass, "getProtocol", int.class, id);
-		return resolved;
-	}
-
-	/** Меняет целевой протокол (то, что делает «Via Version Selector» VFP). */
-	public static boolean setVersion(int protocolId) {
-		Object protocol = resolveProtocol(protocolId);
-		Class<?> translator = protocolTranslatorClass();
-		if (protocol == null || translator == null) {
-			return false;
-		}
-		try {
-			Class<?> protocolClass = protocol.getClass();
-			// точный сигнатурный тип — интерфейс-предок; ищем anySingle «setTargetVersion(X)»
-			for (Method method : translator.getMethods()) {
-				if (method.getName().equals("setTargetVersion")
-						&& method.getParameterCount() == 1
-						&& method.getParameterTypes()[0].isInstance(protocol)) {
-					method.invoke(null, protocol);
-					return true;
-				}
-			}
-		} catch (ReflectiveOperationException exception) {
-			AkarusClient.LOGGER.warn("Не удалось сменить версию через VFP", exception);
-		}
-		return false;
-	}
-
-	/** «Auto Detect» для новых серверов — специальный вариант VFP (id == -2). */
-	public static boolean setAutoDetect() {
-		Class<?> translator = protocolTranslatorClass();
-		if (translator == null) {
-			return false;
-		}
-		try {
-			Object auto = translator.getField("AUTO_DETECT_PROTOCOL").get(null);
-			if (auto == null) {
-				return false;
-			}
-			for (Method method : translator.getMethods()) {
-				if (method.getName().equals("setTargetVersion")
-						&& method.getParameterCount() == 1
-						&& method.getParameterTypes()[0].isInstance(auto)) {
-					method.invoke(null, auto);
-					return true;
-				}
-			}
-		} catch (ReflectiveOperationException exception) {
-			AkarusClient.LOGGER.warn("Не удалось включить автоопределение версии", exception);
-		}
-		return false;
-	}
-
-	/** Нативный протокол клиента — «вернуть как есть» (26.2). */
-	public static boolean setNative() {
-		Object nativeVersion = getNativeVersion();
-		Class<?> translator = protocolTranslatorClass();
-		if (nativeVersion == null || translator == null) {
-			return false;
-		}
-		try {
-			for (Method method : translator.getMethods()) {
-				if (method.getName().equals("setTargetVersion")
-						&& method.getParameterCount() == 1
-						&& method.getParameterTypes()[0].isInstance(nativeVersion)) {
-					method.invoke(null, nativeVersion);
-					return true;
-				}
-			}
-		} catch (ReflectiveOperationException exception) {
-			AkarusClient.LOGGER.warn("Не удалось вернуть нативную версию", exception);
-		}
-		return false;
-	}
-
-	// ------------------------------------------------------------------
-	// Рефлекс-помощники
-	// ------------------------------------------------------------------
-
 	private static Class<?> protocolTranslatorClass() {
+		// Современный пакет VFP 4.x; старые сборки (до 4.0) жили в de.florianmichael
 		return findClass(
-				"com.viaversion.viafabricplus.protocoltranslator.ProtocolTranslator");
+				"com.viaversion.viafabricplus.protocoltranslator.ProtocolTranslator",
+				"de.florianmichael.viafabricplus.protocoltranslator.ProtocolTranslator");
+	}
+
+	private static Class<?> protocolVersionClass() {
+		return findClass("com.viaversion.viaversion.api.protocol.version.ProtocolVersion");
 	}
 
 	private static Class<?> findClass(String... candidates) {
@@ -255,14 +254,6 @@ public final class ViaIntegration {
 	private static Object invokeStatic(Class<?> type, String method) {
 		try {
 			return type.getMethod(method).invoke(null);
-		} catch (ReflectiveOperationException exception) {
-			return null;
-		}
-	}
-
-	private static Object invokeStaticWithArg(Class<?> type, String method, Class<?> argType, Object arg) {
-		try {
-			return type.getMethod(method, argType).invoke(null, arg);
 		} catch (ReflectiveOperationException exception) {
 			return null;
 		}

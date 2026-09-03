@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "akarus",
   "version": "${version}",
-  "name": "Akarus",
-  "description": "Клиентский мод для Minecraft 26.2: свои меню, HUD, модули, музыкальный плеер и встроенный ViaFabricPlus.",
+  "name": "Dreamcast DLC",
+  "description": "Клиентский мод для Minecraft 26.2: свои меню, HUD, модули (Trails, ESP), музыкальный плеер и встроенный ViaFabricPlus.",
   "authors": [
     "inkvizrebirth"
   ],

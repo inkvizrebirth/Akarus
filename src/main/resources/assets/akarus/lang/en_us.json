@@ -1,5 +1,5 @@
 {
-  "key.category.akarus.modules": "Akarus",
+  "key.category.akarus.modules": "Dreamcast DLC",
   "key.akarus.gui": "Open client menu",
   "key.akarus.hud_info": "Module: HUD info",
   "key.akarus.free_cam": "Module: FreeCam",
@@ -14,5 +14,7 @@
   "key.akarus.hand_shader": "Module: Hand outline",
   "key.akarus.view_model": "Module: ViewModel",
   "key.akarus.auto_totem": "Module: AutoTotem",
-  "key.akarus.media_player": "Module: MediaPlayer"
+  "key.akarus.media_player": "Module: MediaPlayer",
+  "key.akarus.trails": "Module: Trails",
+  "key.akarus.esp": "Module: ESP"
 }

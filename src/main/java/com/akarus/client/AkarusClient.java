@@ -3,8 +3,8 @@ package com.akarus.client;
 import com.akarus.client.config.ConfigManager;
 import com.akarus.client.gui.ClickGuiScreen;
 import com.akarus.client.gui.hud.HudRenderer;
-import com.akarus.client.gui.screens.AkarusScreens;
 import com.akarus.client.module.ModuleManager;
+import com.akarus.client.render.WorldRenderHook;
 import com.akarus.client.module.impl.AutoWalkModule;
 import com.akarus.client.module.impl.FreeCamModule;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -24,8 +24,11 @@ import org.slf4j.Logger;
 public class AkarusClient implements ClientModInitializer {
 
 	public static final String MOD_ID = "akarus";
-	public static final String MOD_NAME = "Akarus";
-	public static final String MOD_VERSION = "0.7.1";
+	/** Пользовательское имя клиента. Id мода остаётся akarus — ради совместимости конфига и ресурсов. */
+	public static final String MOD_NAME = "Dreamcast DLC";
+	public static final String MOD_VERSION = "0.8.0";
+	/** Короткое имя для логотипа в меню и HUD. */
+	public static final String LOGO_TEXT = "DREAMCAST";
 
 	public static final Logger LOGGER = LogUtils.getLogger();
 
@@ -43,7 +46,7 @@ public class AkarusClient implements ClientModInitializer {
 		ConfigManager.load();
 		ModuleManager.init();
 		HudRenderer.register();
-		AkarusScreens.register();
+		WorldRenderHook.register();
 
 		// Клавиша открытия меню — правый Shift
 		clickGuiKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(

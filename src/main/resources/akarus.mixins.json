@@ -11,9 +11,9 @@
     "HudMixin",
     "ItemInHandRendererMixin",
     "KeyboardInputMixin",
+    "MinecraftMixin",
     "MouseHandlerMixin",
-    "SubmitNodeCollectionMixin",
-    "AkarusScreenAccessor"
+    "SubmitNodeCollectionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

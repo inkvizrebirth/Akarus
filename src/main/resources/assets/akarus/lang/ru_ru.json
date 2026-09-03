@@ -1,5 +1,5 @@
 {
-  "key.category.akarus.modules": "Akarus",
+  "key.category.akarus.modules": "Dreamcast DLC",
   "key.akarus.gui": "Открыть меню клиента",
   "key.akarus.hud_info": "Модуль: HUD-инфо",
   "key.akarus.free_cam": "Модуль: FreeCam",
@@ -14,5 +14,7 @@
   "key.akarus.hand_shader": "Модуль: Обводка рук",
   "key.akarus.view_model": "Модуль: ViewModel",
   "key.akarus.auto_totem": "Модуль: AutoTotem",
-  "key.akarus.media_player": "Модуль: MediaPlayer"
+  "key.akarus.media_player": "Модуль: MediaPlayer",
+  "key.akarus.trails": "Модуль: Trails",
+  "key.akarus.esp": "Модуль: ESP"
 }

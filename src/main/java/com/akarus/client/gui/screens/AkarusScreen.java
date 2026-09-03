@@ -6,6 +6,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +39,77 @@ public abstract class AkarusScreen extends Screen {
 		}
 	}
 
+	/** Кнопка-чип: маленькая пилюля в ряду действий. */
+	protected static final class Chip {
+		public final String label;
+		public final Runnable action;
+		public boolean enabled = true;
+		public boolean danger;
+
+		public float hover;
+		public int x;
+		public int y;
+		public int width;
+		public int height;
+
+		Chip(String label, Runnable action, boolean danger) {
+			this.label = label;
+			this.action = action;
+			this.danger = danger;
+		}
+	}
+
+	/** Лёгкое собственное текстовое поле: каретка, стирание, фокус. */
+	protected final class TextField {
+		public String value = "";
+		public String hint = "";
+		public int maxLength = 64;
+		public boolean focused;
+		public int x;
+		public int y;
+		public int width;
+		public int height = 18;
+		public float hover;
+
+		public void type(String text) {
+			for (int i = 0; i < text.length() && value.length() < maxLength; i++) {
+				value += text.charAt(i);
+			}
+		}
+
+		public void backspace() {
+			if (!value.isEmpty()) {
+				value = value.substring(0, value.length() - 1);
+			}
+		}
+
+		public boolean contains(double mouseX, double mouseY) {
+			return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
+		}
+
+		public void draw(GuiGraphicsExtractor graphics, int accent, int mouseX, int mouseY) {
+			boolean inside = contains(mouseX, mouseY);
+			hover = ease(hover, inside || focused ? 1.0f : 0.0f, 0.2f);
+			int border = focused ? accent : RenderUtils.mix(0x1AFFFFFF, accent, hover * 0.3f);
+			RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 5, border,
+					RenderUtils.mix(0x82000000, 0x16FFFFFF, hover * 0.5f));
+			int textY = y + (height - font.lineHeight) / 2;
+			boolean blink = (Util.getMillis() / 500L) % 2 == 0;
+			if (value.isEmpty() && !focused) {
+				graphics.text(font, hint, x + 8, textY, 0x6680808C, false);
+			} else {
+				String shown = RenderUtils.clamp(font, value, width - 16);
+				graphics.text(font, shown, x + 8, textY, focused ? 0xFFF6F6F8 : 0xFFC9C9D4, false);
+				if (focused && blink && shown.equals(value)) {
+					int cursorX = x + 8 + font.width(shown) + 1;
+					graphics.fill(cursorX, textY - 1, cursorX + 1, textY + font.lineHeight - 1, accent);
+				}
+			}
+		}
+	}
+
 	protected final List<Item> items = new ArrayList<>();
+	protected final List<Chip> chips = new ArrayList<>();
 
 	/** Плавное появление экрана: 0 → 1 за ~260 мс после открытия. */
 	private float openProgress;
@@ -121,6 +192,65 @@ public abstract class AkarusScreen extends Screen {
 		}
 	}
 
+	/** Кнопка-чип: компактная пилюля для рядов действий. */
+	protected void drawChip(GuiGraphicsExtractor graphics, Chip chip, int x, int y, int w, int h,
+	                        int accent, int mouseX, int mouseY) {
+		chip.x = x;
+		chip.y = y;
+		chip.width = w;
+		chip.height = h;
+		boolean inside = chip.enabled
+				&& mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
+		chip.hover = ease(chip.hover, inside ? 1.0f : 0.0f, 0.25);
+
+		int color = chip.danger ? 0xFFFF5C7A : accent;
+		int base = chip.enabled
+				? RenderUtils.mix(0xD90F0F13, RenderUtils.withAlpha(color, 0.85f), chip.hover * 0.30f)
+				: 0xB80C0C10;
+		RenderUtils.fillRoundedBorder(graphics, x, y, w, h, 6,
+				chip.enabled ? RenderUtils.mix(0x20FFFFFF, color, chip.hover * 0.65f) : 0x14FFFFFF,
+				base);
+
+		int textY = y + (h - font.lineHeight) / 2;
+		int textColor = chip.enabled
+				? RenderUtils.mix(0xFFC9C9D4, 0xFFFFFFFF, chip.hover)
+				: 0xFF54545E;
+		graphics.text(font, RenderUtils.clamp(font, chip.label, w - 8),
+				x + (w - font.width(RenderUtils.clamp(font, chip.label, w - 8))) / 2, textY, textColor, false);
+	}
+
+	/** Строка чипов одинаковой высоты; возвращает итоговую ширину ряда. */
+	protected int drawChipRow(GuiGraphicsExtractor graphics, int centerX, int y, int h, int gap,
+	                          int accent, int mouseX, int mouseY) {
+		int total = 0;
+		for (Chip chip : chips) {
+			chip.width = Math.max(46, font.width(chip.label) + 18);
+			total += chip.width;
+		}
+		total += gap * (chips.size() - 1);
+
+		int x = centerX - total / 2;
+		for (Chip chip : chips) {
+			drawChip(graphics, chip, x, y, chip.width, h, accent, mouseX, mouseY);
+			x += chip.width + gap;
+		}
+		return total;
+	}
+
+	/** Полоса прокрутки для наших списков; возвращает индекс первого видимого элемента. */
+	protected int drawScrollbar(GuiGraphicsExtractor graphics, int trackX, int trackY, int trackH,
+	                            int scroll, int visible, int total, int accent) {
+		if (total <= visible) {
+			return scroll;
+		}
+		RenderUtils.fillRounded(graphics, trackX, trackY, 2, trackH, 1, 0x26FFFFFF);
+		int thumb = Math.max(12, trackH * visible / total);
+		int maxScroll = total - visible;
+		int thumbY = trackY + (trackH - thumb) * scroll / Math.max(1, maxScroll);
+		RenderUtils.fillRounded(graphics, trackX, thumbY, 2, thumb, 1, RenderUtils.withAlpha(accent, 0.85f));
+		return scroll;
+	}
+
 	/** Клик по пунктам меню; true — если попали в пункт (действие уже выполнено). */
 	protected boolean clickItems(MouseButtonEvent event) {
 		double mx = event.x();
@@ -131,6 +261,22 @@ public abstract class AkarusScreen extends Screen {
 					&& my >= item.y && my < item.y + item.height) {
 				playClick();
 				item.action.run();
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Клик по чипам действий. */
+	protected boolean clickChips(MouseButtonEvent event) {
+		double mx = event.x();
+		double my = event.y();
+		for (Chip chip : chips) {
+			if (chip.enabled && chip.action != null
+					&& mx >= chip.x && mx < chip.x + chip.width
+					&& my >= chip.y && my < chip.y + chip.height) {
+				playClick();
+				chip.action.run();
 				return true;
 			}
 		}
@@ -148,5 +294,13 @@ public abstract class AkarusScreen extends Screen {
 
 	protected static Item item(String label, String hint, Runnable action) {
 		return new Item(label, hint, action);
+	}
+
+	protected static Chip chip(String label, Runnable action) {
+		return new Chip(label, action, false);
+	}
+
+	protected static Chip chip(String label, Runnable action, boolean danger) {
+		return new Chip(label, action, danger);
 	}
 }

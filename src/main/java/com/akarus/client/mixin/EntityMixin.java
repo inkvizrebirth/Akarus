@@ -1,5 +1,6 @@
 package com.akarus.client.mixin;
 
+import com.akarus.client.module.impl.EspModule;
 import com.akarus.client.util.RotationHumanizer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -10,6 +11,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * «Человечные» довороты для легитных режимов AutoMine и KillAura.
@@ -59,5 +61,23 @@ public abstract class EntityMixin {
 			this.akarus$writingHumanized = false;
 		}
 		ci.cancel();
+	}
+
+	/**
+	 * ESP (Glow): цвет обводки подсвеченных сущностей.
+	 *
+	 * Контур свечения красится в цвет команды сущности — это единственный вход,
+	 * через который ваниль узнаёт цвет обводки. Для наших целей из {@link EspModule}
+	 * прилетает свой цвет (в том числе радуга и градиент), у всех остальных
+	 * сущностей цвет остаётся игровым. Вызывается на потоке игры при извлечении
+	 * рендер-стейта сущности — то есть ровно один раз на сущность в кадр.
+	 */
+	@Inject(method = "getTeamColor", at = @At("HEAD"), cancellable = true, require = 0)
+	private void akarus$espGlowColor(CallbackInfoReturnable<Integer> cir) {
+		Entity self = (Entity) (Object) this;
+		int color = EspModule.glowColor(self);
+		if (color != 0) {
+			cir.setReturnValue(color);
+		}
 	}
 }

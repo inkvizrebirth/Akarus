@@ -2,10 +2,14 @@ package com.akarus.client.mixin;
 
 import com.akarus.client.gui.screens.AkarusMenuScreen;
 import com.akarus.client.gui.screens.AkarusPauseScreen;
+import com.akarus.client.gui.screens.AkarusServersScreen;
+import com.akarus.client.gui.screens.AkarusWorldsScreen;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -15,12 +19,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Полноценная замена ванильного главного меню и меню паузы.
+ * Полноценная замена ванильной «оболочки» игры.
  *
  * Все пути, которыми игра показывает TitleScreen/PauseScreen (старт, Esc,
  * {@code Gui#setPauseScreen}, возврат с подключений), проходят через
  * {@code Gui#setScreen} — подменяем аргумент ровно там и только там, где это
- * безопасно. Точечная замена вместо точечных патчей десятка мест: в 26.2
+ * безопасно. Тот же крючок ловит и списки миров/серверов: куда бы игра ни
+ * собиралась показать SelectWorldScreen или JoinMultiplayerScreen (после
+ * отключения, из настроек, при возврате), игрок видит наши экраны в стиле
+ * клиента. Точечная замена вместо точечных патчей десятка мест: в 26.2
  * начальный экран собирается в {@code Gui#buildInitialScreens} лямбдой, которая
  * тоже вызывает setScreen — мы её покрываем.
  *
@@ -43,6 +50,10 @@ public final class AkarusGuiMixin {
 			replacement = new AkarusMenuScreen();
 		} else if (incoming instanceof PauseScreen) {
 			replacement = new AkarusPauseScreen();
+		} else if (incoming instanceof SelectWorldScreen) {
+			replacement = new AkarusWorldsScreen(new AkarusMenuScreen());
+		} else if (incoming instanceof JoinMultiplayerScreen) {
+			replacement = new AkarusServersScreen(new AkarusMenuScreen());
 		}
 		if (replacement == null) {
 			return;
