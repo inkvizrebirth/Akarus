@@ -188,7 +188,7 @@ public class AkarusSettingsScreen extends AkarusScreen {
 		Row keys = new Row("Назначить клавиши", ACTION,
 				() -> {
 					if (this.minecraft != null) {
-						this.minecraft.setScreen(new KeyBindsScreen(this, this.minecraft.options));
+						this.minecraft.gui.setScreen(new KeyBindsScreen(this, this.minecraft.options));
 					}
 				});
 		rows.add(keys);
@@ -321,7 +321,7 @@ public class AkarusSettingsScreen extends AkarusScreen {
 			if (mx >= bx && mx < bx + backWidth && my >= backY && my < backY + 20) {
 				playClick();
 				if (this.minecraft != null) {
-					this.minecraft.setScreen(parent);
+					this.minecraft.gui.setScreen(parent);
 				}
 				return true;
 			}
@@ -381,7 +381,7 @@ public class AkarusSettingsScreen extends AkarusScreen {
 	@Override
 	public void onClose() {
 		if (this.minecraft != null) {
-			this.minecraft.setScreen(parent);
+			this.minecraft.gui.setScreen(parent);
 		}
 	}
 }

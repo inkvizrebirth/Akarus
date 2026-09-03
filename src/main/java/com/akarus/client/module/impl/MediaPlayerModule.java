@@ -60,8 +60,6 @@ public class MediaPlayerModule extends Module {
 	private final ButtonSetting openButton = buttonSetting("open_folder", "", "\uD83D\uDCC2 Открыть папку с музыкой",
 			this::openMusicFolder);
 
-	private static final Random RANDOM = new Random();
-
 	/** Для авто-рескана: меняем список только когда папка реально тронута. */
 	private long watchedModified = -1L;
 	private int scanCooldown;

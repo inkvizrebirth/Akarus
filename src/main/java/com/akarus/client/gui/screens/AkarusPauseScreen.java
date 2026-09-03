@@ -4,6 +4,7 @@ import com.akarus.client.gui.ClickGuiScreen;
 import com.akarus.client.util.RenderUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.util.Util;
 
@@ -27,7 +28,7 @@ public class AkarusPauseScreen extends AkarusScreen {
 		items.add(item("Продолжить игру", "Esc", () -> {
 			if (this.minecraft != null) {
 				this.minecraft.pauseGame(false);
-				this.minecraft.setScreen(null);
+				this.minecraft.gui.setScreen(null);
 			}
 		}));
 		items.add(item("Настройки", "", () -> openNext(new AkarusSettingsScreen(this))));
@@ -53,9 +54,9 @@ public class AkarusPauseScreen extends AkarusScreen {
 				}));
 	}
 
-	private void openNext(AkarusScreen next) {
+	private void openNext(Screen next) {
 		if (this.minecraft != null) {
-			this.minecraft.setScreen(next);
+			this.minecraft.gui.setScreen(next);
 		}
 	}
 

@@ -30,7 +30,7 @@ public final class AkarusScreens {
 
 			String label = "Версия: " + ViaIntegration.currentVersionLabel();
 			Button versionPill = Button.builder(Component.literal(label), button ->
-							client.setScreen(new AkarusVersionSelectScreen(screen)))
+							client.gui.setScreen(new AkarusVersionSelectScreen(screen)))
 					.width(Math.min(150, Math.max(110, client.font.width(label) + 18)))
 					.height(14)
 					.pos(scaledWidth - Math.min(150, Math.max(110, client.font.width(label) + 18)) - 4, 4)
@@ -48,7 +48,7 @@ public final class AkarusScreens {
 		if (parent != null) {
 			net.minecraft.client.Minecraft client = net.minecraft.client.Minecraft.getInstance();
 			if (client != null) {
-				client.setScreen(new AkarusSettingsScreen(parent));
+				client.gui.setScreen(new AkarusSettingsScreen(parent));
 			}
 		}
 	}

@@ -56,7 +56,7 @@ public class AkarusVersionSelectScreen extends AkarusScreen {
 		change.run();
 		// пересоздаём экран — галочка «сейчас» должна переехать
 		if (this.minecraft != null) {
-			this.minecraft.setScreen(new AkarusVersionSelectScreen(this.parent));
+			this.minecraft.gui.setScreen(new AkarusVersionSelectScreen(this.parent));
 		}
 	}
 
@@ -118,7 +118,7 @@ public class AkarusVersionSelectScreen extends AkarusScreen {
 	@Override
 	public void onClose() {
 		if (this.minecraft != null) {
-			this.minecraft.setScreen(parent);
+			this.minecraft.gui.setScreen(parent);
 		}
 	}
 }

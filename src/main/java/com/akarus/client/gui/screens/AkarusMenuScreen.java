@@ -5,7 +5,7 @@ import com.akarus.client.gui.ClickGuiScreen;
 import com.akarus.client.util.FileOpener;
 import com.akarus.client.util.RenderUtils;
 import com.akarus.client.util.ViaIntegration;
-import com.mojang.blaze3d.pipeline.RenderPipelines;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
@@ -36,13 +36,13 @@ public class AkarusMenuScreen extends AkarusScreen {
 		super("Akarus");
 
 		items.add(item("Одиночная игра", "миры и сохранения",
-				() -> this.minecraft.setScreen(new SelectWorldScreen(this))));
+				() -> this.minecraft.gui.setScreen(new SelectWorldScreen(this))));
 		items.add(item("Сетевая игра", "серверы и версии",
-				() -> this.minecraft.setScreen(new JoinMultiplayerScreen(this))));
+				() -> this.minecraft.gui.setScreen(new JoinMultiplayerScreen(this))));
 		items.add(item("Настройки", "игра · видео · клавиши",
-				() -> this.minecraft.setScreen(new AkarusSettingsScreen(this))));
+				() -> this.minecraft.gui.setScreen(new AkarusSettingsScreen(this))));
 		items.add(item("ClickGUI", "модули",
-				() -> this.minecraft.setScreen(new ClickGuiScreen())));
+				() -> this.minecraft.gui.setScreen(new ClickGuiScreen())));
 		items.add(item("Telegram", "@inkviz01",
 				() -> FileOpener.openUrl("https://t.me/inkviz01")));
 		items.add(item("Выход", "",
