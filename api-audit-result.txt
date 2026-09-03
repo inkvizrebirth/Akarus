@@ -23,11 +23,11 @@
 MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 === классы мобов/врагов/манекенов ===
-        0  2026-09-03 10:45   assets/minecraft/textures/entity/armorstand/
+        0  2026-09-03 10:47   assets/minecraft/textures/entity/armorstand/
       809  1980-02-01 00:00   assets/minecraft/textures/entity/armorstand/armorstand.png
-        0  2026-09-03 10:45   net/minecraft/client/model/object/armorstand/
-      320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
+        0  2026-09-03 10:47   net/minecraft/client/model/object/armorstand/
      6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
+      320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
      5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
     11516  1980-02-01 00:00   net/minecraft/client/renderer/entity/ArmorStandRenderer.class
      1224  1980-02-01 00:00   net/minecraft/client/renderer/entity/state/ArmorStandRenderState.class
@@ -117,6 +117,58 @@ MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/mine
 === EntityType ===
   public net.minecraft.world.entity.EntityType(net.minecraft.world.entity.EntityType$EntityFactory<T>, net.minecraft.world.entity.MobCategory, boolean, boolean, boolean, boolean, net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>, net.minecraft.world.entity.EntityDimensions, float, int, int, java.lang.String, java.util.Optional<net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>>, net.minecraft.world.flag.FeatureFlagSet, boolean);
   public net.minecraft.world.entity.MobCategory getCategory();
+
+=== MobCategory (константы) ===
+Compiled from "MobCategory.java"
+public final class net.minecraft.world.entity.MobCategory extends java.lang.Enum<net.minecraft.world.entity.MobCategory> implements net.minecraft.util.StringRepresentable {
+  public static final net.minecraft.world.entity.MobCategory MONSTER;
+  public static final net.minecraft.world.entity.MobCategory CREATURE;
+  public static final net.minecraft.world.entity.MobCategory AMBIENT;
+  public static final net.minecraft.world.entity.MobCategory AXOLOTLS;
+  public static final net.minecraft.world.entity.MobCategory UNDERGROUND_WATER_CREATURE;
+  public static final net.minecraft.world.entity.MobCategory WATER_CREATURE;
+  public static final net.minecraft.world.entity.MobCategory WATER_AMBIENT;
+  public static final net.minecraft.world.entity.MobCategory MISC;
+  public static final com.mojang.serialization.Codec<net.minecraft.world.entity.MobCategory> CODEC;
+  public static net.minecraft.world.entity.MobCategory[] values();
+  public static net.minecraft.world.entity.MobCategory valueOf(java.lang.String);
+  public java.lang.String getName();
+  public java.lang.String getDebugAbbreviation();
+  public java.lang.String getSerializedName();
+  public int getMaxInstancesPerChunk();
+  public boolean isFriendly();
+  public boolean isPersistent();
+  public int getDespawnDistance();
+  public int getNoDespawnDistance();
+  static {};
+}
+
+=== Camera приватные (alignWithEntity) ===
+  public void update(net.minecraft.client.DeltaTracker);
+  private void alignWithEntity(float);
+
+=== MouseHandler приватные (turn) ===
+  private final net.minecraft.util.SmoothDouble smoothTurnX;
+  private final net.minecraft.util.SmoothDouble smoothTurnY;
+  private void turnPlayer(double);
+
+=== Minecraft поля ===
+  public final net.minecraft.client.gui.Gui gui;
+  public final net.minecraft.client.MouseHandler mouseHandler;
+  public net.minecraft.client.multiplayer.MultiPlayerGameMode gameMode;
+  public net.minecraft.client.multiplayer.ClientLevel level;
+  public net.minecraft.client.player.LocalPlayer player;
+  public final boolean canSwitchGameMode();
+
+=== Entity getView ===
+  private static double viewScale;
+  public final net.minecraft.world.phys.Vec3 getViewVector(float);
+  public net.minecraft.core.Direction getNearestViewDirection();
+  public float getViewXRot(float);
+  public float getViewYRot(float);
+  public final net.minecraft.world.phys.Vec3 calculateViewVector(float, float);
+  public static double getViewScale();
+  public static void setViewScale(double);
 
 === KeyMapping ===
   public static void resetMapping();
