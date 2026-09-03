@@ -9,6 +9,7 @@ import com.akarus.client.settings.IntSetting;
 import com.akarus.client.settings.ModeSetting;
 import com.akarus.client.settings.Setting;
 import com.akarus.client.settings.StringSetting;
+import com.akarus.client.util.Notifications;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
@@ -46,6 +47,26 @@ public abstract class Module {
 	 */
 	protected boolean defaultEnabled() {
 		return false;
+	}
+
+	/**
+	 * Модули-«настройки» (ClickGUI, HUD): их нельзя выключить — выключателя
+	 * в меню у них нет, а setEnabled молча игнорирует попытки.
+	 */
+	protected boolean alwaysEnabled() {
+		return false;
+	}
+
+	public boolean isAlwaysEnabled() {
+		return alwaysEnabled();
+	}
+
+	/**
+	 * Что делает нажатие клавиши модуля. Обычно — переключение, но у модулей-«экранов»
+	 * (ClickGUI, HUD-редактор) клавиша открывает их окно.
+	 */
+	protected void onBindPressed() {
+		toggle();
 	}
 
 	protected Module(String id, String name, String description, ModuleCategory category, int defaultKey) {
@@ -114,11 +135,15 @@ public abstract class Module {
 	}
 
 	public void setEnabled(boolean enabled) {
-		if (this.enabled == enabled) {
+		if (alwaysEnabled() || this.enabled == enabled) {
 			return;
 		}
 		setEnabledSilently(enabled);
 		ConfigManager.save();
+		// Уведомление на HUD: «включилось/выключилось»
+		Notifications.push("Модуль",
+				getName() + (enabled ? " — включён" : " — выключен"),
+				enabled ? Notifications.Type.OK : Notifications.Type.INFO);
 	}
 
 	/**
@@ -177,6 +202,15 @@ public abstract class Module {
 
 	protected ColorSetting colorSetting(String id, String name, int color) {
 		ColorSetting setting = new ColorSetting(id, name, color);
+		settings.add(setting);
+		return setting;
+	}
+
+	/**
+	 * Добавляет уже созданную настройку — для типов, у которых нет своего хелпера
+	 * (например, список элементов HUD).
+	 */
+	protected <T extends Setting<?>> T addSetting(T setting) {
 		settings.add(setting);
 		return setting;
 	}

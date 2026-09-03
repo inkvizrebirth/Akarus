@@ -1,20 +1,23 @@
 package com.akarus.client.gui.hud;
 
 import com.akarus.client.AkarusClient;
+import com.akarus.client.gui.theme.ClientTheme;
 import com.akarus.client.module.Module;
-import com.akarus.client.module.ModuleCategory;
 import com.akarus.client.module.ModuleManager;
 import com.akarus.client.module.impl.AutoWalkModule;
 import com.akarus.client.module.impl.FreeCamModule;
 import com.akarus.client.module.impl.FreeLookModule;
 import com.akarus.client.module.impl.HudInfoModule;
 import com.akarus.client.module.impl.MediaPlayerModule;
+import com.akarus.client.util.Notifications;
 import com.akarus.client.util.RenderUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -25,27 +28,38 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Отрисовка своего HUD.
+ * Отрисовка HUD.
  *
- * В 26.2 для этого используется Fabric HUD API: мы регистрируем элемент,
- * который игра вызывает каждый кадр и передаёт нам {@link GuiGraphicsExtractor}.
+ * HUD — набор независимых элементов (водяной знак, инфопанель, список модулей,
+ * бинды, медиаплеер, уведомления). Какие показывать — решает модуль HUD
+ * (галочки в его настройках), а где — раскладка {@link HudLayout}: элементы
+ * таскаются мышью в редакторе (клавиша модуля HUD) или с открытым чатом.
+ *
+ * Всё рисуется фирменным шрифтом (Manrope) и в цветах темы клиента.
  */
 public final class HudRenderer {
 
-	private static final int MARGIN = 6;
 	private static final int PADDING = 6;
 	private static final int LINE_GAP = 2;
+	private static final int MARGIN = 6;
 
 	private static final int PANEL_BACKGROUND = 0xB80A0A0D;
 	private static final int PANEL_BORDER = 0x2AFFFFFF;
 	private static final int TEXT_COLOR = 0xFFEDEDF5;
+	private static final int TEXT_SECONDARY = 0xFFA6A6B2;
+	private static final int TEXT_DIM = 0xFF6B6B78;
+	private static final int ENABLED_GREEN = 0xFF7BE08A;
 
-	/** Счётчики появления модулей в списке (0..10 тиков фейда). */
-	private static final Map<String, Integer> MODULE_ALPHA = new java.util.HashMap<>();
+	/** Счётчики появления модулей в списке (0..10 шагов фейда). */
+	private static final Map<String, Integer> MODULE_ALPHA = new HashMap<>();
+
+	/** Кадровое время для анимаций (обновляется в начале отрисовки). */
+	private static float frameDelta;
 
 	private HudRenderer() {
 	}
@@ -55,99 +69,475 @@ public final class HudRenderer {
 				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "overlay"),
 				HudRenderer::render);
 
-		// Координаты AutoWalk рисуются отдельным элементом: они нужны
-		// и тогда, когда сам HUD-инфо выключен
+		// Контекстные плашки: координаты AutoWalk и свободной камеры
 		HudElementRegistry.addLast(
 				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "auto_walk"),
 				HudRenderer::renderAutoWalk);
-
-		// Отдельная плашка свободной камеры: координаты взгляда и расстояние до игрока
 		HudElementRegistry.addLast(
 				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "free_cam"),
 				HudRenderer::renderFreeCam);
 
-		// Карточка медиаплеера: свой правый нижний угол, чтобы не сталкиваться
-		// с инфопанелью и списком модулей
-		HudElementRegistry.addLast(
-				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "media"),
-				HudRenderer::renderMedia);
+		HudLayout.load();
+	}
+
+	/** Человекочитаемое имя элемента раскладки — для редактора. */
+	public static String elementLabel(String elementId) {
+		return switch (elementId) {
+			case HudInfoModule.ELEMENT_WATERMARK -> "Водяной знак";
+			case HudInfoModule.ELEMENT_INFO -> "Инфопанель";
+			case HudInfoModule.ELEMENT_MODULE_LIST -> "Список модулей";
+			case HudInfoModule.ELEMENT_KEYBINDS -> "Бинды";
+			case HudInfoModule.ELEMENT_MEDIA -> "Медиаплеер";
+			case HudInfoModule.ELEMENT_NOTIFICATIONS -> "Уведомления";
+			default -> elementId;
+		};
+	}
+
+	// ------------------------------------------------------------------
+	// Вход из Fabric HUD API
+	// ------------------------------------------------------------------
+
+	private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+		Minecraft client = Minecraft.getInstance();
+		LocalPlayer player = client.player;
+
+		// Рисуем в мире; с открытым чатом HUD тоже нужен — за элемент можно
+		// тащить прямо из чата (см. ChatScreenMixin)
+		Screen screen = client.gui.screen();
+		boolean chatOpen = screen instanceof ChatScreen;
+		if (player == null || client.level == null
+				|| (screen != null && !chatOpen)
+				|| client.gui.hud.isHidden()) {
+			return;
+		}
+
+		renderElements(graphics, client, false);
+
+		// Перетаскивание из чата: ведём элемент за курсором, пока зажата кнопка
+		if (chatOpen && HudLayout.isDragging()) {
+			double scale = client.getWindow().getGuiScaledWidth() / (double) client.getWindow().getScreenWidth();
+			double mouseX = client.mouseHandler.xpos() * scale;
+			double mouseY = client.mouseHandler.ypos() * scale;
+			HudLayout.dragTo(mouseX, mouseY,
+					client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
+			if (!client.mouseHandler.isLeftPressed()) {
+				HudLayout.endDrag();
+			}
+		}
 	}
 
 	/**
-	 * Карточка MediaPlayer: трек, прогресс, время и эквалайзер.
-	 *
-	 * Рисуем и в меню (карточка — часть интерфейса, играет музыка или нет — не важно),
-	 * но прячем при F1. Панель всегда «чёрное стекло»: мягкая тень, скругления,
-	 * акцентная полоска прогресса.
+	 * Рисует все элементы HUD. Используется и обычным рендером, и редактором
+	 * раскладки (там editorMode = true: показываем даже неотмеченные элементы,
+	 * но приглушённо — чтобы их тоже можно было схватить и поставить).
 	 */
-	private static void renderMedia(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
-		Minecraft client = Minecraft.getInstance();
-		if (client.player == null || client.level == null || client.gui.hud.isHidden()) {
-			return;
-		}
-		MediaPlayerModule media = ModuleManager.find(MediaPlayerModule.class);
-		if (media == null || !media.isEnabled() || !media.showsHudCard()) {
+	public static void renderElements(GuiGraphicsExtractor graphics, Minecraft client, boolean editorMode) {
+		long now = Util.getMillis();
+		frameDelta = Math.min((now - lastFrame) / 1000.0f, 0.05f);
+		lastFrame = now;
+
+		HudInfoModule hud = ModuleManager.find(HudInfoModule.class);
+		if (hud == null) {
 			return;
 		}
 
+		boolean watermark = hud.shows(HudInfoModule.ELEMENT_WATERMARK);
+		boolean info = hud.shows(HudInfoModule.ELEMENT_INFO);
+		boolean moduleList = hud.shows(HudInfoModule.ELEMENT_MODULE_LIST);
+		boolean keybinds = hud.shows(HudInfoModule.ELEMENT_KEYBINDS);
+		boolean media = hud.shows(HudInfoModule.ELEMENT_MEDIA);
+		boolean notifications = hud.shows(HudInfoModule.ELEMENT_NOTIFICATIONS);
+
+		if (watermark || editorMode) {
+			drawWatermark(graphics, client, watermark ? 1.0f : 0.35f, now);
+		}
+		if (info || editorMode) {
+			drawInfo(graphics, client, info ? 1.0f : 0.35f);
+		}
+		if (moduleList || editorMode) {
+			drawModuleList(graphics, client, moduleList ? 1.0f : 0.35f, now);
+		}
+		if (keybinds || editorMode) {
+			drawKeybinds(graphics, client, keybinds ? 1.0f : 0.35f);
+		}
+		if (media || editorMode) {
+			drawMedia(graphics, client, media ? 1.0f : 0.35f, now);
+		}
+		if (notifications || editorMode) {
+			drawNotifications(graphics, client, notifications ? 1.0f : 0.35f, now);
+		}
+	}
+
+	private static long lastFrame;
+
+	// ------------------------------------------------------------------
+	// Элемент: водяной знак
+	// ------------------------------------------------------------------
+
+	private static void drawWatermark(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
 		Font font = client.font;
-		int screenWidth = client.getWindow().getGuiScaledWidth();
-		int screenHeight = client.getWindow().getGuiScaledHeight();
+		String brand = AkarusClient.MOD_NAME + " " + AkarusClient.MOD_VERSION;
 
-		int width = Math.min(150, screenWidth - 24);
+		int[] position = HudLayout.position(HudInfoModule.ELEMENT_WATERMARK, MARGIN, MARGIN);
+		int pillW = RenderUtils.width(font, brand) + 28;
+		int pillH = font.lineHeight + 8;
+
+		int accent = ClientTheme.accent(now);
+		RenderUtils.drawSoftShadow(graphics, position[0], position[1], pillW, pillH, 5, 3);
+		RenderUtils.fillRoundedBorder(graphics, position[0], position[1], pillW, pillH, 5,
+				RenderUtils.withAlpha(PANEL_BORDER, 0.9f * alpha), RenderUtils.withAlpha(0xE0070708, alpha));
+
+		// Полоска темы сверху пилюли — «текущий» цвет перелива
+		for (int i = 0; i < pillW - 10; i++) {
+			float t = i / (float) (pillW - 10);
+			graphics.fill(position[0] + 5 + i, position[1], position[0] + 6 + i, position[1] + 1,
+					RenderUtils.withAlpha(ClientTheme.gradientAt(t, now), 0.85f * alpha));
+		}
+
+		float pulse = 0.4f + 0.6f * (float) Math.abs(Math.sin(now / 900.0));
+		graphics.fill(position[0] + 6, position[1] + pillH / 2 - 2, position[0] + 10, position[1] + pillH / 2 + 2,
+				RenderUtils.withAlpha(accent, pulse * alpha));
+
+		// Текст — перелив темы по символам
+		int cursor = position[0] + 15;
+		for (int i = 0; i < brand.length(); i++) {
+			String symbol = String.valueOf(brand.charAt(i));
+			int color = ClientTheme.gradientAt(i / (float) brand.length(), now);
+			RenderUtils.textFlat(graphics, font, symbol, cursor, position[1] + 4,
+					RenderUtils.withAlpha(color, alpha));
+			cursor += RenderUtils.width(font, symbol);
+		}
+
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_WATERMARK, position[0], position[1], pillW, pillH);
+	}
+
+	// ------------------------------------------------------------------
+	// Элемент: инфопанель (FPS · XYZ · направление · пинг)
+	// ------------------------------------------------------------------
+
+	private static void drawInfo(GuiGraphicsExtractor graphics, Minecraft client, float alpha) {
+		LocalPlayer player = client.player;
+		Font font = client.font;
+		long now = Util.getMillis();
+
+		List<String> lines = new ArrayList<>();
+		lines.add("FPS: " + client.getFps());
+		if (player != null) {
+			BlockPos pos = player.blockPosition();
+			lines.add("XYZ: " + pos.getX() + " " + pos.getY() + " " + pos.getZ());
+			lines.add("Направление: " + directionName(player.getDirection()));
+			lines.add("Пинг: " + getPing(client) + " мс");
+		}
+
+		int width = 0;
+		for (String line : lines) {
+			width = Math.max(width, RenderUtils.width(font, line));
+		}
+		width += PADDING * 2 + 9;
+		int height = lines.size() * (font.lineHeight + LINE_GAP) - LINE_GAP + PADDING * 2;
+
+		int[] position = HudLayout.position(HudInfoModule.ELEMENT_INFO, MARGIN, MARGIN + font.lineHeight + 14);
+		int x = position[0];
+		int y = position[1];
+
+		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 4, 3);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 4,
+				RenderUtils.withAlpha(PANEL_BORDER, 0.9f * alpha), RenderUtils.withAlpha(PANEL_BACKGROUND, alpha));
+		// Акцентная полоса слева — текущий цвет перелива
+		graphics.fillGradient(x + 1, y + 3, x + 3, y + height - 3,
+				RenderUtils.withAlpha(ClientTheme.gradientAt(0.0f, now), alpha),
+				RenderUtils.withAlpha(ClientTheme.gradientAt(1.0f, now), alpha));
+
+		int textY = y + PADDING;
+		for (String line : lines) {
+			RenderUtils.text(graphics, font, line, x + PADDING + 6, textY,
+					RenderUtils.withAlpha(TEXT_COLOR, alpha));
+			textY += font.lineHeight + LINE_GAP;
+		}
+
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_INFO, x, y, width, height);
+	}
+
+	// ------------------------------------------------------------------
+	// Элемент: список активных модулей
+	// ------------------------------------------------------------------
+
+	private static void drawModuleList(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
+		Font font = client.font;
+
+		List<Module> active = ModuleManager.getAll().stream()
+				.filter(Module::isEnabled)
+				.sorted(Comparator.comparingInt((Module module) -> -RenderUtils.width(font, module.getName()))
+						.thenComparing(Module::getName))
+				.toList();
+
+		// Прозрачности живут своей жизнью: включённые набирают 0..10,
+		// выключенные доживают на месте и уходят с фейдом
+		for (Module module : active) {
+			MODULE_ALPHA.merge(module.getName(), 0, Math::max);
+		}
+		List<String> gone = new ArrayList<>();
+		for (Map.Entry<String, Integer> entry : MODULE_ALPHA.entrySet()) {
+			boolean stillActive = active.stream().anyMatch(m -> m.getName().equals(entry.getKey()));
+			int steps = Math.max(0, Math.min(10, entry.getValue() + (stillActive ? 1 : -1)));
+			entry.setValue(steps);
+			if (!stillActive && steps <= 0) {
+				gone.add(entry.getKey());
+			}
+		}
+		gone.forEach(MODULE_ALPHA::remove);
+
+		if (active.isEmpty() && MODULE_ALPHA.isEmpty()) {
+			return;
+		}
+
+		int[] position = HudLayout.position(HudInfoModule.ELEMENT_MODULE_LIST, MARGIN, 112);
+
+		int y = position[1];
+		int index = 0;
+		for (Module module : active) {
+			drawModuleLine(graphics, font, position[0], y, now, index, module.getName(), alpha);
+			y += font.lineHeight + LINE_GAP;
+			index++;
+		}
+		for (String name : List.copyOf(MODULE_ALPHA.keySet())) {
+			if (active.stream().anyMatch(m -> m.getName().equals(name))) {
+				continue;
+			}
+			drawModuleLine(graphics, font, position[0], y, now, index, name, alpha);
+			y += font.lineHeight + LINE_GAP;
+			index++;
+		}
+	}
+
+	/** Строка модуля с easing: заезд слева + фейд. */
+	private static void drawModuleLine(GuiGraphicsExtractor graphics, Font font, int x, int y,
+			long time, int index, String name, float alpha) {
+		int alphaSteps = MODULE_ALPHA.getOrDefault(name, 10);
+		float a = Math.max(0.0f, Math.min(1.0f, alphaSteps / 10.0f));
+		float eased = a * a * (3.0f - 2.0f * a);
+		int shift = Math.round((1.0f - eased) * 6.0f);
+		int baseColor = ClientTheme.gradientAt(index * 0.09f, time);
+		int color = (baseColor & 0x00FFFFFF) | (Math.round(255 * eased * alpha) << 24);
+		RenderUtils.textFlat(graphics, font, name, x + shift, y, color);
+	}
+
+	// ------------------------------------------------------------------
+	// Элемент: бинды (модули с клавишами и их статус)
+	// ------------------------------------------------------------------
+
+	private static void drawKeybinds(GuiGraphicsExtractor graphics, Minecraft client, float alpha) {
+		Font font = client.font;
+		long now = Util.getMillis();
+
+		List<Module> bound = ModuleManager.getAll().stream()
+				.filter(module -> !"unknown".equals(module.getBindName()))
+				.sorted(Comparator.comparing(Module::getName))
+				.toList();
+		if (bound.isEmpty()) {
+			return;
+		}
+
+		int rowHeight = font.lineHeight + 3;
+		int width = 0;
+		for (Module module : bound) {
+			width = Math.max(width, RenderUtils.width(font, module.getBindLabel()) + 8
+					+ RenderUtils.width(font, module.getName()));
+		}
+		width += PADDING * 2 + 4;
+		int height = bound.size() * rowHeight - 3 + PADDING * 2;
+
+		int screenW = client.getWindow().getGuiScaledWidth();
+		int[] position = HudLayout.position(HudInfoModule.ELEMENT_KEYBINDS, screenW - width - MARGIN, 92);
+		int x = position[0];
+		int y = position[1];
+
+		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 5, 3);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 5,
+				RenderUtils.withAlpha(PANEL_BORDER, 0.9f * alpha), RenderUtils.withAlpha(0xCC09090C, alpha));
+
+		// Заголовок-пилюля над списком: маленькая, с точкой-«записью»
+		String title = "бинды";
+		int titleW = RenderUtils.width(font, title) + 12;
+		RenderUtils.fillRounded(graphics, x + 4, y - 5, titleW, font.lineHeight + 4, 4,
+				RenderUtils.withAlpha(0xE60A0A0D, alpha));
+		RenderUtils.textFlat(graphics, font, title, x + 10, y - 4,
+				RenderUtils.withAlpha(ClientTheme.accent(now), alpha));
+
+		int rowY = y + PADDING;
+		for (Module module : bound) {
+			boolean on = module.isEnabled();
+			// Бейдж клавиши: тёмная плашка с рамкой цвета статуса
+			String key = module.getBindLabel();
+			int keyW = RenderUtils.width(font, key) + 8;
+			int statusColor = on ? ENABLED_GREEN : RenderUtils.withAlpha(TEXT_SECONDARY, 0.8f);
+			RenderUtils.fillRoundedBorder(graphics, x + PADDING, rowY - 1, keyW, font.lineHeight + 2, 3,
+					RenderUtils.withAlpha(on ? ENABLED_GREEN : 0x30FFFFFF, 0.55f * alpha),
+					RenderUtils.withAlpha(0x66000000, alpha));
+			RenderUtils.textFlat(graphics, font, key, x + PADDING + 4, rowY,
+					RenderUtils.withAlpha(TEXT_COLOR, alpha));
+			// Имя: белое — выключен, зелёное — включён
+			RenderUtils.text(graphics, font, module.getName(), x + PADDING + keyW + 6, rowY,
+					RenderUtils.withAlpha(on ? ENABLED_GREEN : 0xFFF6F6F8, alpha));
+			rowY += rowHeight;
+		}
+
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_KEYBINDS, x, y - 6, width, height + 6);
+	}
+
+	// ------------------------------------------------------------------
+	// Элемент: уведомления
+	// ------------------------------------------------------------------
+
+	private static void drawNotifications(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
+		Font font = client.font;
+		List<Notifications.Notification> items = Notifications.snapshot();
+		if (items.isEmpty()) {
+			return;
+		}
+
+		int screenW = client.getWindow().getGuiScaledWidth();
+		int[] anchor = HudLayout.position(HudInfoModule.ELEMENT_NOTIFICATIONS, screenW - 170, MARGIN);
+		int x = anchor[0];
+		int y = anchor[1];
+
+		// Ограничиваем ширину плашек зоной элемента (плюс запас на длинный текст)
+		int zoneWidth = Math.max(120, screenW - x - 6);
+
+		int maxWidth = 110;
+		for (Notifications.Notification item : items) {
+			maxWidth = Math.max(maxWidth,
+					RenderUtils.width(font, item.title) + 26 + RenderUtils.width(font, item.message));
+		}
+		maxWidth = Math.min(maxWidth, zoneWidth);
+
+		int cursorY = y;
+		int widest = 0;
+		int heightTotal = 0;
+		List<int[]> boxes = new ArrayList<>();
+
+		for (Notifications.Notification item : items) {
+			// Анимация появления: сдвиг справа + фейд; исчезновение — обратный ход
+			item.appear = Math.min(1.0f, item.appear + frameDelta * 5.5f);
+			float dismiss = item.dismissProgress();
+			float slide = easeOut(item.appear) * (1.0f - easeIn(dismiss));
+			float shown = slide;
+
+			int boxWidth = Math.min(maxWidth,
+					Math.max(96, RenderUtils.width(font, item.title) + 18
+							+ Math.min(RenderUtils.width(font, item.message),
+							maxWidth - RenderUtils.width(font, item.title) - 30)));
+			int boxHeight = font.lineHeight + 10;
+			int boxX = x + maxWidth - boxWidth + Math.round((1.0f - slide) * 26.0f);
+			int color = switch (item.type) {
+				case OK -> 0xFF7BE08A;
+				case WARN -> 0xFFFFC66C;
+				case ERROR -> 0xFFFF8095;
+				case INFO -> ClientTheme.accent(now);
+			};
+
+			RenderUtils.drawSoftShadow(graphics, boxX, cursorY, boxWidth, boxHeight, 6, 3);
+			RenderUtils.fillRoundedBorder(graphics, boxX, cursorY, boxWidth, boxHeight, 6,
+					RenderUtils.withAlpha(color, (0.75f - 0.45f * (1.0f - shown)) * alpha),
+					RenderUtils.withAlpha(0xE40A0A0D, alpha * (0.35f + 0.65f * shown)));
+			// Цветная полоска слева — тип уведомления
+			graphics.fill(boxX + 2, cursorY + 4, boxX + 3, cursorY + boxHeight - 4,
+					RenderUtils.withAlpha(color, alpha * shown));
+
+			RenderUtils.textFlat(graphics, font, item.title, boxX + 9, cursorY + 5,
+					RenderUtils.withAlpha(color, alpha * shown));
+			RenderUtils.drawClamped(graphics, font, item.message,
+					boxX + 9 + RenderUtils.width(font, item.title) + 5, cursorY + 6,
+					boxWidth - 14 - RenderUtils.width(font, item.title) - 5,
+					RenderUtils.withAlpha(TEXT_SECONDARY, alpha * shown));
+
+			boxes.add(new int[]{boxX, cursorY, boxWidth, boxHeight});
+			widest = Math.max(widest, boxWidth);
+			cursorY += boxHeight + 3;
+			heightTotal += boxHeight + 3;
+		}
+
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_NOTIFICATIONS, x, y, maxWidth,
+				Math.max(heightTotal - 3, 10));
+	}
+
+	private static float easeOut(float t) {
+		return 1.0f - (1.0f - t) * (1.0f - t);
+	}
+
+	private static float easeIn(float t) {
+		return t * t;
+	}
+
+	// ------------------------------------------------------------------
+	// Элемент: карточка медиаплеера
+	// ------------------------------------------------------------------
+
+	private static void drawMedia(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
+		MediaPlayerModule media = ModuleManager.find(MediaPlayerModule.class);
+		Font font = client.font;
+
+		int screenW = client.getWindow().getGuiScaledWidth();
+		int screenH = client.getWindow().getGuiScaledHeight();
+
+		int width = Math.min(150, screenW - 24);
 		int height = 34 + font.lineHeight;
-		int x = screenWidth - width - 6;
-		int y = screenHeight - height - 6;
+		int[] position = HudLayout.position(HudInfoModule.ELEMENT_MEDIA,
+				screenW - width - MARGIN, screenH - height - MARGIN);
+		int x = position[0];
+		int y = position[1];
 
-		int accent = ModuleCategory.HUD.getAccent();
-		long time = Util.getMillis();
+		// В редакторе карточка-фантом, даже если плеер выключен
+		boolean playable = media != null && media.isEnabled() && media.showsHudCard();
+		if (!playable && alpha >= 1.0f) {
+			return;
+		}
 
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_MEDIA, x, y, width, height);
+
+		int accent = ClientTheme.gradientAt(0.35f, now);
 		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 4);
-		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6, PANEL_BORDER, 0xD2080809);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6,
+				RenderUtils.withAlpha(PANEL_BORDER, 0.9f * alpha), RenderUtils.withAlpha(0xD2080809, alpha));
 
 		String title;
 		String subtitle;
-		boolean playing = media.isPlaying();
+		boolean playing = media != null && media.isPlaying();
 
-		if (media.hasError()) {
+		if (media == null || !media.hasTrack()) {
+			title = "Медиаплеер";
+			subtitle = media != null && media.trackCount() > 0 ? "Трек не выбран" : "Папка akarus/media пуста";
+		} else if (media.hasError()) {
 			title = "Ошибка звука";
 			subtitle = RenderUtils.clamp(font, media.errorText(), width - 16);
-		} else if (media.hasTrack()) {
-			title = RenderUtils.clamp(font, stripExtension(media.currentName()), width - 24 - font.width(playing ? "▶" : "❚❚"));
-			long position = media.positionMillis();
-			long duration = Math.max(1L, media.durationMillis());
-			subtitle = formatTime(position) + " / " + formatTime(duration);
 		} else {
-			title = "Медиаплеер";
-			subtitle = media.trackCount() > 0 ? "Трек не выбран" : "Папка akarus/media пуста";
+			title = RenderUtils.clamp(font, stripExtension(media.currentName()),
+					width - 24 - RenderUtils.width(font, playing ? "\u25B6" : "\u275A\u275A"));
+			subtitle = formatTime(media.positionMillis()) + " / " + formatTime(Math.max(1L, media.durationMillis()));
 		}
 
-		// Заголовок с иконкой состояния
-		graphics.text(font, playing ? "\u25B6" : "\u275A\u275A", x + 8, y + 7, RenderUtils.withAlpha(accent, playing ? 0.95f : 0.5f), true);
-		graphics.text(font, title, x + 20, y + 7, TEXT_COLOR, true);
+		RenderUtils.textFlat(graphics, font, playing ? "\u25B6" : "\u275A\u275A", x + 8, y + 7,
+				RenderUtils.withAlpha(accent, (playing ? 0.95f : 0.5f) * alpha));
+		RenderUtils.text(graphics, font, title, x + 20, y + 7, RenderUtils.withAlpha(TEXT_COLOR, alpha));
 
-		// Полоска прогресса: тонкая, с бегущим бликом во время воспроизведения
 		int barX = x + 8;
 		int barY = y + 7 + font.lineHeight + 4;
 		int barWidth = width - 16;
-		float progress = media.hasTrack() && media.durationMillis() > 0
+		float progress = media != null && media.hasTrack() && media.durationMillis() > 0
 				? Math.min(1.0f, (float) media.positionMillis() / (float) media.durationMillis())
 				: 0.0f;
-		RenderUtils.drawSlider(graphics, barX, barY, barWidth, 4, progress, accent);
+		RenderUtils.drawSlider(graphics, barX, barY, barWidth, 4, progress, RenderUtils.withAlpha(accent, alpha));
 
-		graphics.text(font, subtitle, x + 8, barY + 7, 0xFFA6A6B2, true);
+		RenderUtils.text(graphics, font, subtitle, x + 8, barY + 7,
+				RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
 
-		// Мини-эквалайзер: семь штрихов, живых только когда играет
+		// Мини-эквалайзер
 		int barsX = x + width - 8 - (7 * 3 - 1);
-		int barsY = barY + 7;
 		for (int bar = 0; bar < 7; bar++) {
-			float wave = playing
-					? 0.5f + 0.5f * (float) Math.sin(time / (140.0 + bar * 47.0) + bar * 1.7)
-					: 0.15f;
+			float wave = playing ? 0.5f + 0.5f * (float) Math.sin(now / (140.0 + bar * 47.0) + bar * 1.7) : 0.15f;
 			int barHeight = 2 + Math.round(wave * 8.0f);
-			graphics.fill(barsX + bar * 3, barsY + 9 - barHeight,
-					barsX + bar * 3 + 2, barsY + 9,
-					RenderUtils.withAlpha(accent, 0.25f + 0.7f * wave));
+			graphics.fill(barsX + bar * 3, barY + 9 - barHeight, barsX + bar * 3 + 2, barY + 9,
+					RenderUtils.withAlpha(accent, (0.25f + 0.7f * wave) * alpha));
 		}
 	}
 
@@ -161,12 +551,10 @@ public final class HudRenderer {
 		return String.format(java.util.Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60);
 	}
 
-	/**
-	 * Панель AutoWalk внизу по центру экрана.
-	 *
-	 * Пока игрок летает фрикамом — это его текущие координаты;
-	 * как только цель задана — координаты цели и оставшееся расстояние.
-	 */
+	// ------------------------------------------------------------------
+	// Контекстные плашки (не входят в раскладку — всегда по своим местам)
+	// ------------------------------------------------------------------
+
 	private static void renderAutoWalk(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
@@ -175,8 +563,6 @@ public final class HudRenderer {
 			return;
 		}
 
-		// find, а не getModule: HUD рисуется каждый кадр, и исключение из-за
-		// незарегистрированного модуля уронило бы рендер
 		AutoWalkModule autoWalk = ModuleManager.find(AutoWalkModule.class);
 		if (autoWalk == null || !autoWalk.isEnabled()) {
 			return;
@@ -187,8 +573,6 @@ public final class HudRenderer {
 
 		FreeCamModule freeCam = ModuleManager.find(FreeCamModule.class);
 		boolean flying = freeCam != null && freeCam.isEnabled();
-		// Точку берём там, где сейчас «глаза»: во время осмотра это камера, а не игрок —
-		// игрок стоит на месте, и его координаты для выбора точки бесполезны
 		BlockPos position;
 		if (walking && autoWalk.getTarget() != null) {
 			position = autoWalk.getTarget();
@@ -207,40 +591,32 @@ public final class HudRenderer {
 
 		int screenWidth = client.getWindow().getGuiScaledWidth();
 		int screenHeight = client.getWindow().getGuiScaledHeight();
-
-		int width = Math.max(font.width(title), font.width(hint)) + PADDING * 2 + 3;
+		int width = Math.max(RenderUtils.width(font, title), RenderUtils.width(font, hint)) + PADDING * 2 + 3;
 		int height = font.lineHeight * 2 + LINE_GAP + PADDING * 2 + 2;
 		int x = (screenWidth - width) / 2;
 		int y = screenHeight - height - 46;
 
-		int accent = ModuleCategory.MOVEMENT.getAccent();
+		int accent = ClientTheme.gradientAt(0.4f, Util.getMillis());
 
 		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 5, 4);
 		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 5, PANEL_BORDER, PANEL_BACKGROUND);
-
-		// Акцентная полоса сверху панели и «дышащая» точка рядом с заголовком
 		graphics.fill(x + 7, y, x + width - 7, y + 1, RenderUtils.withAlpha(accent, 0.9f));
 
-		graphics.text(font, title, x + PADDING + 3, y + PADDING + 1, TEXT_COLOR, true);
-		graphics.text(font, hint, x + PADDING + 3, y + PADDING + font.lineHeight + LINE_GAP + 1, 0xFFA6A6B2, true);
+		RenderUtils.text(graphics, font, title, x + PADDING + 3, y + PADDING + 1, TEXT_COLOR);
+		RenderUtils.text(graphics, font, hint, x + PADDING + 3, y + PADDING + font.lineHeight + LINE_GAP + 1,
+				TEXT_SECONDARY);
 
-		long time = Util.getMillis();
-		float pulse = 0.55f + 0.45f * (float) Math.sin(time / 320.0);
+		float pulse = 0.55f + 0.45f * (float) Math.sin(Util.getMillis() / 320.0);
 		int dotX = x + width - PADDING - 3;
 		int dotY = y + PADDING + (font.lineHeight - 4) / 2;
 		graphics.fill(dotX, dotY, dotX + 4, dotY + 4, RenderUtils.withAlpha(accent, pulse));
 	}
 
-	/**
-	 * Компактная плашка свободной камеры: где летим и как далеко от игрока.
-	 *
-	 * Пока AutoWalk включён, координаты показывает его панель — дублировать их
-	 * двумя плашками незачем. FreeLook показывает свою короткую подсказку, когда
-	 * FreeCam не активен.
-	 */
 	private static void renderFreeCam(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
 		Minecraft client = Minecraft.getInstance();
-		if (client.player == null || client.level == null || client.gui.screen() != null || client.gui.hud.isHidden()) {
+		LocalPlayer player = client.player;
+
+		if (player == null || client.level == null || client.gui.screen() != null || client.gui.hud.isHidden()) {
 			return;
 		}
 
@@ -252,17 +628,18 @@ public final class HudRenderer {
 			Vec3 position = freeCam.position();
 			BlockPos block = BlockPos.containing(position);
 			String title = "FreeCam " + block.getX() + " " + block.getY() + " " + block.getZ();
-			String hint = "Игрок в " + String.format(java.util.Locale.ROOT, "%.1f", freeCam.distanceToPlayer()) + " м   •   N — выключить";
+			String hint = "Игрок в " + String.format(java.util.Locale.ROOT, "%.1f", freeCam.distanceToPlayer())
+					+ " м   •   " + freeCam.getBindLabel() + " — выключить";
 
 			Font font = client.font;
 			int screenWidth = client.getWindow().getGuiScaledWidth();
-			int x = (screenWidth - font.width(title)) / 2;
+			int x = (screenWidth - RenderUtils.width(font, title)) / 2;
 			int y = client.getWindow().getGuiScaledHeight() - 58;
 
-			int accent = ModuleCategory.MOVEMENT.getAccent();
-
-			graphics.text(font, title, x, y, TEXT_COLOR, true);
-			graphics.text(font, hint, x, y + font.lineHeight + 1, RenderUtils.withAlpha(accent, 0.9f), true);
+			int accent = ClientTheme.gradientAt(0.4f, Util.getMillis());
+			RenderUtils.text(graphics, font, title, x, y, TEXT_COLOR);
+			RenderUtils.text(graphics, font, hint, x, y + font.lineHeight + 1,
+					RenderUtils.withAlpha(accent, 0.9f));
 			return;
 		}
 
@@ -271,157 +648,19 @@ public final class HudRenderer {
 			return;
 		}
 
-		// FreeLook: камера крутится мышью, игрок всегда в центре и играет как обычно
 		Font font = client.font;
 		String title = "FreeLook";
 		String hint = "Игрок в центре   •   выключить — " + freeLook.getBindLabel();
 		int screenWidth = client.getWindow().getGuiScaledWidth();
-		int x = (screenWidth - Math.max(font.width(title), font.width(hint))) / 2;
+		int x = (screenWidth - Math.max(RenderUtils.width(font, title), RenderUtils.width(font, hint))) / 2;
 		int y = client.getWindow().getGuiScaledHeight() - 58;
 
-		int accent = ModuleCategory.MOVEMENT.getAccent();
-
-		graphics.text(font, title, x, y, TEXT_COLOR, true);
-		graphics.text(font, hint, x, y + font.lineHeight + 1, RenderUtils.withAlpha(accent, 0.9f), true);
+		int accent = ClientTheme.gradientAt(0.4f, Util.getMillis());
+		RenderUtils.text(graphics, font, title, x, y, TEXT_COLOR);
+		RenderUtils.text(graphics, font, hint, x, y + font.lineHeight + 1, RenderUtils.withAlpha(accent, 0.9f));
 	}
 
-	private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
-		Minecraft client = Minecraft.getInstance();
-		LocalPlayer player = client.player;
-
-		// Рисуем только в мире, когда нет открытого экрана и HUD не скрыт клавишей F1
-		if (player == null || client.level == null || client.gui.screen() != null || client.gui.hud.isHidden()) {
-			return;
-		}
-
-		HudInfoModule hud = ModuleManager.find(HudInfoModule.class);
-		if (hud == null || !hud.isEnabled()) {
-			return;
-		}
-
-		Font font = client.font;
-		long time = Util.getMillis();
-		int x = MARGIN;
-		int y = MARGIN;
-
-		// Водяной знак: чёрная пилюля с радужным текстом и «дышащей» точкой
-		if (hud.showWatermark()) {
-			String brand = AkarusClient.MOD_NAME + " " + AkarusClient.MOD_VERSION;
-			int pillW = font.width(brand) + 26;
-			int pillH = font.lineHeight + 8;
-			RenderUtils.drawSoftShadow(graphics, x, y, pillW, pillH, 5, 3);
-			RenderUtils.fillRounded(graphics, x, y, pillW, pillH, 5, 0xE0070708);
-			RenderUtils.fillRounded(graphics, x, y, pillW, 1, 0, 0x1FFFFFFF);
-			float pulse = 0.4f + 0.6f * (float) Math.abs(Math.sin(time / 900.0));
-			graphics.fill(x + 6, y + pillH / 2 - 2, x + 10, y + pillH / 2 + 2, RenderUtils.rainbow(time, 0.0f));
-			int dot = RenderUtils.withAlpha(0xFFFFFFFF, 0.10f + 0.18f * pulse);
-			graphics.fill(x + pillW - 12, y + pillH / 2 - 3, x + pillW - 4, y + pillH / 2 + 3, dot);
-			drawRainbow(graphics, font, brand, x + 15, y + 4, time);
-			y += pillH + 5;
-		}
-
-		// Информационные строки
-		List<String> lines = new ArrayList<>();
-		if (hud.showFps()) {
-			lines.add("FPS: " + client.getFps());
-		}
-		if (hud.showCoordinates()) {
-			BlockPos position = player.blockPosition();
-			lines.add("XYZ: " + position.getX() + " " + position.getY() + " " + position.getZ());
-		}
-		if (hud.showDirection()) {
-			lines.add("Направление: " + directionName(player.getDirection()));
-		}
-		if (hud.showPing()) {
-			lines.add("Пинг: " + getPing(client) + " мс");
-		}
-
-		if (!lines.isEmpty()) {
-			int width = 0;
-			for (String line : lines) {
-				width = Math.max(width, font.width(line));
-			}
-			width += PADDING * 2 + 9;
-			int height = lines.size() * (font.lineHeight + LINE_GAP) - LINE_GAP + PADDING * 2;
-
-			// Панелька: тень, чёрное стекло, акцентная полоса слева со скроллом цвета
-			RenderUtils.drawSoftShadow(graphics, x, y, width, height, 4, 3);
-			RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 4, PANEL_BORDER, PANEL_BACKGROUND);
-			graphics.fillGradient(x + 1, y + 3, x + 3, y + height - 3,
-					RenderUtils.rainbow(time, 0.0f), RenderUtils.rainbow(time, 0.18f));
-
-			int textY = y + PADDING;
-			for (String line : lines) {
-				graphics.text(font, line, x + PADDING + 6, textY, TEXT_COLOR, true);
-				textY += font.lineHeight + LINE_GAP;
-			}
-
-			y += height + 5;
-		}
-
-		// Список включённых модулей: плавное появление, лёгкий заезд, уход с фейдом
-		if (hud.showModuleList()) {
-			List<Module> active = ModuleManager.getAll().stream()
-					.filter(Module::isEnabled)
-					.sorted(Comparator.comparingInt((Module module) -> -font.width(module.getName()))
-							.thenComparing(Module::getName))
-					.toList();
-
-			// обновляем прозрачности; ушедшие модули доживают на месте до нуля
-			for (Module module : active) {
-				MODULE_ALPHA.merge(module.getName(), 0, Math::max);
-			}
-			List<String> gone = new ArrayList<>();
-			for (Map.Entry<String, Integer> entry : MODULE_ALPHA.entrySet()) {
-				boolean stillActive = active.stream().anyMatch(m -> m.getName().equals(entry.getKey()));
-				int steps = Math.max(0, Math.min(10, entry.getValue() + (stillActive ? 1 : -1)));
-				entry.setValue(steps);
-				if (!stillActive && steps <= 0) {
-					gone.add(entry.getKey());
-				}
-			}
-			gone.forEach(MODULE_ALPHA::remove);
-
-			int index = 0;
-			for (Module module : active) {
-				drawModuleLine(graphics, font, x, y, time, index, module.getName(), true);
-				y += font.lineHeight + LINE_GAP;
-				index++;
-			}
-			// доигравшие уход
-			for (String name : List.copyOf(MODULE_ALPHA.keySet())) {
-				if (active.stream().anyMatch(m -> m.getName().equals(name))) {
-					continue;
-				}
-				drawModuleLine(graphics, font, x, y, time, index, name, false);
-				y += font.lineHeight + LINE_GAP;
-				index++;
-			}
-		}
-	}
-
-	/** Строка модуля с easing: alpha 0..1 по счётчику появления, сдвиг при заезде. */
-	private static void drawModuleLine(GuiGraphicsExtractor graphics, Font font, int x, int y,
-	                                    long time, int index, String name, boolean active) {
-		int alphaSteps = MODULE_ALPHA.getOrDefault(name, 10);
-		float a = Math.max(0.0f, Math.min(1.0f, alphaSteps / 10.0f));
-		//ease для плавности: квадратичный вход
-		float eased = a * a * (3.0f - 2.0f * a);
-		int shift = Math.round((1.0f - eased) * 6.0f);
-		int baseColor = RenderUtils.rainbow(time, index * 0.08f);
-		int color = (baseColor & 0x00FFFFFF) | (Math.round(255 * eased) << 24);
-		graphics.text(font, name, x + shift, y, color, true);
-	}
-
-	/** Текст, у которого каждый символ своего цвета — классический «радужный» водяной знак. */
-	private static void drawRainbow(GuiGraphicsExtractor graphics, Font font, String text, int x, int y, long time) {
-		int cursor = x;
-		for (int i = 0; i < text.length(); i++) {
-			String symbol = String.valueOf(text.charAt(i));
-			graphics.text(font, symbol, cursor, y, RenderUtils.rainbow(time, i * 0.035f), true);
-			cursor += font.width(symbol);
-		}
-	}
+	// ------------------------------------------------------------------
 
 	private static int getPing(Minecraft client) {
 		if (client.getConnection() == null || client.player == null) {

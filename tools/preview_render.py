@@ -14,7 +14,10 @@ import os
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                         "src", "main", "resources", "assets", "akarus", "font", "manrope-medium.ttf")
+ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                        "src", "main", "resources", "assets", "akarus", "textures", "gui", "icons")
 SCALE = 2          # рисуем в 2x, чтобы картинка была чёткой
 LINE_HEIGHT = 9    # высота строки шрифта Minecraft
 
@@ -160,12 +163,12 @@ CATEGORIES = [
     ("Прочее", "≡", 0xFFFFC66C, False),
 ]
 
-# Модули вкладки «Рендер»: имя, описание, включён, бинд, раскрыт
+# Модули вкладки «Рендер»: id, имя, описание, включён, бинд, раскрыт
 RENDER_MODULES = [
-    ("Trails", "Светящийся след из партиклов за игроком", True, "—", True),
-    ("ESP", "Подсветка сущностей: свечение и боксы", True, "—", False),
-    ("Обводка рук", "Цветной контур вокруг руки и предмета", True, "V", False),
-    ("ViewModel", "Масштаб, сдвиг и поворот рук", False, "—", False),
+    ("trails", "Trails", "Светящийся след из партиклов за игроком", True, "—", True),
+    ("esp", "ESP", "Подсветка сущностей: свечение и боксы", True, "—", False),
+    ("hand_shader", "Обводка рук", "Цветной контур вокруг руки и предмета", True, "V", False),
+    ("view_model", "ViewModel", "Масштаб, сдвиг и поворот рук", False, "—", False),
 ]
 
 TRAILS_SETTINGS = [
@@ -178,6 +181,23 @@ TRAILS_SETTINGS = [
     ("toggle", "Радуга", False),
     ("slider", "Партиклов/шаг", 2, 1, 6),
 ]
+
+
+_ICON_CACHE = {}
+
+
+def draw_icon(canvas, name, x, y, size, color):
+    """Белая иконка из ресурсов, тонированная цветом (как blit с color в игре)."""
+    key = (name, color, size)
+    if key not in _ICON_CACHE:
+        path = os.path.join(ICON_DIR, name + ".png")
+        icon = Image.open(path).convert("RGBA").resize((size * SCALE, size * SCALE), Image.LANCZOS)
+        r, g, b = color[0], color[1], color[2]
+        tinted = Image.new("RGBA", icon.size, (r, g, b, 0))
+        alpha = icon.split()[3].point(lambda a: a * color[3] // 255)
+        tinted.putalpha(alpha)
+        _ICON_CACHE[key] = tinted
+    canvas.img.alpha_composite(_ICON_CACHE[key], (int(x * SCALE), int(y * SCALE)))
 
 
 def draw_toggle(canvas, x, y, w, h, progress, accent):
@@ -201,20 +221,28 @@ def draw_ripple(canvas, cx, cy, radius, accent, fade):
     canvas.circle(cx, cy, radius * 0.6, with_alpha(accent, 0.16 * fade))
 
 
-def draw_module_row(canvas, x, y, w, name, description, enabled, accent, toggle, expanded, bind=None):
+def draw_module_row(canvas, x, y, w, module_id, name, description, enabled, accent, toggle, expanded,
+                    bind=None, permanent=False):
     background = mix(argb(ROW_BACKGROUND), with_alpha(accent, 0.45), toggle * 0.45)
     border = mix(argb(ROW_BORDER), argb(accent), toggle * 0.55)
     canvas.rrect(x, y, w, MODULE_ROW_HEIGHT, 6, border)
     canvas.rrect(x + 1, y + 1, w - 2, MODULE_ROW_HEIGHT - 2, 5, background)
-    if toggle > 0.02:
-        canvas.rrect(x + 2, y + 6, 2, MODULE_ROW_HEIGHT - 12, 1, with_alpha(accent, 0.9 * toggle))
-    canvas.text(x + 9, y + 6, name, argb(TEXT_PRIMARY if enabled else TEXT_SECONDARY))
+    if toggle > 0.02 or permanent:
+        canvas.rrect(x + 2, y + 6, 2, MODULE_ROW_HEIGHT - 12, 1, with_alpha(accent, 0.9 * max(toggle, 0.7)))
+    # Иконка модуля: тонирована темой у включённых
+    icon_color = argb(accent) if (enabled or permanent) else argb(TEXT_DIM)
+    draw_icon(canvas, module_id, x + 9, y + 5, 13, icon_color)
+    canvas.text(x + 26, y + 6, name, argb(TEXT_PRIMARY if enabled or permanent else TEXT_SECONDARY))
     if bind:
-        canvas.text(x + 9 + canvas.text_width(name) + 6, y + 7, bind, argb(TEXT_DIM))
-    canvas.text(x + 9, y + 21, description, argb(TEXT_DIM))
-    draw_toggle(canvas, x + w - 30 - 9, y + (MODULE_ROW_HEIGHT - 12) // 2, 30, 12, toggle, accent)
+        canvas.text(x + 26 + canvas.text_width(name) + 6, y + 7, bind, argb(TEXT_DIM))
+    canvas.text(x + 26, y + 21, description, argb(TEXT_DIM))
+    if permanent:
+        dot_x = x + w - 30 - 9 + 12
+        canvas.rrect(dot_x, y + (MODULE_ROW_HEIGHT - 6) // 2, 6, 6, 3, with_alpha(accent, 0.9))
+    else:
+        draw_toggle(canvas, x + w - 30 - 9, y + (MODULE_ROW_HEIGHT - 12) // 2, 30, 12, toggle, accent)
     if expanded is not None:
-        canvas.text(x + w - 30 - 24, y + 4, "▾" if expanded else "▸", argb(TEXT_DIM))
+        draw_icon(canvas, "arrow_up" if expanded else "arrow_down", x + w - 30 - 22, y + 6, 9, argb(TEXT_DIM))
 
 
 def draw_setting_row(canvas, x, y, w, name, enabled, accent):
@@ -398,8 +426,8 @@ def render_clickgui(path, selected="Рендер", ripple=True, search="", searc
     canvas.rrect(list_x, list_y, list_w, list_h, 6, argb(LIST_BACKGROUND))
 
     row_y = list_y
-    for name, description, enabled, bind, expanded in RENDER_MODULES:
-        draw_module_row(canvas, list_x, row_y, list_w, name, description, enabled, accent,
+    for module_id, name, description, enabled, bind, expanded in RENDER_MODULES:
+        draw_module_row(canvas, list_x, row_y, list_w, module_id, name, description, enabled, accent,
                         1.0 if enabled else 0.0, expanded, None if bind == "—" else bind)
         row_y += MODULE_ROW_HEIGHT
         if expanded:
@@ -785,16 +813,20 @@ def render_hud(path):
 
     x, y = 6, 6
 
-    # Водяной знак: чёрная пилюля, радужный текст
+    # Водяной знак: пилюля с градиентом темы (перелив по символам)
     brand = "Dreamcast DLC " + VERSION
-    pill_w = canvas.text_width(brand) + 26
+    pill_w = canvas.text_width(brand) + 28
     pill_h = LINE_HEIGHT + 8
-    canvas.rrect(x, y, pill_w, pill_h, 5, argb(0xE0070708))
-    canvas.rect(x, y, pill_w, 1, argb(0x1FFFFFFF))
-    canvas.rect(x + 6, y + pill_h // 2 - 2, 4, 4, hsb(0.0, 0.75, 1.0))
+    canvas.rrect(x, y, pill_w, pill_h, 5, argb(0x2AFFFFFF))
+    canvas.rrect(x + 1, y + 1, pill_w - 2, pill_h - 2, 4, argb(0xE0070708))
+    for i in range(pill_w - 10):
+        t = i / max(1, pill_w - 11)
+        canvas.rect(x + 5 + i, y, 1, 1, with_alpha(mix(argb(ACCENT_VIOLET), argb(ACCENT_CYAN), t), 0.85))
+    canvas.rect(x + 6, y + pill_h // 2 - 2, 4, 4, mix(argb(ACCENT_VIOLET), argb(ACCENT_CYAN), 0.5))
     cursor = x + 15
     for index, symbol in enumerate(brand):
-        canvas.text(cursor, y + 4, symbol, hsb(index * 0.02, 0.75, 1.0))
+        t = index / max(1, len(brand) - 1)
+        canvas.text(cursor, y + 4, symbol, mix(argb(ACCENT_VIOLET), argb(ACCENT_CYAN), t))
         cursor += canvas.text_width(symbol)
     y += pill_h + 5
 
@@ -804,7 +836,7 @@ def render_hud(path):
 
     canvas.rrect(x, y, width, height, 4, argb(0x2AFFFFFF))
     canvas.rrect(x + 1, y + 1, width - 2, height - 2, 3, argb(0xB80A0A0D))
-    canvas.vgradient(x + 1, y + 3, 2, height - 6, hsb(0.55, 0.75, 1.0), hsb(0.72, 0.75, 1.0))
+    canvas.vgradient(x + 1, y + 3, 2, height - 6, argb(ACCENT_CYAN), argb(ACCENT_VIOLET))
 
     text_y = y + 6
     for line in lines:
@@ -813,7 +845,8 @@ def render_hud(path):
     y += height + 5
 
     for index, module_name in enumerate(["Trails", "ESP", "AutoWalk", "FreeCam"]):
-        canvas.text(x, y, module_name, hsb(0.52 + index * 0.06, 0.75, 1.0))
+        t = index / 4.0
+        canvas.text(x, y, module_name, mix(argb(ACCENT_CYAN), argb(ACCENT_VIOLET), t))
         y += LINE_HEIGHT + 2
 
     accent = 0xFFFFC66C
@@ -830,6 +863,41 @@ def render_hud(path):
     canvas.text(panel_x + 9, panel_y + 7, title, argb(0xFFEDEDF5))
     canvas.text(panel_x + 9, panel_y + 7 + LINE_HEIGHT + 2, hint, argb(0xFFA6A6B2))
     canvas.rect(panel_x + panel_w - 12, panel_y + 10, 4, 4, with_alpha(accent, 0.9))
+
+    # Элемент «Бинды»: панель справа, имя зелёное у включённых
+    binds = [("X", "KillAura", True), ("R", "AutoTotem", False), ("N", "FreeCam", True), ("V", "Обводка рук", False)]
+    bind_w = max(canvas.text_width(k) + 8 + canvas.text_width(n) for k, n, _ in binds) + 12
+    bh = len(binds) * (LINE_HEIGHT + 3) - 3 + 12
+    bx, by = 560 - bind_w - 6, 92
+    canvas.rrect(bx, by, bind_w, bh, 5, argb(0x2AFFFFFF))
+    canvas.rrect(bx + 1, by + 1, bind_w - 2, bh - 2, 4, argb(0xCC09090C))
+    title_w = canvas.text_width("бинды") + 12
+    canvas.rrect(bx + 4, by - 5, title_w, LINE_HEIGHT + 4, 4, argb(0xE60A0A0D))
+    canvas.text(bx + 10, by - 4, "бинды", mix(argb(ACCENT_VIOLET), argb(ACCENT_CYAN), 0.5))
+    row_y = by + 6
+    for key, name, on in binds:
+        key_w = canvas.text_width(key) + 8
+        canvas.rrect(bx + 6, row_y - 1, key_w, LINE_HEIGHT + 2, 3, argb(0x8F7BE08A if on else 0x30FFFFFF))
+        canvas.text(bx + 10, row_y, key, argb(TEXT_PRIMARY if on else 0xFFEDEDF5))
+        canvas.text(bx + 6 + key_w + 6, row_y, name, argb(0xFF7BE08A) if on else argb(0xFFF6F6F8))
+        row_y += LINE_HEIGHT + 3
+
+    # Элемент «Уведомления»: стопка сверху справа, одна «уезжает»
+    notes = [("Модуль", "KillAura — включён", 0xFF7BE08A, 1.0),
+             ("Модуль", "FreeCam — выключен", argb(ACCENT_VIOLET), 1.0),
+             ("Конфиг", "Настройки сохранены", 0xFF7BE08A, 0.65)]
+    ny = 6
+    for title, message, color, shown in notes:
+        nw = canvas.text_width(title) + 18 + canvas.text_width(message) + 16
+        nh = LINE_HEIGHT + 10
+        nx = 560 - 6 - nw + round((1.0 - shown) * 8)
+        canvas.rrect(nx, ny, nw, nh, 6, with_alpha(color, 0.75 * shown))
+        canvas.rrect(nx + 1, ny + 1, nw - 2, nh - 2, 5, with_alpha(argb(0xE40A0A0D), shown))
+        canvas.rect(nx + 2, ny + 4, 1, nh - 8, with_alpha(color, shown))
+        canvas.text(nx + 9, ny + 5, title, with_alpha(color, shown))
+        canvas.text(nx + 9 + canvas.text_width(title) + 5, ny + 6, message,
+                    with_alpha(argb(0xFFA6A6B2), shown))
+        ny += nh + 3
 
     draw_media_card(canvas, 560, 220, "netherlands indie.wav")
 

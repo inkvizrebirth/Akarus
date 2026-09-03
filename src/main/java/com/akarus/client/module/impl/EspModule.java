@@ -39,7 +39,8 @@ public class EspModule extends Module {
 	private final ModeSetting mode = mode("mode", "Режим", "both",
 			ModeSetting.option("glow", "Glow"),
 			ModeSetting.option("box", "Box"),
-			ModeSetting.option("both", "Вместе"));
+			ModeSetting.option("both", "Вместе"),
+			ModeSetting.option("target", "TargetESP"));
 
 	private final BooleanSetting players = bool("players", "Игроки", true);
 	private final BooleanSetting monsters = bool("monsters", "Мобы", true);
@@ -72,7 +73,44 @@ public class EspModule extends Module {
 	}
 
 	private boolean glowFor(Entity entity) {
-		return isEnabled() && !mode.is("box") && isTarget(entity);
+		if (!isEnabled() || mode.is("box")) {
+			return false;
+		}
+		if (mode.is("target")) {
+			return entity.equals(resolveTarget());
+		}
+		return isTarget(entity);
+	}
+
+	/** Текущая цель для TargetESP: цель KillAura, иначе то, что под прицелом. */
+	private Entity resolveTarget() {
+		com.akarus.client.module.impl.KillAuraModule killAura =
+				com.akarus.client.module.ModuleManager.find(com.akarus.client.module.impl.KillAuraModule.class);
+		if (killAura != null && killAura.isEnabled() && killAura.currentTarget() != null) {
+			return killAura.currentTarget();
+		}
+		Minecraft client = Minecraft.getInstance();
+		return client != null ? client.crosshairPickEntity : null;
+	}
+
+	/** Цель для world-рендера (в режиме TargetESP). Может быть null. */
+	public Entity targetForRender() {
+		if (!isEnabled() || !mode.is("target")) {
+			return null;
+		}
+		Entity target = resolveTarget();
+		if (target == null || !target.isAlive()) {
+			return null;
+		}
+		return target;
+	}
+
+	/** Доля здоровья цели 0..1 (для полоски). */
+	public static float healthFraction(Entity entity) {
+		if (entity instanceof LivingEntity living) {
+			return Math.max(0.0f, Math.min(1.0f, living.getHealth() / Math.max(1.0f, living.getMaxHealth())));
+		}
+		return 1.0f;
 	}
 
 	/** Цвет обводки для сущности (миксин getTeamColor). 0 — не подменять. */
@@ -96,12 +134,20 @@ public class EspModule extends Module {
 		return isEnabled() && !mode.is("glow");
 	}
 
+	/** Считает цели как обычно, но в режиме TargetESP — только сама цель. */
+	public boolean isRenderTarget(Entity entity) {
+		if (mode.is("target")) {
+			return entity.equals(resolveTarget());
+		}
+		return isTarget(entity);
+	}
+
 	/** Собирает боксы целей — вызывается на этапе извлечения кадра. */
 	public List<EspBox> collectBoxes(Iterable<Entity> entities, double camX, double camY, double camZ) {
 		double maxSqr = (double) distance.get() * distance.get();
 		List<EspBox> result = new ArrayList<>();
 		for (Entity entity : entities) {
-			if (!isTarget(entity)) {
+			if (!isRenderTarget(entity)) {
 				continue;
 			}
 			AABB box = entity.getBoundingBox();

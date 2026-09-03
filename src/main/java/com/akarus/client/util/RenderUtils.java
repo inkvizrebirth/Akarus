@@ -1,7 +1,13 @@
 package com.akarus.client.util;
 
+import com.akarus.client.AkarusClient;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FontDescription;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 
 /**
@@ -21,6 +27,81 @@ public final class RenderUtils {
 	private static final float COVERAGE_EPSILON = 0.03f;
 
 	private RenderUtils() {
+	}
+
+	// ------------------------------------------------------------------
+	// Фирменный шрифт (Manrope): в 26.2 шрифт задаётся стилем строки,
+	// а не отдельным экземпляром Font — оборачиваем строки в компоненты
+	// ------------------------------------------------------------------
+
+	/** Описание фирменного шрифта: assets/akarus/font/dreamcast.json. */
+	public static final FontDescription FONT = new FontDescription.Resource(
+			Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "dreamcast"));
+	/** Жирное начертание — для логотипа и заголовков. */
+	public static final FontDescription FONT_BOLD = new FontDescription.Resource(
+			Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "dreamcast_bold"));
+
+	/** Оборачивает строку в компонент с фирменным шрифтом. */
+	public static MutableComponent styled(String text) {
+		return Component.literal(text).setStyle(Style.EMPTY.withFont(FONT));
+	}
+
+	/** То же, но жирным начертанием. */
+	public static MutableComponent styledBold(String text) {
+		return Component.literal(text).setStyle(Style.EMPTY.withFont(FONT_BOLD));
+	}
+
+	/** Ширина строки фирменным шрифтом. */
+	public static int width(Font font, String text) {
+		return font.width(styled(text));
+	}
+
+	/** Ширина строки жирным фирменным шрифтом. */
+	public static int widthBold(Font font, String text) {
+		return font.width(styledBold(text));
+	}
+
+	/** Ширина строки с разрядкой жирным шрифтом. */
+	public static int trackedWidthBold(Font font, String text, int tracking) {
+		if (text.isEmpty()) {
+			return 0;
+		}
+		return widthBold(font, text) + tracking * (text.length() - 1);
+	}
+
+	/** Текст с разрядкой жирным шрифтом — логотип и заголовки. */
+	public static void drawTrackedBold(GuiGraphicsExtractor graphics, Font font, String text, int x, int y,
+			int color, int tracking) {
+		if (text.isEmpty()) {
+			return;
+		}
+		int cursor = x;
+		for (int i = 0; i < text.length(); i++) {
+			String symbol = String.valueOf(text.charAt(i));
+			graphics.text(font, styledBold(symbol), cursor, y, color, false);
+			cursor += widthBold(font, symbol) + tracking;
+		}
+	}
+
+	/** Рисует строку фирменным шрифтом с тенью. */
+	public static void text(GuiGraphicsExtractor graphics, Font font, String text, int x, int y, int color) {
+		graphics.text(font, styled(text), x, y, color, true);
+	}
+
+	/** Рисует строку фирменным шрифтом без тени. */
+	public static void textFlat(GuiGraphicsExtractor graphics, Font font, String text, int x, int y, int color) {
+		graphics.text(font, styled(text), x, y, color, false);
+	}
+
+	/** Рисует строку жирным фирменным шрифтом без тени. */
+	public static void textBold(GuiGraphicsExtractor graphics, Font font, String text, int x, int y, int color) {
+		graphics.text(font, styledBold(text), x, y, color, false);
+	}
+
+	/** Рисует строку по центру указанной координаты фирменным шрифтом. */
+	public static void textCentered(GuiGraphicsExtractor graphics, Font font, String text,
+			int centerX, int y, int color, boolean shadow) {
+		graphics.text(font, styled(text), centerX - width(font, text) / 2, y, color, shadow);
 	}
 
 	// ------------------------------------------------------------------
@@ -313,13 +394,13 @@ public final class RenderUtils {
 		if (maxWidth <= 0) {
 			return "";
 		}
-		if (font.width(text) <= maxWidth) {
+		if (width(font, text) <= maxWidth) {
 			return text;
 		}
 
 		String ellipsis = "…";
 		String cut = text;
-		while (cut.length() > 1 && font.width(cut + ellipsis) > maxWidth) {
+		while (cut.length() > 1 && width(font, cut + ellipsis) > maxWidth) {
 			cut = cut.substring(0, cut.length() - 1);
 		}
 		return cut + ellipsis;
@@ -330,7 +411,7 @@ public final class RenderUtils {
 		if (text.isEmpty()) {
 			return 0;
 		}
-		return font.width(text) + tracking * (text.length() - 1);
+		return width(font, text) + tracking * (text.length() - 1);
 	}
 
 	/**
@@ -344,16 +425,16 @@ public final class RenderUtils {
 		int cursor = x;
 		for (int i = 0; i < text.length(); i++) {
 			String symbol = String.valueOf(text.charAt(i));
-			graphics.text(font, symbol, cursor, y, color, false);
-			cursor += font.width(symbol) + tracking;
+			graphics.text(font, styled(symbol), cursor, y, color, false);
+			cursor += width(font, symbol) + tracking;
 		}
 	}
 
 	/** Рисует текст, обрезанный по ширине, и возвращает позицию, после которой он закончился. */
 	public static int drawClamped(GuiGraphicsExtractor graphics, Font font, String text, int x, int y, int maxWidth, int color) {
 		String shown = clamp(font, text, maxWidth);
-		graphics.text(font, shown, x, y, color, false);
-		return x + font.width(shown);
+		graphics.text(font, styled(shown), x, y, color, false);
+		return x + width(font, shown);
 	}
 
 	private static float clamp01(float value) {

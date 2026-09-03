@@ -5,6 +5,7 @@ import com.akarus.client.config.ConfigManager;
 import com.akarus.client.module.impl.AutoMineModule;
 import com.akarus.client.module.impl.AutoTotemModule;
 import com.akarus.client.module.impl.AutoWalkModule;
+import com.akarus.client.module.impl.ClickGuiModule;
 import com.akarus.client.module.impl.EspModule;
 import com.akarus.client.module.impl.FreeCamModule;
 import com.akarus.client.module.impl.FreeLookModule;
@@ -34,6 +35,7 @@ public final class ModuleManager {
 	/** Регистрация модулей. Новые модули добавляются здесь одной строкой. */
 	public static void init() {
 		register(new HudInfoModule());
+		register(new ClickGuiModule());
 		register(new FreeCamModule());
 		register(new FreeLookModule());
 		register(new AutoMineModule());
@@ -98,7 +100,7 @@ public final class ModuleManager {
 	public static void tick() {
 		for (Module module : MODULES) {
 			while (module.getKeyMapping().consumeClick()) {
-				module.toggle();
+				module.onBindPressed();
 			}
 
 			if (module.isEnabled()) {

@@ -1,7 +1,7 @@
 {
   "key.category.akarus.modules": "Dreamcast DLC",
-  "key.akarus.gui": "Open client menu",
-  "key.akarus.hud_info": "Module: HUD info",
+  "key.akarus.click_gui": "Open module menu (ClickGUI)",
+  "key.akarus.hud_info": "Module: HUD (layout editor)",
   "key.akarus.free_cam": "Module: FreeCam",
   "key.akarus.free_look": "Module: FreeLook",
   "key.akarus.auto_mine": "Module: AutoMine",

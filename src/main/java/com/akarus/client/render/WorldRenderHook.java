@@ -48,16 +48,38 @@ public final class WorldRenderHook {
 			EspModule esp = ModuleManager.find(EspModule.class);
 			if (esp == null || !esp.wantsBoxes()) {
 				espBoxes = List.of();
+				targetBar = null;
 				return;
 			}
 			var camera = context.camera().position();
 			espBoxes = List.copyOf(esp.collectBoxes(
 					context.level().entitiesForRendering(),
 					camera.x, camera.y, camera.z));
+
+			// TargetESP: полоска здоровья над целью
+			net.minecraft.world.entity.Entity target = esp.targetForRender();
+			if (target != null) {
+				var box = target.getBoundingBox();
+				targetBar = new TargetBar(
+						new EspModule.EspBox(
+								(float) box.minX, (float) box.minY, (float) box.minZ,
+								(float) box.maxX, (float) box.maxY, (float) box.maxZ,
+								target.getId()),
+						EspModule.healthFraction(target));
+			} else {
+				targetBar = null;
+			}
 		} catch (Exception error) {
 			espBoxes = List.of();
+			targetBar = null;
 		}
 	}
+
+	/** Полоска HP цели TargetESP: бокс + доля здоровья. */
+	private record TargetBar(EspModule.EspBox box, float health) {
+	}
+
+	private static TargetBar targetBar;
 
 	private static void render(LevelRenderContext context) {
 		try {
@@ -92,6 +114,9 @@ public final class WorldRenderHook {
 						}
 						if (!boxes.isEmpty()) {
 							drawBoxes(boxes, pose, buffer, camX, camY, camZ, unitsPerPixel);
+						}
+						if (targetBar != null) {
+							drawTargetBar(targetBar, pose, buffer, camX, camY, camZ, unitsPerPixel);
 						}
 					});
 		} catch (Exception ignored) {
@@ -206,6 +231,53 @@ public final class WorldRenderHook {
 					WorldGeometryRenderer.line(buffer, pose, x0, y0, z0, c0, x1, y1, z1, c1, width, unitsPerPixel);
 				}
 			}
+		}
+	}
+
+	/**
+	 * Полоска здоровья цели TargetESP: «биллборд» из двух линий над боксом,
+	 * поворачивается перпендикулярно взгляду — читается с любой стороны.
+	 */
+	private static void drawTargetBar(TargetBar bar, PoseStack.Pose pose, VertexConsumer buffer,
+			double camX, double camY, double camZ, float unitsPerPixel) {
+		EspModule.EspBox box = bar.box();
+		double centerX = (box.minX() + box.maxX()) / 2.0 - camX;
+		double centerY = box.maxY() - camY + 0.42;
+		double centerZ = (box.minZ() + box.maxZ()) / 2.0 - camZ;
+
+		// Перпендикуляр к направлению «камера → цель» в горизонтальной плоскости
+		double vx = camX - (box.minX() + box.maxX()) / 2.0;
+		double vz = camZ - (box.minZ() + box.maxZ()) / 2.0;
+		double length = Math.sqrt(vx * vx + vz * vz);
+		if (length < 1.0e-4) {
+			vx = 1.0;
+			vz = 0.0;
+		} else {
+			double px = -vz / length;
+			double pz = vx / length;
+			vx = px;
+			vz = pz;
+		}
+
+		float halfWidth = 36.0F * unitsPerPixel * 0.5F;
+		double ax = centerX - vx * halfWidth;
+		double az = centerZ - vz * halfWidth;
+		double bx = centerX + vx * halfWidth;
+		double bz = centerZ + vz * halfWidth;
+
+		// Фон полоски
+		WorldGeometryRenderer.line(buffer, pose, ax, centerY, az, 0xE6101014, bx, centerY, bz, 0xE6101014,
+				3.5F, unitsPerPixel);
+		// Здоровье: зелёный при полном, красный в опасности
+		float health = Math.max(0.0f, Math.min(1.0f, bar.health()));
+		int healthColor = health > 0.5f
+				? RenderUtils.mix(0xFFFF5C5C, 0xFF7BE08A, (health - 0.5f) * 2.0f)
+				: 0xFFFF5C5C;
+		double hx = ax + (bx - ax) * health;
+		double hz = az + (bz - az) * health;
+		if (health > 0.01f) {
+			WorldGeometryRenderer.line(buffer, pose, ax, centerY, az, healthColor, hx, centerY, hz, healthColor,
+					3.5F, unitsPerPixel);
 		}
 	}
 

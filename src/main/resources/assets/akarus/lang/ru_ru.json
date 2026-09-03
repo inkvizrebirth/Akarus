@@ -1,7 +1,7 @@
 {
   "key.category.akarus.modules": "Dreamcast DLC",
-  "key.akarus.gui": "Открыть меню клиента",
-  "key.akarus.hud_info": "Модуль: HUD-инфо",
+  "key.akarus.click_gui": "Открыть меню модулей (ClickGUI)",
+  "key.akarus.hud_info": "Модуль: HUD (редактор раскладки)",
   "key.akarus.free_cam": "Модуль: FreeCam",
   "key.akarus.free_look": "Модуль: FreeLook",
   "key.akarus.auto_mine": "Модуль: AutoMine",

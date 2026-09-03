@@ -1,51 +1,74 @@
 package com.akarus.client.module.impl;
 
+import com.akarus.client.gui.hud.HudEditorScreen;
+import com.akarus.client.gui.hud.HudLayout;
 import com.akarus.client.module.Module;
 import com.akarus.client.module.ModuleCategory;
-import com.akarus.client.settings.BooleanSetting;
+import com.akarus.client.settings.ButtonSetting;
+import com.akarus.client.settings.ElementListSetting;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.List;
+
 /**
- * Демонстрационный модуль: информационный HUD.
+ * HUD — набор элементов экрана.
  *
- * Показывает FPS, координаты, направление, пинг, водяной знак
- * и список включённых модулей. Каждую строку можно отключить в меню.
+ * Выключателя у модуля нет: HUD — это «что выбрано, то и показывается».
+ * Список элементов — ватермарк, инфопанель, список модулей, бинды,
+ * медиаплеер, уведомления — отмечается прямо в настройках модуля.
+ *
+ * Раскладка: клавиша модуля (по умолчанию H) открывает редактор HUD,
+ * а с открытым чатом элементы можно тащить мышью прямо по экрану.
  */
 public class HudInfoModule extends Module {
 
-	private final BooleanSetting fps = bool("fps", "FPS", true);
-	private final BooleanSetting coordinates = bool("coordinates", "Координаты", true);
-	private final BooleanSetting direction = bool("direction", "Направление", true);
-	private final BooleanSetting ping = bool("ping", "Пинг", true);
-	private final BooleanSetting watermark = bool("watermark", "Водяной знак", true);
-	private final BooleanSetting moduleList = bool("module_list", "Список модулей", true);
+	public static final String ELEMENT_WATERMARK = "watermark";
+	public static final String ELEMENT_INFO = "info";
+	public static final String ELEMENT_MODULE_LIST = "module_list";
+	public static final String ELEMENT_KEYBINDS = "keybinds";
+	public static final String ELEMENT_MEDIA = "media";
+	public static final String ELEMENT_NOTIFICATIONS = "notifications";
+
+	private final ElementListSetting elements = new ElementListSetting("elements", "Элементы HUD",
+			List.of(
+					new ElementListSetting.Element(ELEMENT_WATERMARK, "Водяной знак"),
+					new ElementListSetting.Element(ELEMENT_INFO, "FPS · координаты · пинг"),
+					new ElementListSetting.Element(ELEMENT_MODULE_LIST, "Список модулей"),
+					new ElementListSetting.Element(ELEMENT_KEYBINDS, "Бинды"),
+					new ElementListSetting.Element(ELEMENT_MEDIA, "Медиаплеер"),
+					new ElementListSetting.Element(ELEMENT_NOTIFICATIONS, "Уведомления")),
+			ELEMENT_WATERMARK, ELEMENT_INFO, ELEMENT_MODULE_LIST, ELEMENT_KEYBINDS,
+			ELEMENT_MEDIA, ELEMENT_NOTIFICATIONS);
 
 	public HudInfoModule() {
-		super("hud_info", "HUD-инфо", "Показывает FPS, координаты, пинг и активные модули",
+		super("hud_info", "HUD", "Элементы на экране: выбери, что показывать, и расставь их",
 				ModuleCategory.HUD, GLFW.GLFW_KEY_H);
+		addSetting(elements);
+		addSetting(new ButtonSetting("editor", "Раскладка", "Открыть редактор", () -> {
+			HudEditorScreen.open();
+		}));
+		addSetting(new ButtonSetting("reset_layout", "Сброс", "Сбросить позиции", () -> {
+			HudLayout.resetAll();
+		}));
 	}
 
-	public boolean showFps() {
-		return fps.isEnabled();
+	/** HUD нельзя «выключить» целиком — только снять галочки с элементов. */
+	@Override
+	protected boolean alwaysEnabled() {
+		return true;
 	}
 
-	public boolean showCoordinates() {
-		return coordinates.isEnabled();
+	/** Клавиша модуля открывает редактор раскладки, а не переключает состояние. */
+	@Override
+	protected void onBindPressed() {
+		HudEditorScreen.open();
 	}
 
-	public boolean showDirection() {
-		return direction.isEnabled();
+	public boolean shows(String elementId) {
+		return elements.isSelected(elementId);
 	}
 
-	public boolean showPing() {
-		return ping.isEnabled();
-	}
-
-	public boolean showWatermark() {
-		return watermark.isEnabled();
-	}
-
-	public boolean showModuleList() {
-		return moduleList.isEnabled();
+	public ElementListSetting elementList() {
+		return elements;
 	}
 }

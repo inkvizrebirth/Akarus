@@ -155,6 +155,8 @@ public class KillAuraModule extends Module {
 	}
 
 	private UUID targetId;
+	/** Текущая цель ауры — читает TargetESP. Обновляется каждый тик. */
+	private Entity currentTarget;
 
 	/** Куда по вертикали целимся по текущей цели: преимущественно корпус, иногда голова. */
 	private float aimOffsetY;
@@ -211,6 +213,7 @@ public class KillAuraModule extends Module {
 	@Override
 	protected void onDisable() {
 		this.targetId = null;
+		this.currentTarget = null;
 		resetSequence();
 		releaseMovement();
 		Minecraft client = Minecraft.getInstance();
@@ -250,6 +253,7 @@ public class KillAuraModule extends Module {
 		}
 
 		Entity target = selectTarget(client, player);
+		this.currentTarget = target;
 		if (target == null) {
 			this.targetId = null;
 			this.wasTargetSwinging = false;
@@ -686,6 +690,11 @@ public class KillAuraModule extends Module {
 	// ------------------------------------------------------------------
 
 	/** Ищет лучшую цель по выбранному приоритету. */
+	/** Текущая цель KillAura (или null) — для TargetESP и HUD. */
+	public Entity currentTarget() {
+		return currentTarget;
+	}
+
 	private Entity selectTarget(Minecraft client, LocalPlayer player) {
 		Entity best = null;
 		double bestScore = Double.MAX_VALUE;
