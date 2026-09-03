@@ -34,6 +34,9 @@ jobs:
             grep -E '\.java:[0-9]+: ' build.log \
               | sed -E 's|^([^:]+\.java):([0-9]+): ([a-z]+):(.*)$|::\3 file=\1,line=\2::\4|' \
               | head -60 || true
+            # А если это ошибка Gradle/Loom — выкладываем секцию «What went wrong»
+            awk '/What went wrong/{flag=1} flag' build.log | head -50 \
+              | while IFS= read -r line; do [ -n "$line" ] && echo "::error::${line}"; done || true
             echo "::error::Сборка завершилась с ошибкой (код $status)"
           fi
           exit "$status"
