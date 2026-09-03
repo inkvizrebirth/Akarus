@@ -19,14 +19,18 @@ loom {
 	// Мод полностью клиентский, поэтому разделять source set'ы на main/client не нужно:
 	// весь код лежит в src/main/java, а точка входа объявлена как "client" в fabric.mod.json
 
-	// С Loom 1.12 по умолчанию миксины перемешиваются TinyRemapper'ом прямо в классе,
-	// и refmap в jar не попадает. Нам же refmap нужен (он прописывается в akarus.mixins.json
-	// и гарантирует работу миксинов в обфусцированной игре), поэтому возвращаем старый путь —
-	// annotation processor, который и генерирует refmap.
-	mixin {
-		useLegacyMixinAp = true
-		defaultRefmapName = "akarus.refmap.json"
-	}
+	// Как работает обфускация миксинов в Loom 1.17 (Minecraft 26.2)
+	// -----------------------------------------------------------
+	// Старый путь «annotation processor генерирует refmap» в этом Loom удалён:
+	// useLegacyMixinAp=true падает с «Configuration with name 'mappingsFinal' not found»,
+	// а intermediary-маппингов для 26.2 в FabricMC/intermediary просто нет (последняя — 1.21.11),
+	// поэтому вариант с remap=false + method_XXXX тоже недоступен.
+	//
+	// Зато по умолчанию включён современный путь: TinyRemapper переписывает имена в
+	// аннотациях миксинов прямо в .class-файлах (mojmap -> intermediary) при remapJar.
+	// refmap в jar при этом не нужен — миксины находят цели в обфусцированной игре по
+	// уже переписанным именам. CI (шаг «Verify mixins...») проверяет, что в jar есть и
+	// классы миксинов, и intermediary-имена (method_/class_) внутри их байткода.
 }
 
 dependencies {
