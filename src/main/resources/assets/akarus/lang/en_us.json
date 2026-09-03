@@ -7,6 +7,7 @@
   "key.akarus.auto_mine": "Module: AutoMine",
   "key.akarus.auto_walk": "Module: AutoWalk",
   "key.akarus.kill_aura": "Module: KillAura",
+  "key.akarus.sprint": "Module: Sprint",
   "key.akarus.hand_shader": "Module: Hand outline",
   "key.akarus.view_model": "Module: ViewModel"
 }

@@ -9,6 +9,7 @@ import com.akarus.client.module.impl.FreeLookModule;
 import com.akarus.client.module.impl.HandShaderModule;
 import com.akarus.client.module.impl.HudInfoModule;
 import com.akarus.client.module.impl.KillAuraModule;
+import com.akarus.client.module.impl.SprintModule;
 import com.akarus.client.module.impl.ViewModelModule;
 
 import java.util.ArrayList;
@@ -31,6 +32,7 @@ public final class ModuleManager {
 		register(new AutoMineModule());
 		register(new AutoWalkModule());
 		register(new KillAuraModule());
+		register(new SprintModule());
 		register(new HandShaderModule());
 		register(new ViewModelModule());
 	}
