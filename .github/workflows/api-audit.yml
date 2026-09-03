@@ -127,6 +127,24 @@ jobs:
               echo; echo "=== BlockState (water) ==="
               javap -cp "$MC" net.minecraft.world.level.material.FluidState 2>&1 | grep -iE 'isSource|getType' | head -8 || true
               javap -cp "$MC" net.minecraft.world.level.block.state.BlockState 2>&1 | grep -iE 'is\(|getFluidState' | head -6 || true
+              echo; echo "=== MultiPlayerGameMode (полный) ==="
+              javap -p -cp "$MC" net.minecraft.client.multiplayer.MultiPlayerGameMode 2>&1 | grep -iE 'menu|slot|inventory|click|carried' | head -20 || true
+              echo; echo "=== классы оверлеев ==="
+              unzip -l "$MC" | grep -iE 'client/.*(overlay|layereddraw|guilayers)' | head -30 || true
+              unzip -l "$MC" | grep -iE '(fireoverlay|pumpkin|portaloverlay|spyglassoverlay|powdersnowoverlay)' | head -15 || true
+              echo; echo "=== FogRenderer ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.fog.FogRenderer 2>&1 | head -40 || true
+              echo; echo "=== nausea-классы ==="
+              unzip -l "$MC" | grep -i nausea | head -10 || true
+              echo; echo "=== Camera (fov) ==="
+              javap -p -cp "$MC" net.minecraft.client.Camera 2>&1 | grep -i fov | head -10 || true
+              echo; echo "=== ClientPacketListener (carried) ==="
+              javap -p -cp "$MC" net.minecraft.client.multiplayer.ClientPacketListener 2>&1 | grep -iE 'carried|sendIsolated|openMenu' | head -10 || true
+              echo; echo "=== LocalPlayer (connection) ==="
+              javap -cp "$MC" net.minecraft.client.player.LocalPlayer 2>&1 | grep -iE 'connection' | head -5 || true
+              echo; echo "=== MobEffects (nausea/darkness/blindness) ==="
+              javap -cp "$MC" net.minecraft.core.registries.BuiltInRegistries 2>&1 | grep -i mobeffect | head -4 || true
+              unzip -l "$MC" | grep -iE 'MobEffects.class|effects/MobEffects' | head -5 || true
               echo; echo "=== EntityType ==="
               javap -cp "$MC" net.minecraft.world.entity.EntityType 2>&1 | grep -iE 'category|classification'
               echo; echo "=== MobCategory (константы) ==="
