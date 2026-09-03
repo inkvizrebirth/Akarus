@@ -40,10 +40,12 @@ jobs:
             echo; echo "=== minecraft-*.jar по всему ~/.gradle ==="
             find ~/.gradle -name 'minecraft*.jar' 2>/dev/null | head -30
 
-            MC=""
-            for j in $(find ~/.gradle -name '*.jar' 2>/dev/null | grep -v sources); do
-              if unzip -l "$j" 2>/dev/null | grep -q 'net/minecraft/world/entity/Entity.class'; then MC="$j"; break; fi
-            done
+            MC=$(find ~/.gradle/caches/fabric-loom -name '*deobf*.jar' 2>/dev/null | head -1)
+            if [ -z "$MC" ]; then
+              for j in $(find ~/.gradle -name '*.jar' 2>/dev/null | grep -v sources); do
+                if unzip -l "$j" 2>/dev/null | grep -q 'net/minecraft/client/Camera.class'; then MC="$j"; break; fi
+              done
+            fi
             echo; echo "MC_JAR=$MC"
 
             if [ -n "$MC" ]; then
