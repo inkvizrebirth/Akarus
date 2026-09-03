@@ -12,7 +12,8 @@
     "ItemInHandRendererMixin",
     "KeyboardInputMixin",
     "MouseHandlerMixin",
-    "SubmitNodeCollectionMixin"
+    "SubmitNodeCollectionMixin",
+    "AkarusScreenAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
