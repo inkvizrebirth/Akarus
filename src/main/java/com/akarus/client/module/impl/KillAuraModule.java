@@ -62,12 +62,22 @@ public class KillAuraModule extends Module {
 	private final BooleanSetting attackInvisible = bool("invisible", "Невидимые", false);
 	private final BooleanSetting throughWalls = bool("walls", "Через стены", false);
 
+	/**
+	 * Степень «человечности» легитного режима: 0 — почти без шума, максимум буста,
+	 * 100 — максимум рандомизации. Влияет на промахи, перелёты, дрожь, задержки.
+	 */
+	private final IntSetting randomization = intSetting("randomization", "Рандомизация, %", 70, 0, 100);
+
 	private static final Random RANDOM = new Random();
 
 	/** До скольки градусов считаем, что прицел наведён (легитный режим). */
 	private static final float AIM_TOLERANCE = 6.0F;
 
 	private UUID targetId;
+
+	/** Куда по вертикали целимся по текущей цели: преимущественно корпус, иногда голова. */
+	private float aimOffsetY;
+
 	private int attackDelay;
 
 	public KillAuraModule() {
@@ -78,6 +88,7 @@ public class KillAuraModule extends Module {
 	@Override
 	protected void onEnable() {
 		this.targetId = null;
+		this.aimOffsetY = drawAimOffset();
 		this.attackDelay = 3;
 	}
 
@@ -88,6 +99,11 @@ public class KillAuraModule extends Module {
 
 	public boolean isLegit() {
 		return mode.is(MODE_LEGIT);
+	}
+
+	/** Степень рандомизации для RotationHumanizer (0..100). */
+	public int getRandomization() {
+		return randomization.get();
 	}
 
 	@Override
@@ -109,16 +125,18 @@ public class KillAuraModule extends Module {
 			return;
 		}
 
-		// Смена цели — человеческая пауза на «перевести взгляд»
+		// Смена цели — новый «захват»: свежая точка прицеливания и человеческая пауза
+		// на «перевести взгляд»
 		UUID id = target.getUUID();
 		if (!id.equals(this.targetId)) {
 			this.targetId = id;
-			this.attackDelay = Math.max(this.attackDelay, isLegit() ? 4 + RANDOM.nextInt(7) : 2);
+			this.aimOffsetY = drawAimOffset();
+			this.attackDelay = Math.max(this.attackDelay, 3 + RANDOM.nextInt(6));
 		}
 
 		float[] aim = aimAt(player, target);
 		if (isLegit()) {
-			// Доворот через RotationHumanizer: плавно, с промахом и переменной скоростью.
+			// Доворот через RotationHumanizer: плавно, с промахом, перелётом и дрожью.
 			// Пишем публичными setYRot/setXRot — они не перехватываются миксином
 			float[] rotation = RotationHumanizer.aimTowards(player, aim[0], aim[1]);
 			if (rotation != null) {
@@ -129,8 +147,9 @@ public class KillAuraModule extends Module {
 				player.setXRot(aim[1]);
 			}
 
-			// Бьём только наведённым прицелом: удар мимо взгляда — читерский почерк
-			if (!RotationHumanizer.arrived()
+			// Бьём только прицелом, который «успел» за целью (перелёт скорректирован):
+			// удар мимо взгляда — читерский почерк
+			if (!RotationHumanizer.settled()
 					|| Math.abs(Mth.wrapDegrees(player.getYRot() - aim[0])) > AIM_TOLERANCE
 					|| Math.abs(player.getXRot() - aim[1]) > AIM_TOLERANCE) {
 				return;
@@ -156,7 +175,30 @@ public class KillAuraModule extends Module {
 		}
 		player.swing(InteractionHand.MAIN_HAND);
 
-		this.attackDelay = isLegit() ? 2 + RANDOM.nextInt(4) : 0;
+		this.attackDelay = nextAttackDelay();
+	}
+
+	/**
+	 * Пауза после удара: обычно крошечная (тайминг диктует восстановление силы удара,
+	 * а не наш счётчик), изредка человек «задумывается» на пару тиков.
+	 */
+	private static int nextAttackDelay() {
+		int delay = RANDOM.nextInt(3);
+		if (RANDOM.nextInt(100) < 16) {
+			delay += 2 + RANDOM.nextInt(4);
+		}
+		return delay;
+	}
+
+	/**
+	 * Точка прицеливания по вертикали: преимущественно корпус (вплоть до ног),
+	 * примерно каждый пятый раз — голова. На урон не влияет, а вот почерк меняет.
+	 */
+	private static float drawAimOffset() {
+		if (RANDOM.nextFloat() < 0.2F) {
+			return 0.05F + RANDOM.nextFloat() * 0.25F;
+		}
+		return 0.05F - 0.4F * RANDOM.nextFloat();
 	}
 
 	// ------------------------------------------------------------------
@@ -227,10 +269,12 @@ public class KillAuraModule extends Module {
 		return Math.toDegrees(Math.acos(dot));
 	}
 
-	/** Углы, по которым игрок смотрит в глаза цели. */
-	private static float[] aimAt(LocalPlayer player, Entity target) {
+	/** Углы, по которым игрок смотрит в точку прицеливания на теле цели. */
+	private float[] aimAt(LocalPlayer player, Entity target) {
 		Vec3 eye = player.getEyePosition();
 		Vec3 at = target.getEyePosition();
+		// Смещение по вертикали: корпус/ноги/голова — свой выбор на каждую цель
+		at = new Vec3(at.x, at.y + this.aimOffsetY, at.z);
 
 		double dx = at.x - eye.x;
 		double dy = at.y - eye.y;

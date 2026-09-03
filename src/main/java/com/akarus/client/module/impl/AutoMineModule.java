@@ -40,6 +40,9 @@ public class AutoMineModule extends Module {
 	private final IntSetting amount = intSetting("amount", "Сколько", 0, 0, 512);
 	private final BooleanSetting chatCommands = bool("chat_commands", "Командами чата", false);
 
+	/** Степень «человечности» доворотов в легитном режиме (0 — почти без шума, 100 — максимум). */
+	private final IntSetting randomization = intSetting("randomization", "Рандомизация, %", 80, 0, 100);
+
 	public AutoMineModule() {
 		super("auto_mine", "AutoMine", "Автоматическая добыча блоков через Baritone",
 				ModuleCategory.MISC, GLFW.GLFW_KEY_B);
@@ -102,6 +105,11 @@ public class AutoMineModule extends Module {
 	/** Работает ли модуль в легитном режиме (человечные повороты + #legitmine). */
 	public boolean isLegit() {
 		return mode.is(MODE_LEGIT);
+	}
+
+	/** Степень рандомизации доворотов для RotationHumanizer (0..100). */
+	public int getRandomization() {
+		return randomization.get();
 	}
 
 	private static void notify(String message) {
