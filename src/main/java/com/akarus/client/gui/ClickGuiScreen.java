@@ -325,6 +325,15 @@ public class ClickGuiScreen extends Screen {
 		}
 	}
 
+	/**
+	 * Область стрелки «раскрыть настройки» в строке модуля. Один и тот же прямоугольник
+	 * используется для подписи и для проверки клика — иначе «жмёшь на стрелку», а срабатывает
+	 * тумблер.
+	 */
+	private static Hitbox expandMark(Hitbox box) {
+		return new Hitbox(box.x() + box.width() - TOGGLE_WIDTH - 24, box.y() + 4, 14, 14);
+	}
+
 	private void drawModuleRow(GuiGraphicsExtractor graphics, Module module, Hitbox box, int accent, int mouseX, int mouseY) {
 		Font font = this.font;
 		float hover = hoverProgress("module:" + module.getId(), box.contains(mouseX, mouseY));
@@ -374,11 +383,14 @@ public class ClickGuiScreen extends Screen {
 		RenderUtils.drawToggle(graphics, box.x() + box.width() - TOGGLE_WIDTH - 9,
 				box.y() + (box.height() - TOGGLE_HEIGHT) / 2, TOGGLE_WIDTH, TOGGLE_HEIGHT, toggle, accent);
 
-		// Отметка, что у модуля есть настройки: ▾/▸ вместо плюса — она читается как «раскрыть»
+		// Отметка, что у модуля есть настройки: ▾/▸ вместо плюса — она читается как «раскрыть».
+		// Попадание по ней считается тем же expandBox(), что и клик, поэтому «стрелка»
+		// всегда там, где она и работает.
 		if (!module.getSettings().isEmpty()) {
+			Hitbox markBox = expandMark(box);
 			String mark = module == expanded ? "▾" : "▸";
-			float markHover = hoverProgress("expand:" + module.getId(), box.contains(mouseX, mouseY));
-			graphics.text(font, mark, box.x() + box.width() - TOGGLE_WIDTH - 22, box.y() + 6,
+			float markHover = hoverProgress("expand:" + module.getId(), markBox.contains(mouseX, mouseY));
+			graphics.text(font, mark, markBox.x() + 2, markBox.y() + 2,
 					RenderUtils.mix(TEXT_DIM, TEXT_SECONDARY, markHover), false);
 		}
 	}
@@ -814,6 +826,7 @@ public class ClickGuiScreen extends Screen {
 
 		int listX = Math.round(guiX) + PADDING + CATEGORY_WIDTH + PADDING;
 		int listY = Math.round(guiY) + HEADER_HEIGHT + PADDING;
+		int listWidth = GUI_WIDTH - CATEGORY_WIDTH - PADDING * 3;
 		int listHeight = panelHeight() - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
 
 		// Ждём бинд: любая кнопка мыши становится новым биндом модуля
@@ -850,7 +863,13 @@ public class ClickGuiScreen extends Screen {
 					playClick();
 				}
 				case MODULE -> {
-					if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+					boolean hasSettings = !entry.module().getSettings().isEmpty();
+					boolean onExpandMark = hasSettings && expandMark(box).contains(mouseX, mouseY);
+
+					if (onExpandMark) {
+						// Стрелка — раскрыть/свернуть настройки, не трогая состояние модуля
+						expanded = expanded == entry.module() ? null : entry.module();
+					} else if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
 						entry.module().toggle();
 					} else if (event.button() == GLFW.GLFW_MOUSE_BUTTON_MIDDLE) {
 						// Колесиком по модулю — переходим в режим ожидания клавиши
