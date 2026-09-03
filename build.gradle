@@ -49,6 +49,21 @@ processResources {
 	filesMatching("fabric.mod.json") {
 		expand "version": version
 	}
+
+	// ViaFabricPlus вшиваем как nested jar (jar-in-jar): Fabric Loader 0.19+ сам
+	// подхватывает META-INF/jars. Локальная сборка без скачанного libs/ViaFabricPlus.jar
+	// просто не получит папку — мод собирается и работает, только без виа внутри.
+	// Компилируем мы против VFP через рефлексию (ViaIntegration), поэтому отсутствие
+	// jar не ломает даже компиляцию.
+	def nested = file("libs/ViaFabricPlus.jar")
+	if (nested.exists()) {
+		from(nested) {
+			into "META-INF/jars"
+		}
+		logger.lifecycle("ViaFabricPlus вшивается в META-INF/jars ({})", nested.length())
+	} else {
+		logger.warn("libs/ViaFabricPlus.jar не найден — собираем без встроенного ViaFabricPlus")
+	}
 }
 
 // Minecraft 26.2 собирается под Java 25. Если в системе стоит более старый JDK,
