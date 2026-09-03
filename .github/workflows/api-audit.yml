@@ -2,7 +2,10 @@ name: api-audit
 
 # Одноразовый аудит имён Minecraft 26.2: локально нет доступа к maven'ам,
 # поэтому сверяем реальные сигнатуры прямо на CI. Запускается вручную.
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/01a066bd-akarus]
 
 jobs:
   audit:
