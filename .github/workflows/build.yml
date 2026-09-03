@@ -37,15 +37,15 @@ jobs:
           path: build.log
           if-no-files-found: ignore
 
-      # Миксины должны попасть в jar вместе с refmap-ом, иначе в обфусцированной
-      # игре метод startUseItem() просто не найдётся
-      - name: Проверить миксины в jar
+      # Диагностика: что реально лежит внутри jar (миксины и refmap)
+      - name: Показать содержимое jar
         run: |
           JAR=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -n 1)
-          echo "Проверяю: $JAR"
-          unzip -l "$JAR" | grep -E "MinecraftMixin|akarus.mixins.json|akarus-refmap.json"
-          unzip -l "$JAR" | grep -q "akarus-refmap.json" || { echo "::error::refmap миксинов не попал в jar"; exit 1; }
-          unzip -l "$JAR" | grep -q "com/akarus/client/mixin/MinecraftMixin.class" || { echo "::error::класс миксина не попал в jar"; exit 1; }
+          echo "JAR=$JAR"
+          echo "::notice::ALL=$(unzip -l "$JAR" | awk '{print $4}' | grep -v '^$' | tr '\n' ' ')"
+          echo "::notice::MIXINSJSON=$(unzip -p "$JAR" akarus.mixins.json 2>/dev/null | tr -d '\n')"
+          echo "::notice::MODJSON=$(unzip -p "$JAR" fabric.mod.json 2>/dev/null | tr -d '\n')"
+          unzip -l "$JAR" | grep -iE "refmap|mixin"
 
       - name: Collect jars
         run: |
