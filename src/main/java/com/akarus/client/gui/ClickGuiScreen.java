@@ -630,15 +630,12 @@ public class ClickGuiScreen extends Screen {
 				TEXT_SECONDARY, false);
 		graphics.text(font, value, box.x() + box.width() - 9 - font.width(value), textY, TEXT_PRIMARY, false);
 
+		// Дорожка и бегунок — общими виджетами RenderUtils: у них край считается
+		// с частичным покрытием пикселей, поэтому бегунок круглый, а не «восьмиугольник»
 		int trackX = box.x() + 9;
-		int trackY = box.y() + box.height() - 10;
 		int trackWidth = box.width() - 18;
-
-		RenderUtils.fillRounded(graphics, trackX, trackY, trackWidth, 3, 1, 0x26FFFFFF);
-
-		float progress = setting.getNormalized();
-		RenderUtils.fillRounded(graphics, trackX, trackY, Math.max(2, (int) (trackWidth * progress)), 3, 1, accent);
-		RenderUtils.fillRounded(graphics, (int) (trackX + (trackWidth - 6) * progress), trackY - 2, 6, 7, 3, 0xFFF2F2F7);
+		RenderUtils.drawSlider(graphics, trackX, box.y() + 14, trackWidth, 5,
+				setting.getNormalized(), accent);
 
 		drawRipples(graphics, box, accent);
 	}
@@ -673,7 +670,8 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	private void drawHint(GuiGraphicsExtractor graphics, int x, int y) {
-		String hint = "ЛКМ — вкл/выкл   •   ПКМ — настройки   •   СКМ — бинд   •   колесо — прокрутка   •   шапку можно таскать";
+		String hint = "ЛКМ — вкл/выкл   •   ПКМ — настройки   •   СКМ — бинд   •   "
+				+ "колесо — прокрутка, над числом — ±1   •   шапку можно таскать";
 		graphics.text(this.font, RenderUtils.clamp(this.font, hint, GUI_WIDTH - PADDING * 2),
 				x + PADDING, y + panelHeight() - PADDING - this.font.lineHeight + 1, TEXT_DIM, false);
 	}
@@ -962,6 +960,18 @@ public class ClickGuiScreen extends Screen {
 		}
 	}
 
+	/**
+	 * Настройка изменилась — сообщаем модулю и сохраняем конфиг.
+	 * Звук не играем: этот путь используют и щелчки колесом, а их за секунду
+	 * бывает десятки.
+	 */
+	private void applySettingChange(Module module) {
+		if (module != null) {
+			module.onSettingsChanged();
+		}
+		ConfigManager.save();
+	}
+
 	private void updateSlider(IntSetting setting, Hitbox box, double mouseX) {
 		int trackX = box.x() + 9;
 		int trackWidth = box.width() - 18;
@@ -1029,6 +1039,29 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+		int direction = (int) Math.signum(scrollY);
+
+		// Колесо над строкой настройки меняет значение на шаг: слайдером в такое
+		// поле попадать мышью неудобно, а «±1» нужен постоянно (например, чтобы
+		// поймать толщину обводки в 3 пикселя, а не 2 или 4)
+		if (direction != 0) {
+			for (LayoutEntry entry : buildLayout()) {
+				if (entry.kind() != Kind.SETTING || !entry.box().contains(mouseX, mouseY)) {
+					continue;
+				}
+				if (entry.setting() instanceof IntSetting intSetting) {
+					intSetting.set(intSetting.get() + direction);
+					applySettingChange(entry.module());
+					return true;
+				}
+				if (entry.setting() instanceof ModeSetting modeSetting) {
+					modeSetting.shift(direction);
+					applySettingChange(entry.module());
+					return true;
+				}
+			}
+		}
+
 		int listHeight = panelHeight() - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
 		int maxScroll = Math.max(0, contentHeight() - listHeight);
 		scrollTarget = clamp(scrollTarget - (float) scrollY * 16.0f, -maxScroll, 0);
