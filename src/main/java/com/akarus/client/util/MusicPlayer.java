@@ -332,10 +332,14 @@ public final class MusicPlayer {
 		AudioInputStream converted = null;
 		try (AudioInputStream source = AudioSystem.getAudioInputStream(file)) {
 			newClip = AudioSystem.getClip();
+			boolean openedDirectly = false;
 			try {
 				newClip.open(source);
-			} catch (Exception direct) {
+				openedDirectly = true;
+			} catch (Exception ignore) {
 				// не-PCM (alaw/ulaw/imadpcm) — пробуем конвертацию в 16-bit PCM
+			}
+			if (!openedDirectly) {
 				AudioFormat base = source.getFormat();
 				int channels = Math.max(1, base.getChannels());
 				float rate = Math.max(8000.0f, base.getSampleRate());
@@ -343,6 +347,7 @@ public final class MusicPlayer {
 						rate, 16, channels, channels * 2, rate * channels, false);
 				converted = AudioSystem.getAudioInputStream(pcm, source);
 				newClip.open(converted);
+				// клип уже всё прочитал в память — поток конвертации можно закрыть
 				converted.close();
 				converted = null;
 			}
