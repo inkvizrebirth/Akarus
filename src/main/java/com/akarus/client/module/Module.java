@@ -3,6 +3,8 @@ package com.akarus.client.module;
 import com.akarus.client.AkarusClient;
 import com.akarus.client.config.ConfigManager;
 import com.akarus.client.settings.BooleanSetting;
+import com.akarus.client.settings.ButtonSetting;
+import com.akarus.client.settings.ColorSetting;
 import com.akarus.client.settings.IntSetting;
 import com.akarus.client.settings.Setting;
 import com.akarus.client.settings.StringSetting;
@@ -150,6 +152,18 @@ public abstract class Module {
 
 	protected StringSetting textSetting(String id, String name, String value) {
 		StringSetting setting = new StringSetting(id, name, value);
+		settings.add(setting);
+		return setting;
+	}
+
+	protected ColorSetting colorSetting(String id, String name, int color) {
+		ColorSetting setting = new ColorSetting(id, name, color);
+		settings.add(setting);
+		return setting;
+	}
+
+	protected ButtonSetting buttonSetting(String id, String name, String label, ButtonSetting.Action action) {
+		ButtonSetting setting = new ButtonSetting(id, name, label, action);
 		settings.add(setting);
 		return setting;
 	}

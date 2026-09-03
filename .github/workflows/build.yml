@@ -27,7 +27,38 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew build --stacktrace 2>&1 | tee build.log
-          exit "${PIPESTATUS[0]}"
+          status="${PIPESTATUS[0]}"
+          if [ "$status" -ne 0 ]; then
+            # Превращаем ошибки компиляции в annotations, чтобы их можно было
+            # прочитать через API check-runs (логи артефактом из песочницы не качаются)
+            grep -E '\.java:[0-9]+: ' build.log \
+              | sed -E 's|^([^:]+\.java):([0-9]+): ([a-z]+):(.*)$|::\3 file=\1,line=\2::\4|' \
+              | head -60 || true
+            # А если это ошибка Gradle/Loom — выкладываем секцию «What went wrong»
+            awk '/What went wrong/{flag=1} flag' build.log | head -50 \
+              | while IFS= read -r line; do [ -n "$line" ] && echo "::error::${line}"; done || true
+            echo "::error::Сборка завершилась с ошибкой (код $status)"
+          fi
+          exit "$status"
+
+      - name: Verify mixins are remapped inside the jar
+        run: |
+          JAR=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -1)
+          echo "Проверяем jar: $JAR"
+          echo "--- классы миксинов ---"
+          unzip -l "$JAR" | grep -E 'com/akarus/client/mixin/.*\.class' || { echo "::error::НЕТ классов миксинов!"; exit 1; }
+          echo "--- конфиг миксинов ---"
+          unzip -p "$JAR" akarus.mixins.json || { echo "::error::НЕТ akarus.mixins.json!"; exit 1; }
+          echo "--- refmap (информационно: в Loom 1.17 его нет, имена переписаны в байткод) ---"
+          unzip -l "$JAR" | grep -E '\.refmap\.json' || echo "refmap отсутствует — это норма для Loom 1.17"
+          echo "--- ссылка на конфиг миксинов в fabric.mod.json ---"
+          unzip -p "$JAR" fabric.mod.json | grep -q 'akarus\.mixins\.json' || { echo "::error::fabric.mod.json не объявляет mixins!"; exit 1; }
+          echo "OK: fabric.mod.json ссылается на akarus.mixins.json"
+          echo "--- refmap / intermediary (информационно) ---"
+          # В Minecraft 26.2 нет intermediary-маппингов (26.2.tiny отсутствует в
+          # FabricMC/intermediary), а runtime использует официальные имена Mojang,
+          # поэтому ни refmap, ни method_/class_ в jar быть не должно — это норма.
+          unzip -l "$JAR" | grep -E '\.refmap\.json' && echo "refmap найден" || echo "refmap отсутствует (норма для 26.2)"
 
       - name: Upload build log
         if: always()

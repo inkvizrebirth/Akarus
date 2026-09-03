@@ -212,6 +212,38 @@ def draw_setting_row(canvas, x, y, w, name, enabled, accent):
     draw_toggle(canvas, x + w - 24 - 8, y + 2, 24, 10, 1.0 if enabled else 0.0, accent)
 
 
+def draw_color_row(canvas, x, y, w, name, color, code, accent, focused=False):
+    """Строка цвета: подпись, плашка с цветом и HEX-код (в фокусе — рамка и курсор)."""
+    canvas.rrect(x, y, w, TEXT_ROW_HEIGHT - 2, 4, argb(accent if focused else 0x10FFFFFF))
+    canvas.rrect(x + 1, y + 1, w - 2, TEXT_ROW_HEIGHT - 4, 3, mix(argb(0x80000000), argb(0x14FFFFFF), 0.6))
+    text_y = y + (TEXT_ROW_HEIGHT - 2 - LINE_HEIGHT) // 2 + 1
+    canvas.text(x + 9, text_y, name, argb(TEXT_SECONDARY))
+
+    swatch_w, swatch_h = 26, TEXT_ROW_HEIGHT - 12
+    code_x = x + w - 9 - canvas.text_width(code)
+    swatch_x = code_x - 6 - swatch_w
+    swatch_y = y + (TEXT_ROW_HEIGHT - 2 - swatch_h) // 2
+    canvas.rrect(swatch_x, swatch_y, swatch_w, swatch_h, 3, argb(0xFF000000))
+    canvas.rrect(swatch_x + 1, swatch_y + 1, swatch_w - 2, swatch_h - 2, 2, argb(color))
+    canvas.text(code_x, text_y, code, argb(TEXT_PRIMARY if focused else TEXT_DIM))
+    if focused:
+        canvas.rect(code_x + canvas.text_width(code) + 1, text_y - 1, 1, LINE_HEIGHT - 1, argb(accent))
+
+
+def draw_button_row(canvas, x, y, w, name, label, accent):
+    """Строка-кнопка: слева подпись, справа — сама кнопка."""
+    canvas.rrect(x, y, w, TEXT_ROW_HEIGHT - 2, 4, argb(0x10FFFFFF))
+    canvas.rrect(x + 1, y + 1, w - 2, TEXT_ROW_HEIGHT - 4, 3, mix(argb(0x80000000), argb(0x14FFFFFF), 0.6))
+    text_y = y + (TEXT_ROW_HEIGHT - 2 - LINE_HEIGHT) // 2 + 1
+    canvas.text(x + 9, text_y, name, argb(TEXT_DIM))
+
+    bw, bh = 54, TEXT_ROW_HEIGHT - 10
+    bx, by = x + w - 8 - bw, y + (TEXT_ROW_HEIGHT - 2 - bh) // 2
+    canvas.rrect(bx, by, bw, bh, 4, mix(argb(0xFF26262E), argb(accent), 0.40))
+    canvas.text(bx + (bw - canvas.text_width(label)) // 2, by + (bh - LINE_HEIGHT) // 2 + 1,
+                label, argb(TEXT_PRIMARY))
+
+
 def draw_text_row(canvas, x, y, w, name, value, accent):
     """Текстовое поле настройки (фокус: рамка акцентного цвета и курсор)."""
     canvas.rrect(x, y, w, TEXT_ROW_HEIGHT - 2, 4, argb(accent))
@@ -240,7 +272,35 @@ def draw_slider_row(canvas, x, y, w, name, value, value_max, accent, value_min=0
     canvas.rrect(track_x + int((track_w - 6) * progress), track_y - 2, 6, 7, 3, argb(0xFFF2F2F7))
 
 
-def render_clickgui(path):
+def draw_settings(canvas, x, row_y, w, accent, settings):
+    """Рисует раскрытые настройки модуля. Каждая настройка — кортеж, первым идёт вид."""
+    for entry in settings:
+        kind = entry[0]
+        if kind == "slider":
+            _, name, value, value_min, value_max = entry
+            draw_slider_row(canvas, x, row_y, w, name, value, value_max, accent, value_min)
+            row_y += SLIDER_ROW_HEIGHT
+        elif kind == "text":
+            _, name, value = entry
+            draw_text_row(canvas, x, row_y, w, name, value, accent)
+            row_y += TEXT_ROW_HEIGHT
+        elif kind == "color":
+            _, name, color, code, focused = entry
+            draw_color_row(canvas, x, row_y, w, name, color, code, accent, focused)
+            row_y += TEXT_ROW_HEIGHT
+        elif kind == "button":
+            _, name, label = entry
+            draw_button_row(canvas, x, row_y, w, name, label, accent)
+            row_y += TEXT_ROW_HEIGHT
+        else:
+            _, name, enabled = entry[:3]
+            draw_setting_row(canvas, x, row_y, w, name, enabled, accent)
+            row_y += SETTING_ROW_HEIGHT
+    return row_y
+
+
+def render_clickgui(path, selected="Движение", accent=0xFF8DE06C, modules=MOVEMENT_MODULES,
+                    settings=FREECAM_SETTINGS, version="0.4.0", ripple=True, scroll_bar=90):
     canvas = Canvas(640, 400, argb(0xFF12121A))
 
     # «Мир» позади окна: небо, горизонт, земля
@@ -255,7 +315,6 @@ def render_clickgui(path):
 
     x = (640 - GUI_WIDTH) // 2
     y = (400 - GUI_HEIGHT) // 2
-    accent = 0xFF8DE06C
 
     # Мягкая тень
     draw_soft_shadow(canvas, x, y, GUI_WIDTH, GUI_HEIGHT, PANEL_RADIUS, SHADOW_LAYERS)
@@ -275,13 +334,14 @@ def render_clickgui(path):
     canvas.vgradient(x + 1, y + HEADER_HEIGHT - 2, GUI_WIDTH - 2, 2, with_alpha(accent, 0.10), with_alpha(accent, 0.85))
 
     canvas.text(x + PADDING, y + 12, "Akarus", argb(TEXT_PRIMARY))
-    canvas.text(x + PADDING + canvas.text_width("Akarus") + 5, y + 13, "v0.3.0", argb(TEXT_DIM))
+    canvas.text(x + PADDING + canvas.text_width("Akarus") + 5, y + 13, "v" + version, argb(TEXT_DIM))
     hint = "ESC — закрыть"
     canvas.text(x + GUI_WIDTH - PADDING - canvas.text_width(hint) - 3, y + 12, hint, argb(TEXT_DIM))
 
     # Категории
     row_y = y + HEADER_HEIGHT + PADDING
-    for name, color, is_selected in CATEGORIES:
+    for name, color, _ in CATEGORIES:
+        is_selected = name == selected
         background = mix(with_alpha(0xFF000000, 0.55), argb(color), 0.26 if is_selected else 0.0)
         canvas.rrect(x + PADDING, row_y, CATEGORY_WIDTH, CATEGORY_ROW_HEIGHT, 6, background)
         if is_selected:
@@ -298,32 +358,123 @@ def render_clickgui(path):
     canvas.rrect(list_x, list_y, list_w, list_h, 6, argb(LIST_BACKGROUND))
 
     row_y = list_y
-    for name, description, enabled, bind, expanded in MOVEMENT_MODULES:
+    for name, description, enabled, bind, expanded in modules:
         draw_module_row(canvas, list_x, row_y, list_w, name, description, enabled, accent,
                         1.0 if enabled else 0.0, expanded, bind)
         row_y += MODULE_ROW_HEIGHT
 
         if expanded:
-            for kind, setting_name, value, value_min, value_max in FREECAM_SETTINGS:
-                if kind == "slider":
-                    draw_slider_row(canvas, list_x + 10, row_y, list_w - 20, setting_name,
-                                    value, value_max, accent, value_min)
-                    row_y += SLIDER_ROW_HEIGHT
-                else:
-                    draw_setting_row(canvas, list_x + 10, row_y, list_w - 20, setting_name, value, accent)
-                    row_y += SETTING_ROW_HEIGHT
+            row_y = draw_settings(canvas, list_x + 10, row_y, list_w - 20, accent, settings)
 
     # Волна по клику — как будто только что нажали на строку модуля
-    draw_ripple(canvas, list_x + 120, list_y + 17, 46, accent, 0.75)
+    if ripple:
+        draw_ripple(canvas, list_x + 120, list_y + 17, 46, accent, 0.75)
 
     # Полоса прокрутки
     canvas.rrect(list_x + list_w - 5, list_y + 3, 3, list_h - 6, 1, argb(0x1AFFFFFF))
-    canvas.rrect(list_x + list_w - 5, list_y + 3, 3, 90, 1, with_alpha(accent, 0.9))
+    canvas.rrect(list_x + list_w - 5, list_y + 3, 3, scroll_bar, 1, with_alpha(accent, 0.9))
 
     # Подсказка внизу
     canvas.text(x + PADDING, y + GUI_HEIGHT - PADDING - LINE_HEIGHT + 1,
                 "ЛКМ — вкл/выкл   •   ПКМ — настройки   •   СКМ — бинд   •   колесо — прокрутка", argb(TEXT_DIM))
 
+    canvas.save(path)
+
+
+def render_render_tab(path):
+    """Вкладка «Рендер»: модуль «Обводка рук» с цветами, градиентом и кнопкой редактора."""
+    modules = [
+        ("Обводка рук", "Цветной контур вокруг руки и предмета", True, "J", True),
+        ("ViewModel", "Масштаб, сдвиг и поворот рук от первого лица", True, "V", False),
+    ]
+    settings = [
+        ("toggle", "Обводить руку", True),
+        ("toggle", "Обводить предмет", True),
+        ("slider", "Толщина", 3, 1, 8),
+        ("color", "Цвет", 0xFF8A6CFF, "#8A6CFF", True),
+        ("color", "Второй цвет", 0xFF5CE1E6, "#5CE1E6", False),
+        ("toggle", "Градиент", False),
+        ("toggle", "Радуга", False),
+        ("button", "Раскладка рук", "Настроить"),
+    ]
+    render_clickgui(path, selected="Рендер", accent=0xFF8A6CFF, modules=modules,
+                    settings=settings, scroll_bar=64)
+
+
+def render_hands(path):
+    """Редактор раскладки рук: мир, рука с обводкой и панель параметров справа."""
+    width, height = 560, 320
+    canvas = Canvas(width, height, argb(0xFF101018))
+
+    # Мир от первого лица
+    canvas.vgradient(0, 0, width, 190, argb(0xFF74A9DE), argb(0xFFC3DDF2))
+    canvas.vgradient(0, 190, width, height - 190, argb(0xFF4C7A38), argb(0xFF22401C))
+    for i in range(0, width, 32):
+        canvas.rect(i, 188 + (i % 4) * 5, 31, 40, argb(0x2D5A3C30))
+    canvas.rect(width // 2 - 4, 176, 8, 8, argb(0xC8FFFFFF))
+
+    accent = 0xFF8A6CFF
+    outline = argb(0xFF8A6CFF)
+
+    # Рука от первого лица: условный силуэт из двух прямоугольников
+    hand_x, hand_y, hand_w, hand_h = 300, 214, 62, 120
+    item_x, item_y, item_w, item_h = 250, 150, 22, 96
+
+    def hand_shape(grow):
+        canvas.rrect(hand_x - grow, hand_y - grow, hand_w + grow * 2, hand_h + grow * 2,
+                     10 + grow, with_alpha(accent, 0.85))
+        canvas.rrect(item_x - grow, item_y - grow, item_w + grow * 2, item_h + grow * 2,
+                     5 + grow, with_alpha(accent, 0.85))
+
+    # Контур: тот же силуэт, но чуть больше (так это и делает HandOutlineRenderer)
+    for grow in (4, 3, 2, 1):
+        hand_shape(grow)
+
+    # Предмет в руке
+    canvas.rrect(item_x, item_y, item_w, item_h, 5, argb(0xFFB9B9C4))
+    canvas.rrect(item_x + 3, item_y + 3, item_w - 6, item_h - 40, 3, argb(0xFF6E6E7A))
+    canvas.rrect(item_x - 6, item_y + item_h - 26, item_w + 12, 9, 3, argb(0xFF8A5A2B))
+
+    # Сама рука
+    canvas.rrect(hand_x, hand_y, hand_w, hand_h, 10, argb(0xFFD9A87C))
+    canvas.rrect(hand_x + 6, hand_y + 8, hand_w - 12, hand_h - 16, 8, argb(0xFFE5BC95))
+    canvas.rrect(hand_x, hand_y + hand_h - 26, hand_w, 26, 10, argb(0xFFC89468))
+
+    # Панель параметров справа
+    panel_w, panel_h = 162, 22 + 15 + PADDING + 7 * 17 + PADDING
+    panel_x, panel_y = width - panel_w - 10, (height - panel_h) // 2
+
+    draw_soft_shadow(canvas, panel_x, panel_y, panel_w, panel_h, 8, 4)
+    canvas.rrect(panel_x, panel_y, panel_w, panel_h, 8, argb(PANEL_OUTLINE))
+    canvas.rrect(panel_x + 1, panel_y + 1, panel_w - 2, panel_h - 2, 7, argb(0xF0101014))
+    canvas.text(panel_x + PADDING, panel_y + 7, "Раскладка рук", argb(TEXT_PRIMARY))
+
+    buttons = ("Сохранить", "Сбросить")
+    for index, label in enumerate(buttons):
+        bx = panel_x + PADDING + index * (71 + 4)
+        canvas.rrect(bx, panel_y + 22, 71, 15, 4, argb(0x14FFFFFF))
+        canvas.rrect(bx + 1, panel_y + 23, 69, 13, 3, mix(argb(0x8A000000), argb(0x1AFFFFFF), 0.4))
+        canvas.text(bx + (71 - canvas.text_width(label)) // 2, panel_y + 26, label, argb(TEXT_SECONDARY))
+
+    parameters = [("Scale", "1.08"), ("X", "0.12"), ("Y", "-0.04"), ("Z", "0.00"),
+                  ("Поворот X", "-6.00"), ("Поворот Y", "12.00"), ("Поворот Z", "0.00")]
+    row_y = panel_y + 22 + 15 + PADDING
+    for index, (name, value) in enumerate(parameters):
+        is_selected = index == 0
+        border = accent if is_selected else 0x14FFFFFF
+        fill = with_alpha(accent, 0.16) if is_selected else argb(0x8A000000)
+        canvas.rrect(panel_x + 4, row_y, panel_w - 8, 15, 4, argb(border))
+        canvas.rrect(panel_x + 5, row_y + 1, panel_w - 10, 13, 3, fill)
+        if is_selected:
+            canvas.rect(panel_x + 4, row_y + 4, 2, 7, argb(accent))
+        canvas.text(panel_x + 12, row_y + 4, name, argb(TEXT_PRIMARY if is_selected else TEXT_SECONDARY))
+        canvas.text(panel_x + panel_w - 10 - canvas.text_width(value), row_y + 4, value,
+                    argb(TEXT_PRIMARY if is_selected else TEXT_DIM))
+        row_y += 17
+
+    canvas.text(10, height - 14,
+                "ЛКМ/ПКМ — тащить руку   •   колесо — размер или значение   •   ESC — сохранить и выйти",
+                argb(TEXT_DIM))
     canvas.save(path)
 
 
@@ -341,7 +492,7 @@ def render_hud(path):
 
     # Водяной знак: радуга по символам
     cursor = x
-    for index, symbol in enumerate("Akarus 0.3.0"):
+    for index, symbol in enumerate("Akarus 0.4.0"):
         canvas.text(cursor, y, symbol, hsb(index * 0.035, 0.75, 1.0))
         cursor += canvas.text_width(symbol)
     y += LINE_HEIGHT + 5
@@ -388,4 +539,6 @@ def render_hud(path):
 if __name__ == "__main__":
     render_clickgui(os.path.join(OUT_DIR, "preview-clickgui.png"))
     render_hud(os.path.join(OUT_DIR, "preview-hud.png"))
+    render_render_tab(os.path.join(OUT_DIR, "preview-render.png"))
+    render_hands(os.path.join(OUT_DIR, "preview-hands.png"))
     print("Мокапы сохранены:", os.path.abspath(OUT_DIR))
