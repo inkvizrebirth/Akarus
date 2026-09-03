@@ -67,6 +67,24 @@ jobs:
               javap -cp "$MC" net.minecraft.client.MouseHandler 2>&1 | grep -iE 'turn|isRightPressed|xpos|ypos'
               echo; echo "=== MultiPlayerGameMode.attack ==="
               javap -cp "$MC" net.minecraft.client.multiplayer.MultiPlayerGameMode 2>&1 | grep -iE 'attack'
+              echo; echo "=== MultiPlayerGameMode (use/interact) ==="
+              javap -cp "$MC" net.minecraft.client.multiplayer.MultiPlayerGameMode 2>&1 | grep -iE 'use|interact'
+              echo; echo "=== LivingEntity (block/using/move) ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'stopUsingItem|isBlocking|onClimbable|isInWater|isInLava|zza|swing|fallDistance|isFallFlying|isPassenger|onGround|jumpFromGround|startUsingItem|getUseItem|isUsingItem'
+              echo; echo "=== Player (hands/blocking) ==="
+              javap -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | grep -iE 'getOffhandItem|getMainhandItem|isBlocking|stopUsingItem|getItemInHand|getCooldowns'
+              echo; echo "=== LocalPlayer (using) ==="
+              javap -cp "$MC" net.minecraft.client.player.LocalPlayer 2>&1 | grep -iE 'stopUsingItem|isBlocking|startUsingItem|isUsingItem'
+              echo; echo "=== Entity (ground/fall) ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'fallDistance|zza|setSprinting|isSprinting|onGround|isPassenger'
+              echo; echo "=== ItemStack ==="
+              javap -cp "$MC" net.minecraft.world.item.ItemStack 2>&1 | grep -iE 'public boolean is\(|getItem'
+              echo; echo "=== Items (shield) ==="
+              javap -cp "$MC" net.minecraft.world.item.Items 2>&1 | grep -iE 'SHIELD'
+              echo; echo "=== AABB ==="
+              javap -cp "$MC" net.minecraft.world.phys.AABB 2>&1 | grep -iE 'minX|maxX|minY|maxY|minZ|maxZ|inflate'
+              echo; echo "=== Options (keys) ==="
+              javap -cp "$MC" net.minecraft.client.Options 2>&1 | grep -iE 'keySprint|keyJump|keyUp|keyShift|keyUse|keyAttack'
               echo; echo "=== EntityType ==="
               javap -cp "$MC" net.minecraft.world.entity.EntityType 2>&1 | grep -iE 'category|classification'
               echo; echo "=== MobCategory (константы) ==="
