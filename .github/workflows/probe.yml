@@ -1,0 +1,18 @@
+name: probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Try push
+        run: |
+          git config user.name "arena-ai-coding-agent"
+          git config user.email "arena-ai-coding-agent@users.noreply.github.com"
+          echo "$(date -u) probe" > probe.txt
+          git add probe.txt
+          git commit -m "probe: write test" || echo "::notice::commit-failed"
+          PUSHOUT=$(git push origin "HEAD:refs/heads/${{ github.ref_name }}" 2>&1) && echo "::notice::push-ok" || echo "::notice::push-fail: ${PUSHOUT:0:200}"
