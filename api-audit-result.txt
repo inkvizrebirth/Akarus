@@ -20,13 +20,21 @@
 /home/runner/.gradle/caches/fabric-loom/26.2/minecraft-client.jar
 /home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
-MC_JAR=/home/runner/.gradle/caches/fabric-loom/26.2/minecraft-extracted_server.jar
+MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 === классы мобов/врагов/манекенов ===
+        0  2026-09-03 10:45   assets/minecraft/textures/entity/armorstand/
+      809  1980-02-01 00:00   assets/minecraft/textures/entity/armorstand/armorstand.png
+        0  2026-09-03 10:45   net/minecraft/client/model/object/armorstand/
+      320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
+     6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
+     5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
+    11516  1980-02-01 00:00   net/minecraft/client/renderer/entity/ArmorStandRenderer.class
+     1224  1980-02-01 00:00   net/minecraft/client/renderer/entity/state/ArmorStandRenderState.class
      2859  1980-02-01 00:00   net/minecraft/util/datafix/fixes/EntityArmorStandSilentFix.class
-   157622  1980-02-01 00:00   net/minecraft/world/entity/LivingEntity.class
-    71991  1980-02-01 00:00   net/minecraft/world/entity/Mob.class
      3925  1980-02-01 00:00   net/minecraft/world/entity/MobCategory.class
+    71991  1980-02-01 00:00   net/minecraft/world/entity/Mob.class
+   157622  1980-02-01 00:00   net/minecraft/world/entity/LivingEntity.class
      5673  1980-02-01 00:00   net/minecraft/world/entity/decoration/ArmorStand$ArmorStandPose.class
     31215  1980-02-01 00:00   net/minecraft/world/entity/decoration/ArmorStand.class
     84438  1980-02-01 00:00   net/minecraft/world/entity/player/Player.class
@@ -71,3 +79,48 @@ MC_JAR=/home/runner/.gradle/caches/fabric-loom/26.2/minecraft-extracted_server.j
   public float getAttackStrengthScale(float);
 
 === ClientLevel ===
+  public java.util.Set<net.minecraft.world.level.block.entity.BlockEntity> getGloballyRenderedBlockEntities();
+  public java.lang.Iterable<net.minecraft.world.entity.Entity> entitiesForRendering();
+  public void tickEntities();
+  public java.util.List<net.minecraft.world.entity.Entity> getPushableEntities(net.minecraft.world.entity.Entity, net.minecraft.world.phys.AABB);
+  protected net.minecraft.world.level.entity.LevelEntityGetter<net.minecraft.world.entity.Entity> getEntities();
+
+=== Level ===
+  public void tickBlockEntities();
+  public java.util.List<net.minecraft.world.entity.Entity> getEntities(net.minecraft.world.entity.Entity, net.minecraft.world.phys.AABB, java.util.function.Predicate<? super net.minecraft.world.entity.Entity>);
+  public <T extends net.minecraft.world.entity.Entity> java.util.List<T> getEntities(net.minecraft.world.level.entity.EntityTypeTest<net.minecraft.world.entity.Entity, T>, net.minecraft.world.phys.AABB, java.util.function.Predicate<? super T>);
+  public <T extends net.minecraft.world.entity.Entity> void getEntities(net.minecraft.world.level.entity.EntityTypeTest<net.minecraft.world.entity.Entity, T>, net.minecraft.world.phys.AABB, java.util.function.Predicate<? super T>, java.util.List<? super T>);
+  public <T extends net.minecraft.world.entity.Entity> void getEntities(net.minecraft.world.level.entity.EntityTypeTest<net.minecraft.world.entity.Entity, T>, net.minecraft.world.phys.AABB, java.util.function.Predicate<? super T>, java.util.List<? super T>, int);
+  public <T extends net.minecraft.world.entity.Entity> boolean hasEntities(net.minecraft.world.level.entity.EntityTypeTest<net.minecraft.world.entity.Entity, T>, net.minecraft.world.phys.AABB, java.util.function.Predicate<? super T>);
+  public java.util.List<net.minecraft.world.entity.Entity> getPushableEntities(net.minecraft.world.entity.Entity, net.minecraft.world.phys.AABB);
+  protected abstract net.minecraft.world.level.entity.LevelEntityGetter<net.minecraft.world.entity.Entity> getEntities();
+
+=== Camera ===
+  protected void setRotation(float, float);
+  protected void setPosition(double, double, double);
+  protected void setPosition(net.minecraft.world.phys.Vec3);
+  public boolean isDetached();
+
+=== MouseHandler ===
+  public static double getScaledXPos(com.mojang.blaze3d.platform.Window, double);
+  public double getScaledXPos(com.mojang.blaze3d.platform.Window);
+  public static double getScaledYPos(com.mojang.blaze3d.platform.Window, double);
+  public double getScaledYPos(com.mojang.blaze3d.platform.Window);
+  public boolean isRightPressed();
+  public double xpos();
+  public double ypos();
+
+=== MultiPlayerGameMode.attack ===
+  public void attack(net.minecraft.world.entity.player.Player, net.minecraft.world.entity.Entity);
+  public void piercingAttack(net.minecraft.world.item.component.PiercingWeapon);
+
+=== EntityType ===
+  public net.minecraft.world.entity.EntityType(net.minecraft.world.entity.EntityType$EntityFactory<T>, net.minecraft.world.entity.MobCategory, boolean, boolean, boolean, boolean, net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>, net.minecraft.world.entity.EntityDimensions, float, int, int, java.lang.String, java.util.Optional<net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>>, net.minecraft.world.flag.FeatureFlagSet, boolean);
+  public net.minecraft.world.entity.MobCategory getCategory();
+
+=== KeyMapping ===
+  public static void resetMapping();
+  public boolean isDown();
+  public boolean consumeClick();
+  public void setKey(com.mojang.blaze3d.platform.InputConstants$Key);
+  public void setDown(boolean);
