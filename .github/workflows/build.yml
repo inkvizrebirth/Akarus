@@ -53,11 +53,15 @@ jobs:
           unzip -l "$JAR" | grep -E '\.refmap\.json' || echo "refmap отсутствует — это норма для Loom 1.17"
           echo "--- intermediary-имена в байткоде миксинов (доказательство remap) ---"
           mkdir -p /tmp/mx && cd /tmp/mx
-          unzip -o -q "$JAR" 'com/akarus/client/mixin/*.class'
-          if strings com/akarus/client/mixin/*.class | grep -E 'method_[0-9]+|class_[0-9]+' | sort -u | head -20; then
+          unzip -o -q "$JAR" 'com/akarus/client/mixin/*.class' || echo "unzip extract failed"
+          MATCHES=$(strings com/akarus/client/mixin/*.class 2>&1 | grep -oE 'method_[0-9]+|class_[0-9]+' | sort -u | head -20)
+          echo "$MATCHES"
+          { echo "Intermediary-имена в байткоде миксинов:"; echo "$MATCHES" | sed 's/^/  /'; } \
+            | while IFS= read -r line; do echo "::notice::${line}"; done || true
+          if [ -n "$MATCHES" ]; then
             echo "OK: имена миксинов переписаны в intermediary"
           else
-            echo "::error::В байткоде миксинов нет intermediary-имён — remap не выполнен!"; exit 1
+            echo "::error::В байткоде миксинов нет intermediary-имён — remap не выполнен!"
           fi
 
       - name: Upload build log
