@@ -227,6 +227,20 @@ def icon_esp():
     return icon
 
 
+def icon_jump_effect():
+    # ударная волна при прыжке: расходящиеся дуги + стрелка вверх
+    icon = Icon()
+    icon.arc([6, 24, 34, 34], 20, 160, 3.4)
+    icon.arc([11, 29, 29, 34], 20, 160, 2.6)
+    # стрелка вверх
+    icon.line(20, 22, 20, 8, 3.6)
+    icon.line(20, 8, 14, 14, 3.2)
+    icon.line(20, 8, 26, 14, 3.2)
+    icon.dot(9, 31, 1.5)
+    icon.dot(31, 31, 1.5)
+    return icon
+
+
 def icon_click_gui():
     # окно меню: заголовок + строки-настройки
     icon = Icon()
@@ -318,6 +332,7 @@ ICONS = {
     "target_esp": icon_target_esp,
     "block_esp": icon_block_esp,
     "spider": icon_spider,
+    "jump_effect": icon_jump_effect,
     "arrow_down": icon_arrow_down,
     "arrow_up": icon_arrow_up,
 }

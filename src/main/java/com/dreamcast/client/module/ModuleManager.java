@@ -13,6 +13,7 @@ import com.dreamcast.client.module.impl.FreeCamModule;
 import com.dreamcast.client.module.impl.FreeLookModule;
 import com.dreamcast.client.module.impl.HandShaderModule;
 import com.dreamcast.client.module.impl.HudInfoModule;
+import com.dreamcast.client.module.impl.JumpEffectModule;
 import com.dreamcast.client.module.impl.KillAuraModule;
 import com.dreamcast.client.module.impl.MediaPlayerModule;
 import com.dreamcast.client.module.impl.NoBlindModule;
@@ -54,6 +55,7 @@ public final class ModuleManager {
 		register(new TrailsModule());
 		register(new EspModule());
 		register(new BlockEspModule());
+		register(new JumpEffectModule());
 		register(new SpiderModule());
 	}
 

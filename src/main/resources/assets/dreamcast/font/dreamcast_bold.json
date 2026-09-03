@@ -2,11 +2,17 @@
   "providers": [
     {
       "type": "ttf",
-      "file": "dreamcast:manrope-extrabold",
+      "file": "dreamcast:manrope-extrabold.ttf",
       "size": 10,
       "oversample": 4,
-      "shift": [0, 1]
+      "shift": [
+        0,
+        1
+      ]
     },
-    { "type": "reference", "id": "minecraft:default" }
+    {
+      "type": "reference",
+      "id": "minecraft:default"
+    }
   ]
 }
