@@ -29,6 +29,18 @@ jobs:
           ./gradlew build --stacktrace 2>&1 | tee build.log
           exit "${PIPESTATUS[0]}"
 
+      - name: Verify mixins and refmap are inside the jar
+        run: |
+          JAR=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -1)
+          echo "Проверяем jar: $JAR"
+          echo "--- классы миксинов ---"
+          unzip -l "$JAR" | grep -E 'com/akarus/client/mixin/.*\.class' || { echo "НЕТ классов миксинов!"; exit 1; }
+          echo "--- refmap ---"
+          unzip -l "$JAR" | grep -E '\.refmap\.json' || { echo "НЕТ refmap!"; exit 1; }
+          echo "--- refmap в конфиге миксинов ---"
+          unzip -p "$JAR" akarus.mixins.json
+          unzip -p "$JAR" akarus.mixins.json | grep -o '"refmap"[^,]*' || { echo "Конфиг миксинов не ссылается на refmap!"; exit 1; }
+
       - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4

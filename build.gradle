@@ -18,6 +18,15 @@ repositories {
 loom {
 	// Мод полностью клиентский, поэтому разделять source set'ы на main/client не нужно:
 	// весь код лежит в src/main/java, а точка входа объявлена как "client" в fabric.mod.json
+
+	// С Loom 1.12 по умолчанию миксины перемешиваются TinyRemapper'ом прямо в классе,
+	// и refmap в jar не попадает. Нам же refmap нужен (он прописывается в akarus.mixins.json
+	// и гарантирует работу миксинов в обфусцированной игре), поэтому возвращаем старый путь —
+	// annotation processor, который и генерирует refmap.
+	mixin {
+		useLegacyMixinAp = true
+		defaultRefmapName = "akarus.refmap.json"
+	}
 }
 
 dependencies {

@@ -4,6 +4,8 @@ import com.akarus.client.AkarusClient;
 import com.akarus.client.module.Module;
 import com.akarus.client.module.ModuleManager;
 import com.akarus.client.settings.BooleanSetting;
+import com.akarus.client.settings.ButtonSetting;
+import com.akarus.client.settings.ColorSetting;
 import com.akarus.client.settings.IntSetting;
 import com.akarus.client.settings.Setting;
 import com.akarus.client.settings.StringSetting;
@@ -89,6 +91,11 @@ public final class ConfigManager {
 		}
 
 		for (Setting<?> setting : module.getSettings()) {
+			// Кнопки значения не хранят — в конфиге им делать нечего
+			if (setting instanceof ButtonSetting) {
+				continue;
+			}
+
 			JsonElement value = settings.get(setting.getId());
 			if (value == null || !value.isJsonPrimitive()) {
 				continue;
@@ -96,7 +103,9 @@ public final class ConfigManager {
 
 			// Конфиг редактируется руками, поэтому значения применяем «мягко»
 			try {
-				if (setting instanceof BooleanSetting) {
+				if (setting instanceof ColorSetting colorSetting) {
+					colorSetting.trySetHex(value.getAsString());
+				} else if (setting instanceof BooleanSetting) {
 					setRaw(setting, value.getAsBoolean());
 				} else if (setting instanceof IntSetting intSetting) {
 					intSetting.set((int) Math.round(value.getAsDouble()));
@@ -122,6 +131,14 @@ public final class ConfigManager {
 			if (!module.getSettings().isEmpty()) {
 				JsonObject settings = new JsonObject();
 				for (Setting<?> setting : module.getSettings()) {
+					if (setting instanceof ButtonSetting) {
+						continue;
+					}
+					if (setting instanceof ColorSetting colorSetting) {
+						// Цвет держим строкой: так конфиг удобно править руками
+						settings.addProperty(setting.getId(), "#" + colorSetting.getHex());
+						continue;
+					}
 					Object value = setting.getValue();
 					if (value instanceof Boolean booleanValue) {
 						settings.addProperty(setting.getId(), booleanValue);

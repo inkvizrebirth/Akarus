@@ -6,6 +6,8 @@ import com.akarus.client.module.Module;
 import com.akarus.client.module.ModuleCategory;
 import com.akarus.client.module.ModuleManager;
 import com.akarus.client.settings.BooleanSetting;
+import com.akarus.client.settings.ButtonSetting;
+import com.akarus.client.settings.ColorSetting;
 import com.akarus.client.settings.IntSetting;
 import com.akarus.client.settings.Setting;
 import com.akarus.client.settings.StringSetting;
@@ -91,6 +93,8 @@ public class ClickGuiScreen extends Screen {
 	private float scrollTarget;
 
 	private Setting<?> focusedSetting;
+	/** То, что сейчас напечатали в поле цвета (без «#»), пока поле в фокусе. */
+	private String colorDraft = "";
 	private Module focusedModule;
 	/** Модуль, который сейчас ждёт новой клавиши для бинда. */
 	private Module bindingModule;
@@ -338,9 +342,76 @@ public class ClickGuiScreen extends Screen {
 			drawSliderRow(graphics, intSetting, box, accent, mouseX, mouseY);
 		} else if (setting instanceof StringSetting stringSetting) {
 			drawTextRow(graphics, stringSetting, box, accent, mouseX, mouseY);
+		} else if (setting instanceof ColorSetting colorSetting) {
+			drawColorRow(graphics, colorSetting, box, accent, mouseX, mouseY);
+		} else if (setting instanceof ButtonSetting buttonSetting) {
+			drawButtonRow(graphics, buttonSetting, box, accent, mouseX, mouseY);
 		} else if (setting instanceof BooleanSetting booleanSetting) {
 			drawToggleRow(graphics, booleanSetting, box, accent, mouseX, mouseY);
 		}
+	}
+
+	/**
+	 * Строка цвета: подпись, плашка с текущим цветом и HEX-код.
+	 * По клику поле попадает в фокус и код можно печатать прямо в меню.
+	 */
+	private void drawColorRow(GuiGraphicsExtractor graphics, ColorSetting setting, Hitbox box, int accent, int mouseX, int mouseY) {
+		Font font = this.font;
+		boolean focused = setting == focusedSetting;
+		float hover = hoverProgress("setting:" + setting.getId(), box.contains(mouseX, mouseY) || focused);
+
+		int border = focused ? accent : RenderUtils.mix(0x10FFFFFF, accent, hover * 0.35f);
+		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4, border,
+				RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.6f));
+
+		int textY = box.y() + (box.height() - 2 - font.lineHeight) / 2 + 1;
+		graphics.text(font, setting.getName(), box.x() + 9, textY, TEXT_SECONDARY, false);
+
+		// Плашка цвета: чёрная подложка, сверху — сам цвет (так виден даже прозрачный)
+		int swatchWidth = 26;
+		int swatchHeight = Math.max(6, box.height() - 12);
+		String shown = focused ? colorDraft : "#" + setting.getHex();
+		int codeWidth = Math.max(font.width(shown), font.width("#AARRGGBB"));
+		int swatchX = box.x() + box.width() - 9 - codeWidth - 6 - swatchWidth;
+		int swatchY = box.y() + (box.height() - 2 - swatchHeight) / 2;
+
+		RenderUtils.fillRounded(graphics, swatchX, swatchY, swatchWidth, swatchHeight, 3, 0xFF000000);
+		RenderUtils.fillRounded(graphics, swatchX + 1, swatchY + 1, swatchWidth - 2, swatchHeight - 2, 2, setting.get());
+
+		graphics.text(font, shown, swatchX + swatchWidth + 6, textY, focused ? TEXT_PRIMARY : TEXT_DIM, false);
+
+		// Мигающий курсор за кодом цвета
+		if (focused && (Util.getMillis() / 500L) % 2 == 0) {
+			int cursorX = swatchX + swatchWidth + 6 + font.width(shown) + 1;
+			graphics.fill(cursorX, textY - 1, cursorX + 1, textY + font.lineHeight - 1, accent);
+		}
+
+		drawRipples(graphics, box, accent);
+	}
+
+	/** Строка-кнопка: действие, которое открывается прямо из списка настроек. */
+	private void drawButtonRow(GuiGraphicsExtractor graphics, ButtonSetting setting, Hitbox box, int accent, int mouseX, int mouseY) {
+		Font font = this.font;
+		float hover = hoverProgress("setting:" + setting.getId(), box.contains(mouseX, mouseY));
+
+		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
+				0x10FFFFFF, RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.6f));
+
+		int textY = box.y() + (box.height() - 2 - font.lineHeight) / 2 + 1;
+		graphics.text(font, setting.getName(), box.x() + 9, textY, TEXT_DIM, false);
+
+		int width = 54;
+		int height = Math.max(10, box.height() - 10);
+		int buttonX = box.x() + box.width() - 8 - width;
+		int buttonY = box.y() + (box.height() - 2 - height) / 2;
+
+		RenderUtils.fillRounded(graphics, buttonX, buttonY, width, height, 4,
+				RenderUtils.mix(0xFF26262E, accent, 0.18f + 0.42f * hover));
+		graphics.text(font, setting.getLabel(), buttonX + (width - font.width(setting.getLabel())) / 2,
+				buttonY + (height - font.lineHeight) / 2 + 1,
+				RenderUtils.mix(TEXT_SECONDARY, TEXT_PRIMARY, hover), false);
+
+		drawRipples(graphics, box, accent);
 	}
 
 	private void drawToggleRow(GuiGraphicsExtractor graphics, BooleanSetting setting, Hitbox box, int accent, int mouseX, int mouseY) {
@@ -654,6 +725,25 @@ public class ClickGuiScreen extends Screen {
 			return;
 		}
 
+		if (setting instanceof ColorSetting colorSetting && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+			if (focusedSetting != colorSetting) {
+				focusedSetting = colorSetting;
+				focusedModule = entry.module();
+				colorDraft = colorSetting.getHex();
+				focusedDirty = false;
+			}
+			playClick();
+			return;
+		}
+
+		if (setting instanceof ButtonSetting buttonSetting && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+			// Кнопка может открыть другой экран, поэтому сначала гасим фокус и сохраняем
+			clearSettingFocus();
+			playClick();
+			buttonSetting.run();
+			return;
+		}
+
 		if (setting instanceof BooleanSetting booleanSetting && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
 			booleanSetting.toggle();
 			entry.module().onSettingsChanged();
@@ -669,6 +759,12 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	private void clearSettingFocus() {
+		// Цвет применяем из черновика: пока поле в фокусе, там может быть неполный код
+		if (focusedSetting instanceof ColorSetting colorSetting && !colorDraft.isEmpty()) {
+			colorSetting.trySetHex(colorDraft);
+			focusedDirty = true;
+		}
+
 		if (focusedModule != null && focusedDirty) {
 			focusedModule.onSettingsChanged();
 			ConfigManager.save();
@@ -676,6 +772,7 @@ public class ClickGuiScreen extends Screen {
 		focusedSetting = null;
 		focusedModule = null;
 		focusedDirty = false;
+		colorDraft = "";
 	}
 
 	@Override
@@ -730,6 +827,17 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean charTyped(CharacterEvent event) {
+		if (focusedSetting instanceof ColorSetting colorSetting) {
+			String typed = event.codepointAsString();
+			// В поле цвета принимают только шестнадцатеричные цифры
+			if (typed.length() == 1 && isHexDigit(typed.charAt(0)) && colorDraft.length() < 8) {
+				colorDraft += Character.toUpperCase(typed.charAt(0));
+				colorSetting.trySetHex(colorDraft);
+				focusedDirty = true;
+			}
+			return true;
+		}
+
 		if (focusedSetting instanceof StringSetting stringSetting && event.isAllowedChatCharacter()) {
 			stringSetting.set(stringSetting.get() + event.codepointAsString());
 			focusedDirty = true;
@@ -748,6 +856,26 @@ public class ClickGuiScreen extends Screen {
 			}
 			bindingModule = null;
 			playClick();
+			return true;
+		}
+
+		if (focusedSetting instanceof ColorSetting colorSetting) {
+			if (event.key() == GLFW.GLFW_KEY_BACKSPACE) {
+				if (!colorDraft.isEmpty()) {
+					colorDraft = colorDraft.substring(0, colorDraft.length() - 1);
+					if (!colorDraft.isEmpty()) {
+						colorSetting.trySetHex(colorDraft);
+					}
+					focusedDirty = true;
+				}
+				return true;
+			}
+
+			if (event.key() == GLFW.GLFW_KEY_ESCAPE || event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
+				clearSettingFocus();
+				return true;
+			}
+
 			return true;
 		}
 
@@ -830,7 +958,7 @@ public class ClickGuiScreen extends Screen {
 		if (setting instanceof IntSetting) {
 			return SLIDER_ROW_HEIGHT;
 		}
-		if (setting instanceof StringSetting) {
+		if (setting instanceof StringSetting || setting instanceof ColorSetting || setting instanceof ButtonSetting) {
 			return TEXT_ROW_HEIGHT;
 		}
 		return TOGGLE_ROW_HEIGHT;
@@ -860,6 +988,10 @@ public class ClickGuiScreen extends Screen {
 
 	private static boolean isInside(double px, double py, float x, float y, int width, int height) {
 		return px >= x && px <= x + width && py >= y && py <= y + height;
+	}
+
+	private static boolean isHexDigit(char symbol) {
+		return Character.digit(symbol, 16) >= 0;
 	}
 
 	// ------------------------------------------------------------------

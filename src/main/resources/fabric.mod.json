@@ -11,6 +11,9 @@
   "license": "MIT",
   "environment": "client",
   "icon": "assets/akarus/icon.png",
+  "mixins": [
+    "akarus.mixins.json"
+  ],
   "entrypoints": {
     "client": [
       "com.akarus.client.AkarusClient"
