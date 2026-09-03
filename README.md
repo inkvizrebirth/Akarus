@@ -92,7 +92,9 @@ JDK 25: [Adoptium Temurin 25](https://adoptium.net/temurin/releases/?version=25)
 1. Включаешь модуль (`G` по умолчанию) — игрок сразу переходит в **FreeCam** и может лететь сквозь блоки.
 2. Снизу по центру экрана всё время видна панель с координатами: `FreeCam: X Y Z`
    и подсказка `ПКМ — Baritone пойдёт сюда`.
-3. Долетаешь до нужного места, жмёшь **правую кнопку мыши** — фрикам выключается,
+3. Долетаешь до нужного места, жмёшь **правую кнопку мыши** — ПКМ перехватывается миксином
+   (`Minecraft#startUseItem()` отменяется), поэтому блоки не ставятся и предметы из руки не
+   используются. Фрикам выключается,
    а Baritone получает цель (`setGoal(new GoalBlock(x, y, z))` + `path()`, либо чат-команда `#goal x y z`)
    и сам идёт на эти координаты. Панель снизу переключается в режим `Цель: X Y Z` и показывает,
    сколько метров осталось.
@@ -134,6 +136,7 @@ JDK 25: [Adoptium Temurin 25](https://adoptium.net/temurin/releases/?version=25)
 src/main/java/com/akarus/client/
 ├── AkarusClient.java             — точка входа, регистрация всего, клавиша меню
 ├── baritone/BaritoneBridge.java  — мост к Baritone (reflection + чат-команды)
+├── mixin/MinecraftMixin.java     — перехват ПКМ для AutoWalk (Mixin)
 ├── config/ConfigManager.java     — сохранение настроек в config/akarus.json
 ├── gui/
 │   ├── ClickGuiScreen.java       — окно ClickGUI (категории, модули, настройки)

@@ -174,6 +174,21 @@ public class AutoWalkModule extends Module {
 		return target;
 	}
 
+	/**
+	 * true, пока ПКМ принадлежит модулю.
+	 *
+	 * В этот момент миксин {@code MinecraftMixin} отменяет ванильное использование
+	 * предмета, чтобы правая кнопка не ставила блоки и не съедала еду.
+	 */
+	public static boolean isInterceptingUse() {
+		try {
+			// Модуль может быть ещё не зарегистрирован — тогда ПКМ не трогаем
+			return ModuleManager.getModule(AutoWalkModule.class).isEnabled();
+		} catch (RuntimeException exception) {
+			return false;
+		}
+	}
+
 	/** Расстояние от игрока до цели в блоках. */
 	public double getDistance() {
 		LocalPlayer player = Minecraft.getInstance().player;
