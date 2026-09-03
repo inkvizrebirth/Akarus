@@ -26,6 +26,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Отрисовка своего HUD.
@@ -42,6 +43,9 @@ public final class HudRenderer {
 	private static final int PANEL_BACKGROUND = 0xB80A0A0D;
 	private static final int PANEL_BORDER = 0x2AFFFFFF;
 	private static final int TEXT_COLOR = 0xFFEDEDF5;
+
+	/** Счётчики появления модулей в списке (0..10 тиков фейда). */
+	private static final Map<String, Integer> MODULE_ALPHA = new java.util.HashMap<>();
 
 	private HudRenderer() {
 	}
@@ -300,10 +304,20 @@ public final class HudRenderer {
 		int x = MARGIN;
 		int y = MARGIN;
 
-		// Водяной знак: название и версия, переливающиеся по радуге
+		// Водяной знак: чёрная пилюля с радужным текстом и «дышащей» точкой
 		if (hud.showWatermark()) {
-			drawRainbow(graphics, font, AkarusClient.MOD_NAME + " " + AkarusClient.MOD_VERSION, x, y, time);
-			y += font.lineHeight + LINE_GAP + 3;
+			String brand = AkarusClient.MOD_NAME + " " + AkarusClient.MOD_VERSION;
+			int pillW = font.width(brand) + 26;
+			int pillH = font.lineHeight + 8;
+			RenderUtils.drawSoftShadow(graphics, x, y, pillW, pillH, 5, 3);
+			RenderUtils.fillRounded(graphics, x, y, pillW, pillH, 5, 0xE0070708);
+			RenderUtils.fillRounded(graphics, x, y, pillW, 1, 0, 0x1FFFFFFF);
+			float pulse = 0.4f + 0.6f * (float) Math.abs(Math.sin(time / 900.0));
+			graphics.fill(x + 6, y + pillH / 2 - 2, x + 10, y + pillH / 2 + 2, RenderUtils.rainbow(time, 0.0f));
+			int dot = RenderUtils.withAlpha(0xFFFFFFFF, 0.10f + 0.18f * pulse);
+			graphics.fill(x + pillW - 12, y + pillH / 2 - 3, x + pillW - 4, y + pillH / 2 + 3, dot);
+			drawRainbow(graphics, font, brand, x + 15, y + 4, time);
+			y += pillH + 5;
 		}
 
 		// Информационные строки
@@ -327,24 +341,25 @@ public final class HudRenderer {
 			for (String line : lines) {
 				width = Math.max(width, font.width(line));
 			}
-			width += PADDING * 2 + 3;
+			width += PADDING * 2 + 9;
 			int height = lines.size() * (font.lineHeight + LINE_GAP) - LINE_GAP + PADDING * 2;
 
-			// Панелька с акцентной полосой слева
+			// Панелька: тень, чёрное стекло, акцентная полоса слева со скроллом цвета
+			RenderUtils.drawSoftShadow(graphics, x, y, width, height, 4, 3);
 			RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 4, PANEL_BORDER, PANEL_BACKGROUND);
 			graphics.fillGradient(x + 1, y + 3, x + 3, y + height - 3,
 					RenderUtils.rainbow(time, 0.0f), RenderUtils.rainbow(time, 0.18f));
 
 			int textY = y + PADDING;
 			for (String line : lines) {
-				graphics.text(font, line, x + PADDING + 3, textY, TEXT_COLOR, true);
+				graphics.text(font, line, x + PADDING + 6, textY, TEXT_COLOR, true);
 				textY += font.lineHeight + LINE_GAP;
 			}
 
 			y += height + 5;
 		}
 
-		// Список включённых модулей: чем длиннее название, тем выше строка
+		// Список включённых модулей: плавное появление, лёгкий заезд, уход с фейдом
 		if (hud.showModuleList()) {
 			List<Module> active = ModuleManager.getAll().stream()
 					.filter(Module::isEnabled)
@@ -352,13 +367,50 @@ public final class HudRenderer {
 							.thenComparing(Module::getName))
 					.toList();
 
+			// обновляем прозрачности; ушедшие модули доживают на месте до нуля
+			for (Module module : active) {
+				MODULE_ALPHA.merge(module.getName(), 0, Math::max);
+			}
+			List<String> gone = new ArrayList<>();
+			for (Map.Entry<String, Integer> entry : MODULE_ALPHA.entrySet()) {
+				boolean stillActive = active.stream().anyMatch(m -> m.getKey().equals(entry.getKey()));
+				int steps = Math.max(0, Math.min(10, entry.getValue() + (stillActive ? 1 : -1)));
+				entry.setValue(steps);
+				if (!stillActive && steps <= 0) {
+					gone.add(entry.getKey());
+				}
+			}
+			gone.forEach(MODULE_ALPHA::remove);
+
 			int index = 0;
 			for (Module module : active) {
-				graphics.text(font, module.getName(), x, y, RenderUtils.rainbow(time, index * 0.08f), true);
+				drawModuleLine(graphics, font, x, y, time, index, module.getName(), true);
+				y += font.lineHeight + LINE_GAP;
+				index++;
+			}
+			// доигравшие уход
+			for (String name : List.copyOf(MODULE_ALPHA.keySet())) {
+				if (active.stream().anyMatch(m -> m.getName().equals(name))) {
+					continue;
+				}
+				drawModuleLine(graphics, font, x, y, time, index, name, false);
 				y += font.lineHeight + LINE_GAP;
 				index++;
 			}
 		}
+	}
+
+	/** Строка модуля с easing: alpha 0..1 по счётчику появления, сдвиг при заезде. */
+	private static void drawModuleLine(GuiGraphicsExtractor graphics, Font font, int x, int y,
+	                                    long time, int index, String name, boolean active) {
+		int alphaSteps = MODULE_ALPHA.getOrDefault(name, 10);
+		float a = Math.max(0.0f, Math.min(1.0f, alphaSteps / 10.0f));
+		//ease для плавности: квадратичный вход
+		float eased = a * a * (3.0f - 2.0f * a);
+		int shift = Math.round((1.0f - eased) * 6.0f);
+		int baseColor = RenderUtils.rainbow(time, index * 0.08f);
+		int color = (baseColor & 0x00FFFFFF) | (Math.round(255 * eased) << 24);
+		graphics.text(font, name, x + shift, y, color, true);
 	}
 
 	/** Текст, у которого каждый символ своего цвета — классический «радужный» водяной знак. */

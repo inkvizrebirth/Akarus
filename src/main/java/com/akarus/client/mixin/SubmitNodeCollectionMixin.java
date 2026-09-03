@@ -31,7 +31,7 @@ import java.util.List;
 @Mixin(SubmitNodeCollection.class)
 public abstract class SubmitNodeCollectionMixin implements OrderedSubmitNodeCollector {
 
-	@Inject(method = "submitItem", at = @At("TAIL"))
+	@Inject(method = "submitItem", at = @At("TAIL"), require = 0)
 	private void akarus$outlineItem(PoseStack poseStack, ItemDisplayContext displayContext, int lightCoords,
 			int overlayCoords, int outlineColor, int[] tintLayers, List<BakedQuad> quads,
 			ItemStackRenderState.FoilType foilType, CallbackInfo ci) {

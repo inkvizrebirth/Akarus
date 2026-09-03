@@ -35,7 +35,7 @@ public abstract class ItemInHandRendererMixin {
 	@Unique
 	private boolean akarus$transformApplied;
 
-	@Inject(method = "renderArmWithItem", at = @At("HEAD"))
+	@Inject(method = "renderArmWithItem", at = @At("HEAD"), require = 0)
 	private void akarus$applyViewModel(AbstractClientPlayer player, float frameInterp, float xRot, InteractionHand hand,
 			float attack, ItemStack itemStack, float inverseArmHeight, PoseStack poseStack,
 			SubmitNodeCollector submitNodeCollector, int lightCoords, CallbackInfo ci) {
@@ -59,7 +59,7 @@ public abstract class ItemInHandRendererMixin {
 		this.akarus$transformApplied = true;
 	}
 
-	@Inject(method = "renderArmWithItem", at = @At("RETURN"))
+	@Inject(method = "renderArmWithItem", at = @At("RETURN"), require = 0)
 	private void akarus$restoreViewModel(AbstractClientPlayer player, float frameInterp, float xRot, InteractionHand hand,
 			float attack, ItemStack itemStack, float inverseArmHeight, PoseStack poseStack,
 			SubmitNodeCollector submitNodeCollector, int lightCoords, CallbackInfo ci) {
