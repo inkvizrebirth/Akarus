@@ -29,7 +29,7 @@ loom {
 	//     (useLegacyMixinAp=true падает с «Configuration with name 'mappingsFinal' not found»);
 	//   * refmap в jar не нужен: миксины ссылаются на цели по именам Mojang, которые и есть
 	//     имена рантайма.
-	// Миксины объявлены в akarus.mixins.json (секция "mixins" в fabric.mod.json). CI-шаг
+	// Миксины объявлены в dreamcast.mixins.json (секция "mixins" в fabric.mod.json). CI-шаг
 	// «Verify mixins are remapped inside the jar» проверяет, что классы миксинов и конфиг
 	// действительно лежат в jar.
 }

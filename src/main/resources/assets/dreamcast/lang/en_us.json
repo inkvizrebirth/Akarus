@@ -1,0 +1,22 @@
+{
+  "key.category.dreamcast.modules": "Dreamcast",
+  "key.dreamcast.click_gui": "Open module menu (ClickGUI)",
+  "key.dreamcast.hud_info": "Module: HUD (layout editor)",
+  "key.dreamcast.free_cam": "Module: FreeCam",
+  "key.dreamcast.free_look": "Module: FreeLook",
+  "key.dreamcast.auto_mine": "Module: AutoMine",
+  "key.dreamcast.auto_walk": "Module: AutoWalk",
+  "key.dreamcast.kill_aura": "Module: KillAura",
+  "key.dreamcast.sprint": "Module: Sprint",
+  "key.dreamcast.no_fov": "Module: NoFOV",
+  "key.dreamcast.no_blind": "Module: NoBlind",
+  "key.dreamcast.no_fall_damage": "Module: NoFallDamage",
+  "key.dreamcast.hand_shader": "Module: Hand outline",
+  "key.dreamcast.view_model": "Module: ViewModel",
+  "key.dreamcast.auto_totem": "Module: AutoTotem",
+  "key.dreamcast.media_player": "Module: MediaPlayer",
+  "key.dreamcast.trails": "Module: Trails",
+  "key.dreamcast.esp": "Module: ESP",
+  "key.dreamcast.block_esp": "Module: BlockESP",
+  "key.dreamcast.spider": "Module: Spider"
+}

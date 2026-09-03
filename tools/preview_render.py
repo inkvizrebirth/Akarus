@@ -2,7 +2,7 @@
 Генератор мокапов интерфейса для документации (docs/preview-*.png).
 
 Скрипт НЕ нужен для сборки мода — он повторяет ту же геометрию и те же цвета,
-что и com.akarus.client.gui.* (клиент Dreamcast DLC), и рисует их средствами
+что и com.dreamcast.client.gui.* (клиент Dreamcast DLC), и рисует их средствами
 Pillow (блюр делается настоящим GaussianBlur, чтобы показать эффект).
 
 Запуск:  python3 tools/preview_render.py
@@ -15,9 +15,9 @@ import os
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
-                         "src", "main", "resources", "assets", "akarus", "font", "manrope-medium.ttf")
+                         "src", "main", "resources", "assets", "dreamcast", "font", "manrope-medium.ttf")
 ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
-                        "src", "main", "resources", "assets", "akarus", "textures", "gui", "icons")
+                        "src", "main", "resources", "assets", "dreamcast", "textures", "gui", "icons")
 SCALE = 2          # рисуем в 2x, чтобы картинка была чёткой
 LINE_HEIGHT = 9    # высота строки шрифта Minecraft
 
@@ -368,19 +368,14 @@ def render_clickgui(path, selected="Рендер", ripple=True, search="", searc
         canvas.rect(x + 1 + i, y + HEADER_HEIGHT - 2, 1, 1,
                     with_alpha(mix(argb(accent), second, t), 0.35 + 0.6 * wave))
 
-    # Логотип DREAMCAST с разрядкой + бейдж DLC + версия
+    # Логотип DREAMCAST с разрядкой + версия, без бейджей
     logo_x = x + PADDING + 1
     title_y = y + (HEADER_HEIGHT - LINE_HEIGHT) // 2
     cursor = logo_x
     for symbol in LOGO:
         canvas.text(cursor, title_y, symbol, argb(TEXT_PRIMARY))
         cursor += canvas.text_width(symbol) + 3
-    badge_w, badge_h = 20, 10
-    canvas.rrect(cursor, title_y + (LINE_HEIGHT - badge_h) // 2, badge_w, badge_h, 3,
-                 mix(argb(accent), second, 0.5))
-    canvas.text(cursor + (badge_w - canvas.text_width("DLC")) // 2,
-                title_y + (LINE_HEIGHT - badge_h) // 2 + 1, "DLC", argb(0xFFE8E8F0))
-    canvas.text(cursor + badge_w + 6, title_y + 1, "v" + VERSION, argb(TEXT_DIM))
+    canvas.text(cursor + 8, title_y + 1, "v" + VERSION, argb(TEXT_DIM))
 
     # Поле поиска в шапке
     search_w = 112
@@ -468,15 +463,8 @@ def render_menu(path):
     logo = LOGO
     logo_w = tracked_width(canvas, logo, 6)
     logo_y = H // 4 - 22
-    logo_x = W // 2 - (logo_w + 26) // 2
+    logo_x = W // 2 - logo_w // 2
     draw_tracked(canvas, logo_x, logo_y, logo, argb(0xFFF4F4FA), 6)
-
-    # Бейдж «DLC»
-    badge_x = logo_x + logo_w + 7
-    badge_y = logo_y - 1
-    canvas.rrect(badge_x, badge_y, 20, 11, 3, mix(argb(ACCENT_VIOLET), argb(ACCENT_CYAN), 0.5))
-    canvas.rrect(badge_x + 1, badge_y + 1, 18, 9, 2, argb(0xF6151518))
-    canvas.text(badge_x + (20 - canvas.text_width("DLC")) // 2, badge_y + 2, "DLC", argb(0xFFE8E8F0))
 
     # «Дышащая» линия под логотипом: градиент фиолетовый → циан
     bar_w = int(logo_w * 0.85)
@@ -513,7 +501,7 @@ def render_menu(path):
             canvas.text(bx + bw - 12 - canvas.text_width(hint), by + (bh - LINE_HEIGHT) // 2,
                         hint, with_alpha(0xFFA6A6B2, 0.9))
         by += bh + gap
-    canvas.text(6, H - 10, "Dreamcast DLC " + VERSION + "   ·   Minecraft 26.2", argb(0xFF80808C))
+    canvas.text(6, H - 10, "Dreamcast " + VERSION + "   ·   Minecraft 26.2", argb(0xFF80808C))
     build = "build 26.2"
     canvas.text(W - 6 - canvas.text_width(build), H - 10, build, argb(0xFF80808C))
     canvas.save(path)
@@ -536,7 +524,7 @@ def draw_tracked(canvas, x, y, text, color, tracking):
 # ---------- Экран миров ----------
 
 def render_worlds(path):
-    """AkarusWorldsScreen: список миров с иконками и чипами действий."""
+    """DreamcastWorldsScreen: список миров с иконками и чипами действий."""
     W, H = 640, 400
     canvas = Canvas(W, H, argb(0xFF0B0B0D))
     canvas.vgradient(0, 0, W, H, argb(0xFF131317), argb(0xFF070709))
@@ -604,7 +592,7 @@ def render_worlds(path):
 # ---------- Экран серверов ----------
 
 def render_servers(path):
-    """AkarusServersScreen: серверы с пингами и пилюлей версии ViaFabricPlus."""
+    """DreamcastServersScreen: серверы с пингами и пилюлей версии ViaFabricPlus."""
     W, H = 640, 400
     canvas = Canvas(W, H, argb(0xFF0B0B0D))
     canvas.vgradient(0, 0, W, H, argb(0xFF101318), argb(0xFF06080A))
@@ -814,7 +802,7 @@ def render_hud(path):
     x, y = 6, 6
 
     # Водяной знак: пилюля с градиентом темы (перелив по символам)
-    brand = "Dreamcast DLC " + VERSION
+    brand = "Dreamcast " + VERSION
     pill_w = canvas.text_width(brand) + 28
     pill_h = LINE_HEIGHT + 8
     canvas.rrect(x, y, pill_w, pill_h, 5, argb(0x2AFFFFFF))
@@ -907,7 +895,7 @@ def render_hud(path):
 # ---------- Настройки ----------
 
 def render_settings(path):
-    """AkarusSettingsScreen — список настроек чёрным стеклом."""
+    """DreamcastSettingsScreen — список настроек чёрным стеклом."""
     W, H = 560, 330
     canvas = Canvas(W, H, argb(0xFF0B0B0D))
     canvas.vgradient(0, 0, W, H // 2, argb(0xFF16161A), argb(0xFF0A0A0C))

@@ -1,0 +1,22 @@
+{
+  "key.category.dreamcast.modules": "Dreamcast",
+  "key.dreamcast.click_gui": "Открыть меню модулей (ClickGUI)",
+  "key.dreamcast.hud_info": "Модуль: HUD (редактор раскладки)",
+  "key.dreamcast.free_cam": "Модуль: FreeCam",
+  "key.dreamcast.free_look": "Модуль: FreeLook",
+  "key.dreamcast.auto_mine": "Модуль: AutoMine",
+  "key.dreamcast.auto_walk": "Модуль: AutoWalk",
+  "key.dreamcast.kill_aura": "Модуль: KillAura",
+  "key.dreamcast.sprint": "Модуль: Спринт",
+  "key.dreamcast.no_fov": "Модуль: NoFOV",
+  "key.dreamcast.no_blind": "Модуль: NoBlind",
+  "key.dreamcast.no_fall_damage": "Модуль: NoFallDamage",
+  "key.dreamcast.hand_shader": "Модуль: Обводка рук",
+  "key.dreamcast.view_model": "Модуль: ViewModel",
+  "key.dreamcast.auto_totem": "Модуль: AutoTotem",
+  "key.dreamcast.media_player": "Модуль: MediaPlayer",
+  "key.dreamcast.trails": "Модуль: Trails",
+  "key.dreamcast.esp": "Модуль: ESP",
+  "key.dreamcast.block_esp": "Модуль: BlockESP",
+  "key.dreamcast.spider": "Модуль: Spider"
+}

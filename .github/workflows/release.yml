@@ -65,7 +65,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: akarus-build-log
+          name: dreamcast-build-log
           path: build.log
           if-no-files-found: ignore
 
@@ -79,9 +79,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: Akarus ${{ steps.version.outputs.tag }}
+          name: Dreamcast ${{ steps.version.outputs.tag }}
           body: |
-            ## Akarus ${{ steps.version.outputs.tag }} — Minecraft 26.2 · Fabric (Java 25)
+            ## Dreamcast ${{ steps.version.outputs.tag }} — Minecraft 26.2 · Fabric (Java 25)
 
             **Главное в этом релизе**
             - **AutoTotem с предсказанием урона**: тотем в левой руке появляется ДО удара —
@@ -91,7 +91,7 @@ jobs:
               пилюля версии в списке серверов с выбором протокола ViaFabricPlus.
             - **ViaFabricPlus встроен** (jar-in-jars) — ставить отдельно не нужно.
             - **MediaPlayer**: фоновая музыка (wav) мимо звука игры, карточка на HUD,
-              кнопка открытия папки `akarus/media` прямо из ClickGUI.
+              кнопка открытия папки `dreamcast/media` прямо из ClickGUI.
             - **KillAura: лимиты** — не бить во время еды/тотема, только с оружием,
               не под водой/в прыжке, отступление при малом HP, «не опускать щит».
             - **HUD**: плавные появления, чёрное «стекло», тени, эквалайзер у плеера.

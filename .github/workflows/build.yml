@@ -58,14 +58,14 @@ jobs:
           JAR=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -1)
           echo "Проверяем jar: $JAR"
           echo "--- классы миксинов ---"
-          unzip -l "$JAR" | grep -E 'com/akarus/client/mixin/.*\.class' || { echo "::error::НЕТ классов миксинов!"; exit 1; }
+          unzip -l "$JAR" | grep -E 'com/dreamcast/client/mixin/.*\.class' || { echo "::error::НЕТ классов миксинов!"; exit 1; }
           echo "--- конфиг миксинов ---"
-          unzip -p "$JAR" akarus.mixins.json || { echo "::error::НЕТ akarus.mixins.json!"; exit 1; }
+          unzip -p "$JAR" dreamcast.mixins.json || { echo "::error::НЕТ dreamcast.mixins.json!"; exit 1; }
           echo "--- refmap (информационно: в Loom 1.17 его нет, имена переписаны в байткод) ---"
           unzip -l "$JAR" | grep -E '\.refmap\.json' || echo "refmap отсутствует — это норма для Loom 1.17"
           echo "--- ссылка на конфиг миксинов в fabric.mod.json ---"
-          unzip -p "$JAR" fabric.mod.json | grep -q 'akarus\.mixins\.json' || { echo "::error::fabric.mod.json не объявляет mixins!"; exit 1; }
-          echo "OK: fabric.mod.json ссылается на akarus.mixins.json"
+          unzip -p "$JAR" fabric.mod.json | grep -q 'dreamcast\.mixins\.json' || { echo "::error::fabric.mod.json не объявляет mixins!"; exit 1; }
+          echo "OK: fabric.mod.json ссылается на dreamcast.mixins.json"
           echo "--- nested jars (ViaFabricPlus) ---"
           unzip -l "$JAR" | grep -E 'META-INF/jars/.*\.jar' || echo "::warning::VFP не вшита (libs/ViaFabricPlus.jar отсутствовал на сборке)"; true
           echo "--- refmap / intermediary (информационно) ---"
@@ -78,7 +78,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: akarus-build-log
+          name: dreamcast-build-log
           path: build.log
           if-no-files-found: ignore
 
@@ -91,6 +91,6 @@ jobs:
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
-          name: akarus
+          name: dreamcast
           path: out/*.jar
           if-no-files-found: error

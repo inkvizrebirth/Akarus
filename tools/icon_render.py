@@ -1,5 +1,5 @@
 """
-Генератор лёгких иконок модулей и стрелок для списков (assets/akarus/textures/gui/icons/).
+Генератор лёгких иконок модулей и стрелок для списков (assets/dreamcast/textures/gui/icons/).
 
 Иконки белые монохромные: в игре они тонируются цветом через blit(..., color).
 Рисуем в 4x и уменьшаем — получаются гладкие линии при крошечном размере файла.
@@ -15,7 +15,7 @@ SIZE = 40          # логический размер иконки
 SS = 4             # суперсэмплинг
 STROKE = 3.4       # толщина линии в логических пикселях
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
-                   "src", "main", "resources", "assets", "akarus", "textures", "gui", "icons")
+                   "src", "main", "resources", "assets", "dreamcast", "textures", "gui", "icons")
 
 WHITE = (255, 255, 255, 255)
 
