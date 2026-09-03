@@ -373,7 +373,7 @@ public final class HudRenderer {
 			}
 			List<String> gone = new ArrayList<>();
 			for (Map.Entry<String, Integer> entry : MODULE_ALPHA.entrySet()) {
-				boolean stillActive = active.stream().anyMatch(m -> m.getKey().equals(entry.getKey()));
+				boolean stillActive = active.stream().anyMatch(m -> m.getName().equals(entry.getKey()));
 				int steps = Math.max(0, Math.min(10, entry.getValue() + (stillActive ? 1 : -1)));
 				entry.setValue(steps);
 				if (!stillActive && steps <= 0) {

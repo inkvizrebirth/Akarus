@@ -29,11 +29,11 @@ public final class AkarusScreens {
 			}
 
 			String label = "Версия: " + ViaIntegration.currentVersionLabel();
+			int pillWidth = Math.min(150, Math.max(110, client.font.width(label) + 18));
 			Button versionPill = Button.builder(Component.literal(label), button ->
 							client.gui.setScreen(new AkarusVersionSelectScreen(screen)))
-					.width(Math.min(150, Math.max(110, client.font.width(label) + 18)))
-					.height(14)
-					.pos(scaledWidth - Math.min(150, Math.max(110, client.font.width(label) + 18)) - 4, 4)
+					.size(pillWidth, 14)
+					.pos(scaledWidth - pillWidth - 4, 4)
 					.build();
 			versionPill.setTooltip(Tooltip.create(Component.literal(
 					ViaIntegration.available()

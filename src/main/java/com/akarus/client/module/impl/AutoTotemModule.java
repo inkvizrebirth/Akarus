@@ -488,7 +488,7 @@ public class AutoTotemModule extends Module {
 				}
 				// смэш уже исполняется (игрок в удар-анимации с падением) — полный урон
 				if (enemy.fallDistance > 1.5 && distance < 3.5) {
-					return MACE_BASE_DAMAGE + enemy.fallDistance * 1.1f;
+					return MACE_BASE_DAMAGE + (float) enemy.fallDistance * 1.1f;
 				}
 			}
 		}
