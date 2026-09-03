@@ -2,6 +2,7 @@ package com.akarus.client.module.impl;
 
 import com.akarus.client.module.Module;
 import com.akarus.client.module.ModuleCategory;
+import com.akarus.client.module.ModuleManager;
 import com.akarus.client.settings.BooleanSetting;
 import com.akarus.client.settings.IntSetting;
 import com.akarus.client.settings.ModeSetting;
@@ -60,6 +61,10 @@ public class KillAuraModule extends Module {
 	public static final String SPRINT_FAST = "fast";
 	public static final String SPRINT_LEGIT = "legit";
 
+	public static final String MOVEMENT_FREE = "free";
+	public static final String MOVEMENT_FOCUSED = "focused";
+	public static final String MOVEMENT_LEGIT = "legit";
+
 	private final ModeSetting mode = mode("mode", "Режим", MODE_FAST,
 			ModeSetting.option(MODE_FAST, "Быстрый"),
 			ModeSetting.option(MODE_LEGIT, "Легитный"));
@@ -87,6 +92,18 @@ public class KillAuraModule extends Module {
 
 	/** Вместо удара с земли — прыгнуть и критовать в падении, затем сразу поднять щит. */
 	private final BooleanSetting smartCrit = bool("smart_crit", "Смарт Крит", false);
+
+	/**
+	 * Коррекция движений: как игрок двигается, пока киллаура целится.
+	 * Свободный — ввод поворачивается к «своему» взгляду (W ведёт туда, куда смотрел
+	 * игрок, а не куда навела аура). Фокусированный — аура сама ведёт игрока в центр
+	 * цели и на близкой дистанции кружит вокруг неё. Легитный — аура клавиши не
+	 * трогает: игрок идёт сам, и только пока держит W.
+	 */
+	private final ModeSetting movement = mode("movement", "Коррекция движений", MOVEMENT_LEGIT,
+			ModeSetting.option(MOVEMENT_FREE, "Свободный"),
+			ModeSetting.option(MOVEMENT_FOCUSED, "Фокусированный"),
+			ModeSetting.option(MOVEMENT_LEGIT, "Легитный"));
 
 	/** Сброс спринта после удара: полный нокбэк каждым ударом (w-tap). */
 	private final ModeSetting sprintReset = mode("sprint_reset", "Сброс спринта", SPRINT_FAST,
@@ -132,9 +149,24 @@ public class KillAuraModule extends Module {
 	/** Замах врага: фронт замаха ловим по переходу swinging false → true. */
 	private boolean wasTargetSwinging;
 
-	/** Держим ли мы сейчас W (движение за камерой) и прыжок (Смарт Крит). */
-	private boolean holdingMove;
+	/** Держим ли мы сейчас клавиши движения (Фокусированный режим) и прыжок. */
+	private boolean holdingForward;
+	private int holdingStrafe; // -1 — влево, 0 — нет, 1 — вправо
 	private boolean holdingJump;
+
+	/** Фокусированный режим: накопленный «ультра-быстрый» доворот круга. */
+	private float spinYaw;
+	private int orbitDirection = 1;
+	private int orbitTicks;
+
+	/**
+	 * Куда игрок смотрел бы «сам» — без камеры киллауры. Считается из мышиных
+	 * дельт (см. tick): нужно «Свободной» коррекции, чтобы W вёл игрока по его
+	 * собственному взгляду, а не по наведённой камере.
+	 */
+	private static float userYaw;
+	private static float lastWrittenYaw;
+	private static boolean trackingUserYaw;
 
 	public KillAuraModule() {
 		super("kill_aura", "KillAura", "Автоматическая атака: режимы, Авто-Блок щитом, Смарт Крит, сброс спринта и обязательный RayTrace",
@@ -206,11 +238,29 @@ public class KillAuraModule extends Module {
 			resetSequence();
 		}
 
-		// Легитный режим: игрок двигается туда, куда фактически смотрит камера киллауры
-		if (isLegit()) {
-			moveWithCamera(client, player, target);
+		// «Свободная» коррекция: запоминаем, куда игрок смотрел бы без ауры —
+		// ввод потом разворачивается к этому взгляду в KeyboardInputMixin
+		if (movement.is(MOVEMENT_FREE)) {
+			float currentYaw = player.getYRot();
+			if (!trackingUserYaw) {
+				userYaw = currentYaw;
+				trackingUserYaw = true;
+			} else {
+				float mouse = Mth.wrapDegrees(currentYaw - lastWrittenYaw);
+				userYaw = Math.abs(mouse) < 40.0F ? Mth.wrapDegrees(userYaw + mouse) : currentYaw;
+			}
 		} else {
-			releaseMovement();
+			trackingUserYaw = false;
+		}
+
+		// «Фокусированный» режим сам ведёт игрока; остальные — ввод не трогают
+		if (!movement.is(MOVEMENT_FOCUSED)) {
+			releaseHeldKeys();
+		}
+
+		// «Фокусированный» режим: ведём игрока к центру цели и кружим вблизи
+		if (movement.is(MOVEMENT_FOCUSED)) {
+			moveFocused(client, player, target);
 		}
 
 		// Замах врага — фронт: swinging только что стал true
@@ -220,8 +270,9 @@ public class KillAuraModule extends Module {
 
 		// Прицеливание
 		float[] aim = aimAt(player, target);
+		boolean fastRotation = !isLegit() || movement.is(MOVEMENT_FOCUSED);
 		boolean aimReady;
-		if (isLegit()) {
+		if (!fastRotation) {
 			// Доворот через RotationHumanizer: плавно, с промахом, перелётом и дрожью.
 			// Пишем публичными setYRot/setXRot — они не перехватываются миксином
 			float[] rotation = RotationHumanizer.aimTowards(player, aim[0], aim[1]);
@@ -237,10 +288,20 @@ public class KillAuraModule extends Module {
 					&& Math.abs(Mth.wrapDegrees(player.getYRot() - aim[0])) <= AIM_TOLERANCE
 					&& Math.abs(player.getXRot() - aim[1]) <= AIM_TOLERANCE;
 		} else {
-			player.setYRot(aim[0]);
-			player.setXRot(aim[1]);
+			if (movement.is(MOVEMENT_FOCUSED) && player.distanceTo(target) < 2.2F) {
+				// Дошли до центра — «ультра-быстрое кружение»: камера крутится
+				// вокруг цели, удары проходят по RayTrace на каждом обороте
+				this.spinYaw += 38.0F + RANDOM.nextFloat() * 14.0F;
+				player.setYRot(aim[0] + this.spinYaw);
+				player.setXRot(aim[1]);
+			} else {
+				this.spinYaw = 0.0F;
+				player.setYRot(aim[0]);
+				player.setXRot(aim[1]);
+			}
 			aimReady = true;
 		}
+		lastWrittenYaw = player.getYRot();
 
 		// Обязательный RayTrace: луч из глаз по взгляду должен пересекать хитбокс —
 		// иначе удар «мимо прицела» и античит получает классический детект ауры
@@ -311,8 +372,12 @@ public class KillAuraModule extends Module {
 				client.options.keySprint.setDown(false);
 				player.setSprinting(false);
 			} else if (sprintReset.is(SPRINT_LEGIT)) {
-				// w-tap: W отпускается в moveWithCamera по moveSuppressTicks
+				// w-tap: на тик отпускаем спринт и — в легитной коррекции — W,
+				// который в этом режиме держит сам игрок
 				client.options.keySprint.setDown(false);
+				if (movement.is(MOVEMENT_LEGIT)) {
+					client.options.keyUp.setDown(false);
+				}
 			}
 		}
 	}
@@ -416,39 +481,107 @@ public class KillAuraModule extends Module {
 	private int moveSuppressTicks;
 
 	/**
-	 * Легитный режим: игрок идёт туда, куда фактически смотрит камера киллауры.
-	 * Камера наведена на цель — значит, жмём W и сокращаем дистанцию; вблизи —
-	 * отпускаем, чтобы не толкать цель. После удара на пару тиков W отпускается
-	 * (легитный сброс спринта), как это делает человек.
+	 * «Фокусированный» режим: пока далеко — жмём W (игрок бежит в центр цели),
+	 * у центра — кружим: strafe влево/вправо со сменой направления раз в
+	 * 8–14 тиков плюс «ультра-быстрый» доворот камеры (см. tick).
 	 */
-	private void moveWithCamera(Minecraft client, LocalPlayer player, Entity target) {
+	private void moveFocused(Minecraft client, LocalPlayer player, Entity target) {
 		if (moveSuppressTicks > 0) {
+			// w-tap после удара: на тик отпускаем всё
 			moveSuppressTicks--;
-			client.options.keyUp.setDown(false);
-			holdingMove = false;
+			holdForward(client, false);
+			holdStrafe(client, 0);
 			return;
 		}
 
-		if (player.distanceTo(target) > 1.4F) {
-			client.options.keyUp.setDown(true);
-			holdingMove = true;
-		} else if (holdingMove) {
-			client.options.keyUp.setDown(false);
-			holdingMove = false;
+		if (player.distanceTo(target) > 2.2F) {
+			holdForward(client, true);
+			holdStrafe(client, 0);
+			return;
+		}
+
+		if (--this.orbitTicks <= 0) {
+			this.orbitDirection = RANDOM.nextBoolean() ? 1 : -1;
+			this.orbitTicks = 8 + RANDOM.nextInt(7);
+		}
+		holdForward(client, false);
+		holdStrafe(client, this.orbitDirection);
+	}
+
+	private void holdForward(Minecraft client, boolean down) {
+		if (holdingForward != down) {
+			client.options.keyUp.setDown(down);
+			holdingForward = down;
 		}
 	}
 
-	private void releaseMovement() {
+	private void holdStrafe(Minecraft client, int direction) {
+		if (holdingStrafe == direction) {
+			return;
+		}
+		if (holdingStrafe == -1) {
+			client.options.keyLeft.setDown(false);
+		} else if (holdingStrafe == 1) {
+			client.options.keyRight.setDown(false);
+		}
+		if (direction == -1) {
+			client.options.keyLeft.setDown(true);
+		} else if (direction == 1) {
+			client.options.keyRight.setDown(true);
+		}
+		holdingStrafe = direction;
+	}
+
+	/** Отпускает всё, что мы держали (клавиши игрока не трогает). */
+	private void releaseHeldKeys() {
 		Minecraft client = Minecraft.getInstance();
 		if (client == null || client.options == null) {
 			return;
 		}
-		if (holdingMove) {
-			client.options.keyUp.setDown(false);
-			holdingMove = false;
-		}
+		holdForward(client, false);
+		holdStrafe(client, 0);
 		releaseJump(client);
+	}
+
+	private void releaseMovement() {
+		releaseHeldKeys();
 		moveSuppressTicks = 0;
+	}
+
+	/**
+	 * «Свободная» коррекция для KeyboardInputMixin: пересчитывает ввод так, будто
+	 * камера не наводилась аурой — W ведёт игрока по его собственному взгляду.
+	 */
+	public static net.minecraft.world.phys.Vec2 correctedMovement(net.minecraft.world.phys.Vec2 moveVector) {
+		KillAuraModule module = ModuleManager.find(KillAuraModule.class);
+		if (module == null || !module.isEnabled() || !module.movement.is(MOVEMENT_FREE) || !trackingUserYaw) {
+			return null;
+		}
+		Minecraft client = Minecraft.getInstance();
+		if (client == null || client.player == null || moveVector == null
+				|| moveVector.x == 0.0F && moveVector.y == 0.0F) {
+			return null;
+		}
+
+		float aimYaw = client.player.getYRot();
+		if (Math.abs(Mth.wrapDegrees(userYaw - aimYaw)) < 1.0F) {
+			return null;
+		}
+
+		// Мировое направление текущего ввода (относительно наведённой камеры)…
+		double aimRad = Math.toRadians(aimYaw);
+		double aimForwardX = -Math.sin(aimRad), aimForwardZ = Math.cos(aimRad);
+		double aimRightX = -aimForwardZ, aimRightZ = aimForwardX;
+		double worldX = aimForwardX * moveVector.y + aimRightX * moveVector.x;
+		double worldZ = aimForwardZ * moveVector.y + aimRightZ * moveVector.x;
+
+		// …и то же направление в осях «своего» взгляда игрока
+		double userRad = Math.toRadians(userYaw);
+		double userForwardX = -Math.sin(userRad), userForwardZ = Math.cos(userRad);
+		double userRightX = -userForwardZ, userRightZ = userForwardX;
+		return new net.minecraft.world.phys.Vec2(
+				(float) (worldX * userRightX + worldZ * userRightZ),
+				(float) (worldX * userForwardX + worldZ * userForwardZ));
 	}
 
 	private void releaseJump(Minecraft client) {

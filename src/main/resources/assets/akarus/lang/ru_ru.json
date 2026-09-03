@@ -8,6 +8,9 @@
   "key.akarus.auto_walk": "Модуль: AutoWalk",
   "key.akarus.kill_aura": "Модуль: KillAura",
   "key.akarus.sprint": "Модуль: Спринт",
+  "key.akarus.no_fov": "Модуль: NoFOV",
+  "key.akarus.no_blind": "Модуль: NoBlind",
+  "key.akarus.no_fall_damage": "Модуль: NoFallDamage",
   "key.akarus.hand_shader": "Модуль: Обводка рук",
   "key.akarus.view_model": "Модуль: ViewModel"
 }

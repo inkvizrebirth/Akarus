@@ -9,6 +9,9 @@ import com.akarus.client.module.impl.FreeLookModule;
 import com.akarus.client.module.impl.HandShaderModule;
 import com.akarus.client.module.impl.HudInfoModule;
 import com.akarus.client.module.impl.KillAuraModule;
+import com.akarus.client.module.impl.NoBlindModule;
+import com.akarus.client.module.impl.NoFallDamageModule;
+import com.akarus.client.module.impl.NoFovModule;
 import com.akarus.client.module.impl.SprintModule;
 import com.akarus.client.module.impl.ViewModelModule;
 
@@ -33,6 +36,9 @@ public final class ModuleManager {
 		register(new AutoWalkModule());
 		register(new KillAuraModule());
 		register(new SprintModule());
+		register(new NoFovModule());
+		register(new NoBlindModule());
+		register(new NoFallDamageModule());
 		register(new HandShaderModule());
 		register(new ViewModelModule());
 	}

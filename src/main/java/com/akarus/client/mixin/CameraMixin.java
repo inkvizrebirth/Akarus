@@ -1,7 +1,9 @@
 package com.akarus.client.mixin;
 
+import com.akarus.client.module.ModuleManager;
 import com.akarus.client.module.impl.FreeCamModule;
 import com.akarus.client.module.impl.FreeLookModule;
+import com.akarus.client.module.impl.NoFovModule;
 import net.minecraft.client.Camera;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
@@ -62,6 +64,20 @@ public abstract class CameraMixin {
 	private void akarus$showPlayerBody(CallbackInfoReturnable<Boolean> cir) {
 		if (FreeLookModule.active()) {
 			cir.setReturnValue(true);
+		}
+	}
+
+	/**
+	 * NoFOV: фиксированный угол обзора. {@code Camera#getFov} — последнее звено
+	 * цепочки «опции → модификаторы (спринт, лук, вода, смерть) → проекция»,
+	 * поэтому здесь достаточно вернуть наше значение, и картинка перестаёт
+	 * «дышать» независимо от состояния игрока.
+	 */
+	@Inject(method = "getFov", at = @At("HEAD"), cancellable = true, require = 0)
+	private void akarus$staticFov(CallbackInfoReturnable<Float> cir) {
+		NoFovModule module = ModuleManager.find(NoFovModule.class);
+		if (module != null && module.isEnabled()) {
+			cir.setReturnValue((float) module.getFov());
 		}
 	}
 }
