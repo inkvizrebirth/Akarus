@@ -518,7 +518,7 @@ public class ClickGuiScreen extends Screen {
 			dragging = true;
 			dragOffsetX = mouseX - guiX;
 			dragOffsetY = mouseY - guiY;
-			clearFocus();
+			clearSettingFocus();
 			if (rippleBounds != null) {
 				addRipple(mouseX, mouseY, rippleBounds);
 			}
@@ -535,7 +535,7 @@ public class ClickGuiScreen extends Screen {
 		int listHeight = GUI_HEIGHT - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
 
 		// Клик в любом месте снимает фокус с текстового поля (и применяет ввод)
-		clearFocus();
+		clearSettingFocus();
 
 		for (LayoutEntry entry : buildLayout()) {
 			Hitbox box = entry.box();
@@ -613,7 +613,7 @@ public class ClickGuiScreen extends Screen {
 		setting.setNormalized((float) ((mouseX - trackX) / trackWidth));
 	}
 
-	private void clearFocus() {
+	private void clearSettingFocus() {
 		if (focusedModule != null && focusedDirty) {
 			focusedModule.onSettingsChanged();
 			ConfigManager.save();
@@ -696,7 +696,7 @@ public class ClickGuiScreen extends Screen {
 			}
 
 			if (event.key() == GLFW.GLFW_KEY_ESCAPE || event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
-				clearFocus();
+				clearSettingFocus();
 				return true;
 			}
 
@@ -709,7 +709,7 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public void onClose() {
-		clearFocus();
+		clearSettingFocus();
 		ConfigManager.save();
 		super.onClose();
 	}
