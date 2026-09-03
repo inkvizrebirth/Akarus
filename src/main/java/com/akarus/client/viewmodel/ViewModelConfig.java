@@ -44,7 +44,7 @@ public final class ViewModelConfig {
 					profile.set(parameter, root.get(parameter.name()).getAsFloat());
 				}
 			}
-		} catch (IOException | com.google.gson.JsonParseException | RuntimeException exception) {
+		} catch (IOException | RuntimeException exception) {
 			AkarusClient.LOGGER.error("Не удалось прочитать раскладку рук {}", PATH, exception);
 		}
 
