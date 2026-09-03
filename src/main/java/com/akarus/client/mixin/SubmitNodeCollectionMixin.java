@@ -1,6 +1,7 @@
 package com.akarus.client.mixin;
 
 import com.akarus.client.render.HandOutlineRenderer;
+import com.akarus.client.render.HandOutlineRenderer.Spec;
 import com.akarus.client.render.HandRenderHook;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
@@ -18,11 +19,10 @@ import java.util.List;
 /**
  * Обводка предмета в руке от первого лица.
  *
- * Ванильный канал обводки здесь не годится: {@code submitItem} складывает её
- * в фазу {@code outline}, а руки от первого лица рисуются в отдельном
- * {@code handAndScreenSubmitNodeStorage}, чей диспетчер эту фазу не выполняет
- * (см. {@code GameRenderer.renderAllFeatures}). Поэтому контур предмета
- * дорисовываем сами — теми же квадами, но плоским цветом.
+ * Ванильный канал обводки здесь не годится: {@code submitItem} кладёт её в фазу
+ * {@code outline}, а руки от первого лица рисуются в отдельном контейнере, чей
+ * диспетчер эту фазу не выполняет. Поэтому контур предмета дорисовываем сами —
+ * теми же квадами, сдвинутыми по кругу (см. {@link HandOutlineRenderer}).
  *
  * Метод вызывается для всех предметов вообще, поэтому работаем только когда
  * {@link HandRenderHook} сообщает, что прямо сейчас идёт отрисовка рук
@@ -36,10 +36,10 @@ public abstract class SubmitNodeCollectionMixin implements OrderedSubmitNodeColl
 			int overlayCoords, int outlineColor, int[] tintLayers, List<BakedQuad> quads,
 			ItemStackRenderState.FoilType foilType, CallbackInfo ci) {
 
-		int color = HandRenderHook.itemOutlineColor();
-		if (color == 0) {
+		Spec spec = HandRenderHook.itemSpec();
+		if (spec == null) {
 			return;
 		}
-		HandOutlineRenderer.outlineItem(quads, poseStack, this, color, HandRenderHook.outlineScale());
+		HandOutlineRenderer.outlineItem(quads, poseStack, this, spec);
 	}
 }

@@ -1,6 +1,7 @@
 package com.akarus.client.mixin;
 
 import com.akarus.client.render.HandOutlineRenderer;
+import com.akarus.client.render.HandOutlineRenderer.Spec;
 import com.akarus.client.render.HandRenderHook;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.geom.ModelPart;
@@ -15,11 +16,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Обводка руки от первого лица.
  *
- * {@code renderHand} вызывается ровно один раз на кадр на каждую руку —
- * и только из {@code ItemInHandRenderer.renderPlayerArm}, то есть только
- * от первого лица. Мы встаём в конец метода: рука уже нарисована, стек матриц
- * всё ещё в её системе координат, а нужная часть модели лежит прямо в аргументах,
- * поэтому остаётся отправить её в рендер ещё раз — чуть крупнее и одним цветом.
+ * {@code renderHand} вызывается ровно один раз на кадр на каждую руку — и только
+ * из {@code ItemInHandRenderer#renderPlayerArm}, то есть только от первого лица.
+ * Встаём в конец метода: рука уже нарисована, стек матриц всё ещё лежит в системе
+ * координат руки (сама {@code renderHand} ничего в стеке не оставляет), поэтому
+ * оттуда удобно брать направление «вправо/вверх по экрану» для копий обводки.
+ *
+ * Модели при этом не масштабируются — см. {@link HandOutlineRenderer}: copies
+ * сдвигаются в плоскости экрана и чуть-чуть от камеры, и там, где есть рука,
+ * она перекрывает копию по глубине.
  */
 @Mixin(AvatarRenderer.class)
 public abstract class AvatarRendererMixin {
@@ -28,10 +33,10 @@ public abstract class AvatarRendererMixin {
 	private void akarus$outlineHand(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords,
 			Identifier skinTexture, ModelPart arm, boolean hasSleeve, CallbackInfo ci) {
 
-		int color = HandRenderHook.armOutlineColor();
-		if (color == 0) {
+		Spec spec = HandRenderHook.armSpec();
+		if (spec == null) {
 			return;
 		}
-		HandOutlineRenderer.outlineArm(arm, poseStack, submitNodeCollector, color, HandRenderHook.outlineScale());
+		HandOutlineRenderer.outlineArm(arm, poseStack, submitNodeCollector, spec);
 	}
 }

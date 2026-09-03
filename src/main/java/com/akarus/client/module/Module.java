@@ -6,6 +6,7 @@ import com.akarus.client.settings.BooleanSetting;
 import com.akarus.client.settings.ButtonSetting;
 import com.akarus.client.settings.ColorSetting;
 import com.akarus.client.settings.IntSetting;
+import com.akarus.client.settings.ModeSetting;
 import com.akarus.client.settings.Setting;
 import com.akarus.client.settings.StringSetting;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -38,6 +39,15 @@ public abstract class Module {
 
 	private boolean enabled;
 
+	/**
+	 * Состояние модуля при первом запуске (когда в конфиге про модуль ещё нет записи).
+	 * По умолчанию выключен; включённым имеют смысл модули-«настройки внешности»,
+	 * вроде раскладки рук.
+	 */
+	protected boolean defaultEnabled() {
+		return false;
+	}
+
 	protected Module(String id, String name, String description, ModuleCategory category, int defaultKey) {
 		this.id = id;
 		this.name = name;
@@ -51,6 +61,8 @@ public abstract class Module {
 				InputConstants.Type.KEYSYM,
 				defaultKey,
 				AkarusClient.KEY_CATEGORY));
+
+		this.enabled = defaultEnabled();
 	}
 
 	// ------------------------------------------------------------------
@@ -152,6 +164,13 @@ public abstract class Module {
 
 	protected StringSetting textSetting(String id, String name, String value) {
 		StringSetting setting = new StringSetting(id, name, value);
+		settings.add(setting);
+		return setting;
+	}
+
+	/** Настройка с выбором одного из нескольких вариантов. */
+	protected ModeSetting mode(String id, String name, String defaultId, ModeSetting.Option... options) {
+		ModeSetting setting = new ModeSetting(id, name, List.of(options), defaultId);
 		settings.add(setting);
 		return setting;
 	}

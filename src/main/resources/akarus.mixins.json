@@ -4,7 +4,9 @@
   "package": "com.akarus.client.mixin",
   "client": [
     "AvatarRendererMixin",
+    "CameraMixin",
     "ItemInHandRendererMixin",
+    "KeyboardInputMixin",
     "SubmitNodeCollectionMixin"
   ],
   "injectors": {

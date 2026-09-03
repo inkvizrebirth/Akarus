@@ -16,7 +16,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.Locale;
 
 /**
  * Редактор раскладки рук.
@@ -63,7 +62,6 @@ public class HandEditorScreen extends Screen {
 	private static final float DRAG_SCALE = 1.0f / 260.0f;
 
 	private ViewModelModule module;
-	private ViewModelProfile backup;
 	private Parameter selected = Parameter.SCALE;
 
 	private boolean dragging;
@@ -85,8 +83,6 @@ public class HandEditorScreen extends Screen {
 		super.init();
 
 		this.module = ModuleManager.find(ViewModelModule.class);
-		// Запоминаем раскладку, чтобы «Сбросить» возвращал к ванили, а не к «что было при входе»
-		this.backup = this.module == null ? ViewModelProfile.createDefault() : this.module.getProfile().copy();
 
 		layout();
 	}
@@ -124,7 +120,8 @@ public class HandEditorScreen extends Screen {
 
 		drawPanel(graphics, mouseX, mouseY);
 
-		String hint = "ЛКМ/ПКМ — тащить руку   •   колесо — размер или значение   •   ESC — сохранить и выйти";
+		String hint = "ЛКМ/ПКМ — тащить руку   •   колесо — размер или значение   •   ↑/↓ (с Ctrl ×5) — точно"
+				+ "   •   ESC — сохранить и выйти";
 		graphics.text(font, RenderUtils.clamp(font, hint, this.width - 20), 10, this.height - 14, TEXT_DIM, true);
 
 		if (this.module == null) {
@@ -167,7 +164,7 @@ public class HandEditorScreen extends Screen {
 			graphics.text(font, parameter.getDisplayName(), x + 12, textY,
 					isSelected ? TEXT_PRIMARY : TEXT_SECONDARY, false);
 
-			String value = String.format(Locale.ROOT, "%.2f", profile.get(parameter));
+			String value = parameter.format(profile.get(parameter));
 			graphics.text(font, value, x + PANEL_WIDTH - 10 - font.width(value), textY,
 					isSelected ? TEXT_PRIMARY : TEXT_DIM, false);
 
@@ -219,13 +216,13 @@ public class HandEditorScreen extends Screen {
 		}
 
 		// Всё остальное пространство — перетаскивание руки
-		if (currentProfile() != null) {
+		if (this.module != null) {
 			this.dragging = true;
 			this.dragStartX = (float) mouseX;
 			this.dragStartY = (float) mouseY;
 			ViewModelProfile profile = currentProfile();
-			this.dragStartOffsetX = profile.getOffsetX();
-			this.dragStartOffsetY = profile.getOffsetY();
+			this.dragStartOffsetX = profile.get(Parameter.X);
+			this.dragStartOffsetY = profile.get(Parameter.Y);
 			return true;
 		}
 
@@ -234,13 +231,12 @@ public class HandEditorScreen extends Screen {
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
-		ViewModelProfile profile = currentProfile();
-		if (this.dragging && profile != null) {
+		if (this.dragging && this.module != null) {
 			float movedX = (float) (event.x() - this.dragStartX) * DRAG_SCALE;
 			float movedY = (float) (event.y() - this.dragStartY) * DRAG_SCALE;
-			profile.set(Parameter.X, this.dragStartOffsetX + movedX);
+			this.module.set(Parameter.X, this.dragStartOffsetX + movedX);
 			// Вниз по экрану — это «ближе к игроку» по Y от первого лица, поэтому минус
-			profile.set(Parameter.Y, this.dragStartOffsetY - movedY);
+			this.module.set(Parameter.Y, this.dragStartOffsetY - movedY);
 			return true;
 		}
 		return super.mouseDragged(event, deltaX, deltaY);
@@ -258,8 +254,7 @@ public class HandEditorScreen extends Screen {
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-		ViewModelProfile profile = currentProfile();
-		if (profile == null) {
+		if (this.module == null) {
 			return true;
 		}
 
@@ -270,9 +265,9 @@ public class HandEditorScreen extends Screen {
 
 		// Колесо над панелью крутит выбранный параметр, над миром — размер руки
 		if (isInside(mouseX, mouseY, this.panelX, this.panelY, PANEL_WIDTH, this.panelHeight)) {
-			profile.change(this.selected, amount);
+			this.module.change(this.selected, amount);
 		} else {
-			profile.change(Parameter.SCALE, amount);
+			this.module.change(Parameter.SCALE, amount);
 		}
 		return true;
 	}
@@ -285,9 +280,9 @@ public class HandEditorScreen extends Screen {
 			return true;
 		}
 		// Стрелками удобно доводить значение, когда руками уже не поймать
-		ViewModelProfile profile = currentProfile();
-		if (profile != null && (event.key() == GLFW.GLFW_KEY_UP || event.key() == GLFW.GLFW_KEY_DOWN)) {
-			profile.change(this.selected, event.key() == GLFW.GLFW_KEY_UP ? 1.0f : -1.0f);
+		if (this.module != null && (event.key() == GLFW.GLFW_KEY_UP || event.key() == GLFW.GLFW_KEY_DOWN)) {
+			float step = (event.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0 ? 5.0f : 1.0f;
+			this.module.change(this.selected, (event.key() == GLFW.GLFW_KEY_UP ? step : -step));
 			return true;
 		}
 		if (event.key() == GLFW.GLFW_KEY_R) {

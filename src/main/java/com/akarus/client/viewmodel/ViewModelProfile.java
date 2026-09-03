@@ -1,22 +1,38 @@
 package com.akarus.client.viewmodel;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+
 /**
- * Раскладка рук от первого лица: масштаб, сдвиг и поворот по трём осям.
+ * Раскладка рук от первого лица: масштаб, сдвиг и поворот.
  *
- * Один экземпляр на обе руки — именно так работают почти все клиенты:
- * правая и левая рука настраиваются вместе, а «зеркалит» их сама игра.
+ * Один экземпляр на обе руки — именно так работают почти все клиенты: правая и левая
+ * рука настраиваются вместе, а «зеркалит» их сама игра (см. {@code invert} в
+ * {@code ItemInHandRenderer}). Мы это зеркало повторяем, иначе сдвиг «вправо» для
+ * второй руки уезжал бы влево.
+ *
+ * Важный момент, из-за которого раньше «поворот и размер не работали»: трансформации
+ * накладываются не от начала координат, а вокруг запястья — точки, к которой рука
+ * «прикреплена» в пространстве экрана. Иначе масштаб уносит руку за край экрана,
+ * а поворот закручивает её вокруг угла монитора, и выглядит это ровно как «ничего
+ * не работает, только перетаскивание живое».
  */
 public class ViewModelProfile {
 
-	/** Какой параметр сейчас редактируется колесом мыши. */
+	/** Точка, вокруг которой рука висит на экране: см. ItemInHandRenderer#applyItemArmTransform. */
+	private static final float ANCHOR_X = 0.56F;
+	private static final float ANCHOR_Y = -0.52F;
+	private static final float ANCHOR_Z = -0.72F;
+
+	/** Какой параметр сейчас редактируется. */
 	public enum Parameter {
-		SCALE("Scale", 0.02f, 0.10f, 4.00f),
-		X("X", 0.02f, -3.00f, 3.00f),
-		Y("Y", 0.02f, -3.00f, 3.00f),
-		Z("Z", 0.02f, -3.00f, 3.00f),
-		ROT_X("Поворот X", 1.0f, -180.0f, 180.0f),
-		ROT_Y("Поворот Y", 1.0f, -180.0f, 180.0f),
-		ROT_Z("Поворот Z", 1.0f, -180.0f, 180.0f);
+		SCALE("Масштаб", 0.02f, 0.10f, 3.00f),
+		X("Сдвиг X", 0.01f, -1.50f, 1.50f),
+		Y("Сдвиг Y", 0.01f, -1.50f, 1.50f),
+		Z("Сдвиг Z", 0.01f, -1.50f, 1.50f),
+		ROT_X("Поворот X", 1.0f, -90.0f, 90.0f),
+		ROT_Y("Поворот Y", 1.0f, -90.0f, 90.0f),
+		ROT_Z("Поворот Z", 1.0f, -90.0f, 90.0f);
 
 		private final String displayName;
 		private final float step;
@@ -38,6 +54,22 @@ public class ViewModelProfile {
 			return step;
 		}
 
+		public float getMin() {
+			return min;
+		}
+
+		public float getMax() {
+			return max;
+		}
+
+		public boolean isAngle() {
+			return this == ROT_X || this == ROT_Y || this == ROT_Z;
+		}
+
+		public String format(float value) {
+			return isAngle() ? String.format("%.0f°", value) : String.format("%.2f", value);
+		}
+
 		public float clamp(float value) {
 			return Math.max(min, Math.min(max, value));
 		}
@@ -57,7 +89,7 @@ public class ViewModelProfile {
 	}
 
 	/**
-	 * Меняет параметр на {@code amount} шагов. Вызывается колесом мыши
+	 * Меняет параметр на {@code amount} шагов. Вызывается колесом мыши и стрелками
 	 * в редакторе раскладки: amount &gt; 0 — вверх, &lt; 0 — вниз.
 	 */
 	public void change(Parameter parameter, float amount) {
@@ -89,7 +121,40 @@ public class ViewModelProfile {
 		};
 	}
 
-	/** Копия раскладки — для превью и отмены изменений. */
+	/**
+	 * Накладывает раскладку на текущую позу руки.
+	 *
+	 * Вызывается из миксина до того, как игра положит на стек взмах и поворот:
+	 * наши трансформации оказываются внешними, то есть применяются к руке целиком —
+	 * вместе с предметом в ней.
+	 *
+	 * @param mirrored true — это левая рука, и всё по X отзеркаливается (как в ванили)
+	 */
+	public void apply(PoseStack poseStack, boolean mirrored) {
+		float sign = mirrored ? -1.0f : 1.0f;
+
+		poseStack.pushPose();
+
+		// Сдвиг — в тех же единицах, что и сама рука (1 = блок)
+		poseStack.translate(offsetX * sign, offsetY, offsetZ);
+
+		// Масштаб и поворот — вокруг запястья, иначе руку уносит от края экрана
+		poseStack.translate(ANCHOR_X * sign, ANCHOR_Y, ANCHOR_Z);
+		poseStack.mulPose(Axis.XP.rotationDegrees(rotationX));
+		poseStack.mulPose(Axis.YP.rotationDegrees(rotationY));
+		poseStack.mulPose(Axis.ZP.rotationDegrees(rotationZ));
+		poseStack.scale(scale, scale, scale);
+		poseStack.translate(-ANCHOR_X * sign, -ANCHOR_Y, -ANCHOR_Z);
+	}
+
+	/** Нужно ли вообще трогать матрицу: при ванильной раскладке этого делать не надо. */
+	public boolean isDefault() {
+		return Math.abs(scale - 1.0f) < 1.0e-4f
+				&& Math.abs(offsetX) < 1.0e-4f && Math.abs(offsetY) < 1.0e-4f && Math.abs(offsetZ) < 1.0e-4f
+				&& Math.abs(rotationX) < 1.0e-4f && Math.abs(rotationY) < 1.0e-4f && Math.abs(rotationZ) < 1.0e-4f;
+	}
+
+	/** Копия раскладки — для предпросмотра и отмены изменений. */
 	public ViewModelProfile copy() {
 		ViewModelProfile copy = new ViewModelProfile();
 		copy.scale = scale;
@@ -110,13 +175,6 @@ public class ViewModelProfile {
 		this.rotationX = other.rotationX;
 		this.rotationY = other.rotationY;
 		this.rotationZ = other.rotationZ;
-	}
-
-	/** Ровно ли совпадает с ванильной раскладкой. */
-	public boolean isDefault() {
-		return Math.abs(scale - 1.0f) < 1.0e-4f
-				&& Math.abs(offsetX) < 1.0e-4f && Math.abs(offsetY) < 1.0e-4f && Math.abs(offsetZ) < 1.0e-4f
-				&& Math.abs(rotationX) < 1.0e-4f && Math.abs(rotationY) < 1.0e-4f && Math.abs(rotationZ) < 1.0e-4f;
 	}
 
 	public float getScale() {
