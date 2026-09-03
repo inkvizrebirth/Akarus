@@ -23,9 +23,9 @@
 MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 === классы мобов/врагов/манекенов ===
-        0  2026-09-03 12:35   assets/minecraft/textures/entity/armorstand/
+        0  2026-09-03 12:39   assets/minecraft/textures/entity/armorstand/
       809  1980-02-01 00:00   assets/minecraft/textures/entity/armorstand/armorstand.png
-        0  2026-09-03 12:35   net/minecraft/client/model/object/armorstand/
+        0  2026-09-03 12:39   net/minecraft/client/model/object/armorstand/
      6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
       320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
      5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
@@ -477,17 +477,17 @@ public class net.minecraft.world.item.BucketItem extends net.minecraft.world.ite
      3595  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay$1.class
      7316  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay.class
      3361  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay$1.class
-    21742  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay.class
      4652  1980-02-01 00:00   net/minecraft/client/gui/components/IMEPreeditOverlay.class
+    21742  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay.class
      1473  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay$HealthState.class
      2498  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay$ScoreDisplayEntry.class
      2015  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$SoundPlayedAt.class
-     5001  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$Subtitle.class
      7576  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay.class
     21670  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay.class
+     5001  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$Subtitle.class
      2687  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay$LogoTexture.class
-      632  1980-02-01 00:00   net/minecraft/client/gui/screens/Overlay.class
      8761  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay.class
+      632  1980-02-01 00:00   net/minecraft/client/gui/screens/Overlay.class
      1522  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayScreen$1.class
      4421  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayTabButton.class
     22448  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayScreen.class
@@ -541,8 +541,8 @@ public class net.minecraft.client.renderer.fog.FogRenderer implements java.lang.
 
 === nausea-классы ===
     12935  1980-02-01 00:00   assets/minecraft/textures/misc/nausea.png
-      169  1980-02-01 00:00   assets/minecraft/textures/mob_effect/nausea.png
        40  1980-02-01 00:00   assets/minecraft/textures/misc/nausea.png.mcmeta
+      169  1980-02-01 00:00   assets/minecraft/textures/mob_effect/nausea.png
 
 === Camera (fov) ===
   public static final float BASE_HUD_FOV;
@@ -588,16 +588,16 @@ public final class net.minecraft.world.inventory.ContainerInput extends java.lan
   public static final net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> DARKNESS;
 
 === fog environments ===
-        0  2026-09-03 12:35   net/minecraft/client/renderer/fog/environment/
-     7163  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/AtmosphericFogEnvironment.class
+        0  2026-09-03 12:39   net/minecraft/client/renderer/fog/environment/
+     2722  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/BlindnessFogEnvironment.class
      2698  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/DarknessFogEnvironment.class
      1723  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/FogEnvironment.class
-     1494  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/MobEffectFogEnvironment.class
      2599  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/LavaFogEnvironment.class
      2290  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/PowderedSnowFogEnvironment.class
-      321  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/package-info.class
      3052  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/WaterFogEnvironment.class
-     2722  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/BlindnessFogEnvironment.class
+      321  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/package-info.class
+     1494  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/MobEffectFogEnvironment.class
+     7163  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/AtmosphericFogEnvironment.class
 
 === gui layers/overlays ===
      2196  1980-02-01 00:00   net/minecraft/client/gui/Hud$1DisplayEntry.class
@@ -628,6 +628,35 @@ public final class net.minecraft.world.inventory.ContainerInput extends java.lan
   public int findSlotMatchingCraftingIngredient(net.minecraft.core.Holder<net.minecraft.world.item.Item>, net.minecraft.world.item.ItemStack);
   public int clearOrCountMatchingItems(java.util.function.Predicate<net.minecraft.world.item.ItemStack>, int, net.minecraft.world.Container);
   private int addResource(net.minecraft.world.item.ItemStack);
+
+=== LivingEntity (removeEffect) ===
+  protected void removeEffectParticles();
+  public final net.minecraft.world.effect.MobEffectInstance removeEffectNoUpdate(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect>);
+  public boolean removeEffect(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect>);
+
+=== Hud (fire/overlay) ===
+  private static final float PORTAL_OVERLAY_ALPHA_MIN;
+  private net.minecraft.network.chat.Component overlayMessageString;
+  private int overlayMessageTime;
+  private boolean animateOverlayMessageColor;
+  private final net.minecraft.client.gui.components.DebugScreenOverlay debugOverlay;
+  private final net.minecraft.client.gui.components.SubtitleOverlay subtitleOverlay;
+  private final net.minecraft.client.gui.components.PlayerTabOverlay tabList;
+  private final net.minecraft.client.gui.components.BossHealthOverlay bossOverlay;
+  private void extractBossOverlay(net.minecraft.client.gui.GuiGraphicsExtractor, net.minecraft.client.DeltaTracker);
+  public void extractDebugOverlay(net.minecraft.client.gui.GuiGraphicsExtractor);
+  private void extractSubtitleOverlay(net.minecraft.client.gui.GuiGraphicsExtractor, boolean);
+  private void extractCameraOverlays(net.minecraft.client.gui.GuiGraphicsExtractor, net.minecraft.client.DeltaTracker);
+  private void extractSleepOverlay(net.minecraft.client.gui.GuiGraphicsExtractor, net.minecraft.client.DeltaTracker);
+  private void extractOverlayMessage(net.minecraft.client.gui.GuiGraphicsExtractor, net.minecraft.client.DeltaTracker);
+  private void extractDemoOverlay(net.minecraft.client.gui.GuiGraphicsExtractor, net.minecraft.client.DeltaTracker);
+  private void extractTextureOverlay(net.minecraft.client.gui.GuiGraphicsExtractor, net.minecraft.resources.Identifier, float);
+  private void extractSpyglassOverlay(net.minecraft.client.gui.GuiGraphicsExtractor, float);
+  private void extractPortalOverlay(net.minecraft.client.gui.GuiGraphicsExtractor, float);
+  private void extractConfusionOverlay(net.minecraft.client.gui.GuiGraphicsExtractor, float);
+  public void setOverlayMessage(net.minecraft.network.chat.Component, boolean);
+
+=== HudRenderState-подобные ===
 
 === EntityType ===
   public net.minecraft.world.entity.EntityType(net.minecraft.world.entity.EntityType$EntityFactory<T>, net.minecraft.world.entity.MobCategory, boolean, boolean, boolean, boolean, net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>, net.minecraft.world.entity.EntityDimensions, float, int, int, java.lang.String, java.util.Optional<net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>>, net.minecraft.world.flag.FeatureFlagSet, boolean);
