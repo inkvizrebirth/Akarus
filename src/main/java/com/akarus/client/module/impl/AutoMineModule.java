@@ -6,7 +6,9 @@ import com.akarus.client.module.Module;
 import com.akarus.client.module.ModuleCategory;
 import com.akarus.client.settings.BooleanSetting;
 import com.akarus.client.settings.IntSetting;
+import com.akarus.client.settings.ModeSetting;
 import com.akarus.client.settings.StringSetting;
+import com.akarus.client.util.RotationHumanizer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
@@ -16,8 +18,23 @@ import org.lwjgl.glfw.GLFW;
  *
  * Нужен установленный мод Baritone (Fabric, версия для 26.2).
  * Что и сколько добывать задаётся в настройках модуля.
+ *
+ * Режимы:
+ * <ul>
+ *   <li><b>Нормальный</b> — как раньше: {@code #mine}/API, повороты мгновенные;</li>
+ *   <li><b>Легитный</b> — {@code #legitmine} (Baritone копает «как игрок»), а довороты
+ *       к блокам дополнительно очеловечивает {@link RotationHumanizer}: плавно, с промахом
+ *       и переменной скоростью, вместо мгновенных щелчков точно в центр блока.</li>
+ * </ul>
  */
 public class AutoMineModule extends Module {
+
+	public static final String MODE_NORMAL = "normal";
+	public static final String MODE_LEGIT = "legit";
+
+	private final ModeSetting mode = mode("mode", "Режим", MODE_NORMAL,
+			ModeSetting.option(MODE_NORMAL, "Нормальный"),
+			ModeSetting.option(MODE_LEGIT, "Легитный"));
 
 	private final StringSetting block = textSetting("block", "Блок", "diamond_ore");
 	private final IntSetting amount = intSetting("amount", "Сколько", 0, 0, 512);
@@ -43,7 +60,12 @@ public class AutoMineModule extends Module {
 
 	@Override
 	public void tick() {
-		// Baritone сам управляет процессом, здесь можно добавить контроль прогресса
+		// Baritone сам управляет процессом, но цель выдаёт не каждый тик — в легитном
+		// режиме здесь доживается «человеческий» доворот камеры
+		if (isLegit()) {
+			Minecraft client = Minecraft.getInstance();
+			RotationHumanizer.tick(client == null ? null : client.player);
+		}
 	}
 
 	@Override
@@ -66,12 +88,20 @@ public class AutoMineModule extends Module {
 			return;
 		}
 
+		boolean legit = isLegit();
 		int quantity = amount.get();
-		if (BaritoneBridge.mine(target, quantity, chatCommands.isEnabled())) {
-			notify("§7[Akarus] Добываю: §f" + target + (quantity > 0 ? " §7x§f" + quantity : " §7(без лимита)"));
+		// Легитный режим идёт только чат-командой: #legitmine — это отдельный процесс Baritone
+		if (BaritoneBridge.mine(target, quantity, chatCommands.isEnabled() || legit, legit)) {
+			notify("§7[Akarus] Добываю" + (legit ? " §f(легитно)§7" : "") + ": §f" + target
+					+ (quantity > 0 ? " §7x§f" + quantity : " §7(без лимита)"));
 		} else {
 			notify("§c[Akarus] Не удалось запустить добычу");
 		}
+	}
+
+	/** Работает ли модуль в легитном режиме (человечные повороты + #legitmine). */
+	public boolean isLegit() {
+		return mode.is(MODE_LEGIT);
 	}
 
 	private static void notify(String message) {

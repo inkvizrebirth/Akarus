@@ -5,8 +5,10 @@
   "client": [
     "AvatarRendererMixin",
     "CameraMixin",
+    "EntityMixin",
     "ItemInHandRendererMixin",
     "KeyboardInputMixin",
+    "MouseHandlerMixin",
     "SubmitNodeCollectionMixin"
   ],
   "injectors": {
