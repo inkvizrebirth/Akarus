@@ -27,7 +27,16 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew build --stacktrace 2>&1 | tee build.log
-          exit "${PIPESTATUS[0]}"
+          status="${PIPESTATUS[0]}"
+          if [ "$status" -ne 0 ]; then
+            # Превращаем ошибки компиляции в annotations, чтобы их можно было
+            # прочитать через API check-runs (логи артефактом из песочницы не качаются)
+            grep -E '\.java:[0-9]+: ' build.log \
+              | sed -E 's|^([^:]+\.java):([0-9]+): ([a-z]+):(.*)$|::\3 file=\1,line=\2::\4|' \
+              | head -60 || true
+            echo "::error::Сборка завершилась с ошибкой (код $status)"
+          fi
+          exit "$status"
 
       - name: Verify mixins and refmap are inside the jar
         run: |
