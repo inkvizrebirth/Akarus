@@ -158,7 +158,7 @@ public final class HandOutlineRenderer {
 		// Кольцо рисуем первым: свечение должно лечь поверх него, а не под него
 		if (spec.ring()) {
 			for (int direction = 0; direction < DIRECTIONS; direction++) {
-				submitArmCopy(arm, poseStack, collector, spec,
+				submitArmCopy(arm, poseStack, collector, spec, unitsPerPixel,
 						DIRECTION_X[direction] * spec.thickness(), DIRECTION_Y[direction] * spec.thickness(),
 						colorFor(spec, direction, 1.0f));
 			}
@@ -183,11 +183,16 @@ public final class HandOutlineRenderer {
 		}
 	}
 
-	/** Одна копия руки, сдвинутая на экранный offset (в пикселях). */
+	/**
+	 * Одна копия руки, сдвинутая на экранный offset (в пикселях интерфейса).
+	 *
+	 * @param unitsPerPixel пересчёт пикселей в единицы камеры — считается один раз на
+	 *                      проход, а не на каждое кольцо (копий за кадр больше сотни)
+	 */
 	private static void submitArmCopy(ModelPart arm, PoseStack poseStack, OrderedSubmitNodeCollector collector,
-			Spec spec, float screenXPx, float screenYPx, int color) {
+			Spec spec, float unitsPerPixel, float screenXPx, float screenYPx, int color) {
 		poseStack.pushPose();
-		applyScreenOffset(poseStack, screenXPx, screenYPx, unitsPerPixel(poseStack.last().pose()));
+		applyScreenOffset(poseStack, screenXPx, screenYPx, unitsPerPixel);
 		collector.submitModelPart(arm, poseStack, outlineType(), FULL_LIGHT, OverlayTexture.NO_OVERLAY,
 				null, color, null);
 		poseStack.popPose();
@@ -271,14 +276,21 @@ public final class HandOutlineRenderer {
 		poseStack.translate(SCRATCH_OFFSET.x, SCRATCH_OFFSET.y, SCRATCH_OFFSET.z);
 	}
 
-	/** Сколько единиц пространства камеры приходится на один пиксель на глубине руки. */
+	/**
+	 * Сколько единиц пространства камеры приходится на один пиксель на глубине руки.
+	 *
+	 * «Пиксель» тут — экранный пиксель интерфейса (то есть с учётом GUI scale), а не
+	 * физический пиксель окна: иначе на масштабе интерфейса 2 обводка в 3 пикселя
+	 * превращалась бы в полтора, и настройка вела бы себя по-разному на разных
+	 * настройках Minecraft.
+	 */
 	private static float unitsPerPixel(Matrix4fc poseMatrix) {
 		Minecraft client = Minecraft.getInstance();
 		if (client == null) {
 			return 0.0f;
 		}
 
-		int windowHeight = client.getWindow().getHeight();
+		int windowHeight = client.getWindow().getGuiScaledHeight();
 		if (windowHeight <= 0) {
 			return 0.0f;
 		}
