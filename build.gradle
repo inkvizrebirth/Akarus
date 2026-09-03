@@ -1,0 +1,77 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	// При желании сюда добавляются репозитории сторонних модов.
+	// Всё необходимое для Minecraft и Fabric Loom подключает сам.
+}
+
+loom {
+	// Мод полностью клиентский, поэтому разделять source set'ы на main/client не нужно:
+	// весь код лежит в src/main/java, а точка входа объявлена как "client" в fabric.mod.json
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// Fabric API (нужны модули key-mapping и rendering — HUD)
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+// Minecraft 26.2 собирается под Java 25. Если в системе стоит более старый JDK,
+// сборка упадёт с «release version 25 not supported» — подскажем заранее.
+if (JavaVersion.current() < JavaVersion.VERSION_25) {
+	logger.warn("\nДля сборки нужен JDK 25, а сейчас используется {}. Скачать: https://adoptium.net/temurin/releases/?version=25\n",
+			JavaVersion.current())
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	// В проекте русские строки и комментарии — явно указываем кодировку
+	it.options.encoding = 'UTF-8'
+}
+
+java {
+	// Loom сам прикрепит sourcesJar к задаче remapSourcesJar и к сборке
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	from("LICENSE") {
+		rename { "${it}_${project.archives_base_name}" }
+	}
+}
+
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			from components.java
+		}
+	}
+
+	repositories {
+		// Сюда можно добавить репозиторий для публикации мода
+	}
+}
