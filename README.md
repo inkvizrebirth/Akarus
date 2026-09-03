@@ -7,7 +7,7 @@
 [![Minecraft](https://img.shields.io/badge/Minecraft-26.2-71b722?logo=minecraft&logoColor=white)](https://www.minecraft.net/)
 [![FabricAPI](https://img.shields.io/badge/Fabric-loader%200.19%2B-ddd0c9)](https://fabricmc.net/)
 [![Java](https://img.shields.io/badge/Java-25-orange?logo=openjdk&logoColor=white)](https://adoptium.net/)
-[![Version](https://img.shields.io/badge/version-0.7.0-5CE1E6)](https://github.com/inkvizrebirth/Akarus/releases)
+[![Version](https://img.shields.io/badge/version-0.7.1-5CE1E6)](https://github.com/inkvizrebirth/Akarus/releases)
 [![Build](https://github.com/inkvizrebirth/Akarus/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/inkvizrebirth/Akarus/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-CC0-yellow)](LICENSE)
 
@@ -66,7 +66,7 @@ Akarus — клиентский мод на **Fabric для Minecraft 26.2** (Ja
 ## Установка
 
 1. Поставь [Fabric Loader](https://fabricmc.net/use/installer/) для **Minecraft 26.2** и [Fabric API](https://modrinth.com/mod/fabric-api) (0.158+ для 26.2) — оба jar'а в `.minecraft/mods`.
-2. Скачай `akarus-0.7.0.jar` из [releases](https://github.com/inkvizrebirth/Akarus/releases) и положи туда же.
+2. Скачай `akarus-0.7.1.jar` из [releases](https://github.com/inkvizrebirth/Akarus/releases) и положи туда же.
 3. ViaFabricPlus **уже встроен** (nested jar) — отдельной установкой можно не заморачиваться.
 
 Сборка из исходников: `JAVA_HOME=jdk25 ./gradlew build` (CI дополнительно скачивает VFP

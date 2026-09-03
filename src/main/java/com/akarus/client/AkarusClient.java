@@ -25,7 +25,7 @@ public class AkarusClient implements ClientModInitializer {
 
 	public static final String MOD_ID = "akarus";
 	public static final String MOD_NAME = "Akarus";
-	public static final String MOD_VERSION = "0.7.0";
+	public static final String MOD_VERSION = "0.7.1";
 
 	public static final Logger LOGGER = LogUtils.getLogger();
 

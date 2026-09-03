@@ -57,7 +57,10 @@ public final class AkarusGuiMixin {
 		}
 	}
 
-	@Inject(method = "setScreen", at = @At("HEAD"), require = 0)
+	// Обязательно cancellable=true: replaceScreen вызывает ci.cancel(). Без этого Mixin
+	// бросает CancellationException именно при первом показе TitleScreen, а загрузочный
+	// оверлей принимает её за ошибку ресурсов и остаётся на «Minecraft Loading».
+	@Inject(method = "setScreen", at = @At("HEAD"), cancellable = true, require = 0)
 	private void akarus$onSetScreen(Screen screen, CallbackInfo ci) {
 		akarus$replaceScreen(screen, ci);
 	}
