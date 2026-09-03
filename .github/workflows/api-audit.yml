@@ -119,7 +119,7 @@ jobs:
               javap -cp "$MC" net.minecraft.world.inventory.InventoryClick 2>&1 | head -25 || echo "нет InventoryClick"
               echo; echo "=== MultiPlayerGameMode (клики инвентаря) ==="
               javap -cp "$MC" net.minecraft.client.multiplayer.MultiPlayerGameMode 2>&1 | grep -iE 'handleInventoryMouseClick|clickSlot|swap'
-              echo; === вёдра ===
+              echo; echo "=== вёдра ==="
               javap -cp "$MC" net.minecraft.world.item.Items 2>&1 | grep -iE 'BUCKET|WATER_BUCKET'
               javap -p -cp "$MC" net.minecraft.world.item.BucketItem 2>&1 | head -20 || echo "нет BucketItem"
               echo; echo "=== Blocks (water) ==="
