@@ -1333,3 +1333,290 @@ public abstract class net.minecraft.client.gui.components.Button extends net.min
   public static net.minecraft.resources.Identifier fromNamespaceAndPath(java.lang.String, java.lang.String);
 
 === OperatingSystem open ===
+
+=== PauseScreen ===
+Compiled from "PauseScreen.java"
+public class net.minecraft.client.gui.screens.PauseScreen extends net.minecraft.client.gui.screens.Screen {
+  private static final net.minecraft.resources.Identifier DRAFT_REPORT_SPRITE;
+  private static final int COLUMNS;
+  private static final int MENU_PADDING_TOP;
+  private static final int BUTTON_PADDING;
+  private static final int BUTTON_WIDTH_FULL;
+  private static final int BUTTON_WIDTH_HALF;
+  private static final net.minecraft.network.chat.Component RETURN_TO_GAME;
+  private static final net.minecraft.network.chat.Component ADVANCEMENTS;
+  private static final net.minecraft.network.chat.Component STATS;
+  private static final net.minecraft.network.chat.Component SEND_FEEDBACK;
+  private static final net.minecraft.network.chat.Component REPORT_BUGS;
+  private static final net.minecraft.network.chat.Component OPTIONS;
+  private static final net.minecraft.network.chat.Component MULTIPLAYER_OPTIONS;
+  private static final net.minecraft.network.chat.Component PLAYER_REPORTING;
+  private static final net.minecraft.network.chat.Component GAME;
+  private static final net.minecraft.network.chat.Component PAUSED;
+  private static final net.minecraft.client.gui.components.Tooltip CUSTOM_OPTIONS_TOOLTIP;
+  private static final net.minecraft.client.gui.components.Tooltip NO_PLAYERS_TO_REPORT_TOOLTIP;
+  private final java.lang.Runnable friendListUpdateListener;
+  private net.minecraft.client.gui.components.FriendsButton friends;
+  private final boolean showPauseMenu;
+  private net.minecraft.client.gui.components.Button disconnectButton;
+  public net.minecraft.client.gui.screens.PauseScreen(boolean);
+  public boolean showsPauseMenu();
+  protected void init();
+  private void createPauseMenu();
+  private java.util.Optional<? extends net.minecraft.core.Holder<net.minecraft.server.dialog.Dialog>> getCustomAdditions();
+  private void addCustomDialogButtons(net.minecraft.client.Minecraft, net.minecraft.core.Holder<net.minecraft.server.dialog.Dialog>, net.minecraft.client.gui.layouts.GridLayout$RowHelper);
+
+=== TitleScreen весь ===
+Compiled from "TitleScreen.java"
+public class net.minecraft.client.gui.screens.TitleScreen extends net.minecraft.client.gui.screens.Screen {
+  private static final org.slf4j.Logger LOGGER;
+  private static final net.minecraft.network.chat.Component TITLE;
+  private static final net.minecraft.network.chat.Component COPYRIGHT_TEXT;
+  private static final java.lang.String DEMO_LEVEL_ID;
+  private net.minecraft.client.gui.components.SplashRenderer splash;
+  private com.mojang.realmsclient.gui.screens.RealmsNotificationsScreen realmsNotificationsScreen;
+  private net.minecraft.client.gui.components.FriendsButton friends;
+  private boolean fading;
+  private long fadeInStart;
+  private final net.minecraft.client.gui.components.LogoRenderer logoRenderer;
+  public net.minecraft.client.gui.screens.TitleScreen();
+  public net.minecraft.client.gui.screens.TitleScreen(boolean);
+  public net.minecraft.client.gui.screens.TitleScreen(boolean, net.minecraft.client.gui.components.LogoRenderer);
+  private boolean realmsNotificationsEnabled();
+  public void tick();
+  public static void registerTextures(net.minecraft.client.renderer.texture.TextureManager);
+  public boolean isPauseScreen();
+  public boolean shouldCloseOnEsc();
+  protected void init();
+  private int getHorizontalPosition(int, int, int);
+  private int createNormalMenuOptions(int, int);
+  private net.minecraft.network.chat.Component getMultiplayerDisabledReason();
+  private int createDemoMenuOptions(int, int);
+  private boolean checkDemoWorldPresence();
+  public void extractRenderState(net.minecraft.client.gui.GuiGraphicsExtractor, int, int, float);
+  public void extractBackground(net.minecraft.client.gui.GuiGraphicsExtractor, int, int, float);
+  public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent, boolean);
+  public void removed();
+  public void added();
+  private void confirmDemo(boolean);
+  public boolean canInterruptWithAnotherScreen();
+  private void lambda$createDemoMenuOptions$2(net.minecraft.client.gui.components.Button);
+  private void lambda$createDemoMenuOptions$0(boolean, net.minecraft.client.gui.components.Button);
+  private void lambda$createDemoMenuOptions$1();
+  private void lambda$createNormalMenuOptions$4(net.minecraft.client.gui.components.Button);
+  private void lambda$createNormalMenuOptions$3(net.minecraft.client.gui.components.Button);
+  private void lambda$createNormalMenuOptions$1(net.minecraft.client.gui.components.Button);
+  private void lambda$createNormalMenuOptions$2();
+  private void lambda$createNormalMenuOptions$0(net.minecraft.client.gui.components.Button);
+  private void lambda$init$6(net.minecraft.client.gui.components.Button);
+  private void lambda$init$5(net.minecraft.client.gui.components.Button);
+  private void lambda$init$4(net.minecraft.client.gui.components.Button);
+
+=== worldselection/keybinds screens ===
+net/minecraft/client/gui/screens/options/controls/ControlsScreen.class
+net/minecraft/client/gui/screens/options/controls/KeyBindsList.class
+net/minecraft/client/gui/screens/options/controls/KeyBindsScreen.class
+net/minecraft/client/gui/screens/worldselection/AbstractGameRulesScreen.class
+net/minecraft/client/gui/screens/worldselection/ConfirmExperimentalFeaturesScreen.class
+net/minecraft/client/gui/screens/worldselection/CreateWorldCallback.class
+net/minecraft/client/gui/screens/worldselection/CreateWorldScreen.class
+net/minecraft/client/gui/screens/worldselection/DataPackReloadCookie.class
+net/minecraft/client/gui/screens/worldselection/EditWorldScreen.class
+net/minecraft/client/gui/screens/worldselection/ExperimentsScreen.class
+net/minecraft/client/gui/screens/worldselection/FileFixerProgressScreen.class
+net/minecraft/client/gui/screens/worldselection/InitialWorldCreationOptions.class
+net/minecraft/client/gui/screens/worldselection/OptimizeWorldScreen.class
+net/minecraft/client/gui/screens/worldselection/PresetEditor.class
+net/minecraft/client/gui/screens/worldselection/SelectWorldScreen.class
+net/minecraft/client/gui/screens/worldselection/SwitchGrid.class
+net/minecraft/client/gui/screens/worldselection/WorldCreationContext.class
+net/minecraft/client/gui/screens/worldselection/WorldCreationContextMapper.class
+net/minecraft/client/gui/screens/worldselection/WorldCreationGameRulesScreen.class
+net/minecraft/client/gui/screens/worldselection/WorldCreationUiState.class
+net/minecraft/client/gui/screens/worldselection/WorldOpenFlows.class
+net/minecraft/client/gui/screens/worldselection/WorldSelectionList.class
+
+=== Gui: ссылки TitleScreen/PauseScreen + setScreen ===
+  private net.minecraft.client.gui.screens.Screen screen;
+  private net.minecraft.client.gui.screens.Overlay overlay;
+        71: invokevirtual #200                // Method setScreen:(Lnet/minecraft/client/gui/screens/Screen;)V
+  public void setScreen(net.minecraft.client.gui.screens.Screen);
+        22: ldc_w         #481                // String setScreen called from non-game thread
+        89: new           #509                // class net/minecraft/client/gui/screens/TitleScreen
+        93: invokespecial #510                // Method net/minecraft/client/gui/screens/TitleScreen."<init>":()V
+        11: invokevirtual #588                // Method net/minecraft/client/gui/screens/Screen.isPauseScreen:()Z
+  public void setPauseScreen(boolean, boolean);
+        13: new           #635                // class net/minecraft/client/gui/screens/PauseScreen
+        26: invokespecial #637                // Method net/minecraft/client/gui/screens/PauseScreen."<init>":(Z)V
+        29: invokevirtual #200                // Method setScreen:(Lnet/minecraft/client/gui/screens/Screen;)V
+        36: new           #635                // class net/minecraft/client/gui/screens/PauseScreen
+        41: invokespecial #637                // Method net/minecraft/client/gui/screens/PauseScreen."<init>":(Z)V
+        44: invokevirtual #200                // Method setScreen:(Lnet/minecraft/client/gui/screens/Screen;)V
+        59: invokevirtual #200                // Method setScreen:(Lnet/minecraft/client/gui/screens/Screen;)V
+       144: invokevirtual #200                // Method setScreen:(Lnet/minecraft/client/gui/screens/Screen;)V
+  private net.minecraft.client.gui.screens.Screen lambda$addInitialScreens$0(java.lang.Runnable);
+         2: invokevirtual #200                // Method setScreen:(Lnet/minecraft/client/gui/screens/Screen;)V
+        36: new           #509                // class net/minecraft/client/gui/screens/TitleScreen
+        49: invokespecial #985                // Method net/minecraft/client/gui/screens/TitleScreen."<init>":(ZLnet/minecraft/client/gui/components/LogoRenderer;)V
+        52: invokevirtual #200                // Method setScreen:(Lnet/minecraft/client/gui/screens/Screen;)V
+
+=== Minecraft: начальный экран ===
+      3016: invokestatic  #1681               // Method net/minecraft/client/gui/screens/TitleScreen.registerTextures:(Lnet/minecraft/client/renderer/texture/TextureManager;)V
+         5: invokevirtual #1929               // Method net/minecraft/client/gui/Gui.buildInitialScreens:(Lnet/minecraft/client/GameLoadCookie;)Ljava/lang/Runnable;
+        33: new           #1678               // class net/minecraft/client/gui/screens/TitleScreen
+        37: invokespecial #2142               // Method net/minecraft/client/gui/screens/TitleScreen."<init>":()V
+        40: new           #1678               // class net/minecraft/client/gui/screens/TitleScreen
+        44: invokespecial #2142               // Method net/minecraft/client/gui/screens/TitleScreen."<init>":()V
+       179: invokevirtual #4227               // Method setScreenAndShow:(Lnet/minecraft/client/gui/screens/Screen;)V
+        58: invokevirtual #4227               // Method setScreenAndShow:(Lnet/minecraft/client/gui/screens/Screen;)V
+  public void setScreenAndShow(net.minecraft.client.gui.screens.Screen);
+        61: instanceof    #1678               // class net/minecraft/client/gui/screens/TitleScreen
+
+=== OptionInstance public ===
+public final class net.minecraft.client.OptionInstance<T> {
+  public static final net.minecraft.client.OptionInstance$Enum<java.lang.Boolean> BOOLEAN_VALUES;
+  public static final net.minecraft.client.OptionInstance$CaptionBasedToString<java.lang.Boolean> BOOLEAN_TO_STRING;
+  public static final net.minecraft.client.OptionInstance$ValueUpdateListener<java.lang.Object> NO_ACTION;
+  public static net.minecraft.client.OptionInstance<java.lang.Boolean> createBoolean(java.lang.String, boolean, net.minecraft.client.OptionInstance$ValueUpdateListener<? super java.lang.Boolean>);
+  public static net.minecraft.client.OptionInstance<java.lang.Boolean> createBoolean(java.lang.String, boolean);
+  public static net.minecraft.client.OptionInstance<java.lang.Boolean> createBoolean(java.lang.String, net.minecraft.client.OptionInstance$TooltipSupplier<java.lang.Boolean>, boolean);
+  public static net.minecraft.client.OptionInstance<java.lang.Boolean> createBoolean(java.lang.String, net.minecraft.client.OptionInstance$TooltipSupplier<java.lang.Boolean>, boolean, net.minecraft.client.OptionInstance$ValueUpdateListener<? super java.lang.Boolean>);
+  public static net.minecraft.client.OptionInstance<java.lang.Boolean> createBoolean(java.lang.String, net.minecraft.client.OptionInstance$TooltipSupplier<java.lang.Boolean>, net.minecraft.client.OptionInstance$CaptionBasedToString<java.lang.Boolean>, boolean, net.minecraft.client.OptionInstance$ValueUpdateListener<? super java.lang.Boolean>);
+  public net.minecraft.client.OptionInstance(java.lang.String, net.minecraft.client.OptionInstance$TooltipSupplier<T>, net.minecraft.client.OptionInstance$CaptionBasedToString<T>, net.minecraft.client.OptionInstance$ValueSet<T>, T, net.minecraft.client.OptionInstance$ValueUpdateListener<? super T>);
+  public net.minecraft.client.OptionInstance(java.lang.String, net.minecraft.client.OptionInstance$TooltipSupplier<T>, net.minecraft.client.OptionInstance$CaptionBasedToString<T>, net.minecraft.client.OptionInstance$ValueSet<T>, com.mojang.serialization.Codec<T>, T, net.minecraft.client.OptionInstance$ValueUpdateListener<? super T>);
+  public static <T> net.minecraft.client.OptionInstance$TooltipSupplier<T> noTooltip();
+  public static <T> net.minecraft.client.OptionInstance$TooltipSupplier<T> cachedConstantTooltip(net.minecraft.network.chat.Component);
+  public net.minecraft.client.gui.components.AbstractWidget createButton(net.minecraft.client.Options);
+  public net.minecraft.client.gui.components.AbstractWidget createButton(net.minecraft.client.Options, int, int, int);
+  public net.minecraft.client.gui.components.AbstractWidget createButton(net.minecraft.client.Options, int, int, int, net.minecraft.client.OptionInstance$ValueUpdateListener<? super T>);
+  public T get();
+  public com.mojang.serialization.Codec<T> codec();
+  public java.lang.String toString();
+  public void set(T);
+  public net.minecraft.client.OptionInstance$ValueSet<T> values();
+
+=== Items ключевые (тотем/щит/булава/трезубец) ===
+  public static final net.minecraft.world.item.Item ELYTRA;
+  public static final net.minecraft.world.item.Item ENDER_PEARL;
+  public static final net.minecraft.world.item.Item MACE;
+  public static final net.minecraft.world.item.Item TIPPED_ARROW;
+  public static final net.minecraft.world.item.Item SHIELD;
+  public static final net.minecraft.world.item.Item TOTEM_OF_UNDYING;
+  public static final net.minecraft.world.item.Item TRIDENT;
+  public static final net.minecraft.world.item.Item CROSSBOW;
+
+=== Entity getDeltaMovement/getViewVector/isAlive ===
+  public boolean getRequiresPrecisePosition();
+  public void setRequiresPrecisePosition(boolean);
+  public final net.minecraft.world.phys.Vec3 oldPosition();
+  public final net.minecraft.world.phys.Vec3 getViewVector(float);
+  public final net.minecraft.world.phys.Vec3 getEyePosition();
+  public final net.minecraft.world.phys.Vec3 getEyePosition(float);
+  public net.minecraft.world.phys.Vec3 getLightProbePosition(float);
+  public final net.minecraft.world.phys.Vec3 getPosition(float);
+  public boolean isAlive();
+  public net.minecraft.world.phys.Vec3 getPassengerRidingPosition(net.minecraft.world.entity.Entity);
+  public net.minecraft.world.phys.Vec3 getLookAngle();
+  public void copyPosition(net.minecraft.world.entity.Entity);
+  public void teleportSetPosition(net.minecraft.world.entity.PositionMoveRotation, java.util.Set<net.minecraft.world.entity.Relative>);
+  public void teleportSetPosition(net.minecraft.world.entity.PositionMoveRotation, net.minecraft.world.entity.PositionMoveRotation, java.util.Set<net.minecraft.world.entity.Relative>);
+
+=== LivingEntity getHealth/getMaxHealth/getAbsorption/isBlocking/stopUsingItem/getUseItemRemaining ===
+  public float getHealth();
+  public final float getMaxHealth();
+  public final float getMaxAbsorption();
+  public net.minecraft.world.item.ItemStack getMainHandItem();
+  public net.minecraft.world.item.ItemStack getOffhandItem();
+  public net.minecraft.world.item.ItemStack getItemBySlot(net.minecraft.world.entity.EquipmentSlot);
+  public float getAbsorptionAmount();
+  public final void setAbsorptionAmount(float);
+  public boolean isUsingItem();
+  public int getUseItemRemainingTicks();
+  public void stopUsingItem();
+  public boolean isBlocking();
+
+=== Player getOffhandItem/isBlocking/attackStrength/getCooldowns/getAbilities ===
+  public static final float DEFAULT_BLOCK_INTERACTION_RANGE;
+  public int experienceLevel;
+  public int totalExperience;
+  public float experienceProgress;
+  public boolean blockActionRestricted(net.minecraft.world.level.Level, net.minecraft.core.BlockPos, net.minecraft.world.level.GameType);
+  public void onAboveBubbleColumn(boolean, net.minecraft.core.BlockPos);
+  public float getDestroySpeed(net.minecraft.world.level.block.state.BlockState);
+  public boolean hasCorrectToolForDrops(net.minecraft.world.level.block.state.BlockState);
+  public void openTextEdit(net.minecraft.world.level.block.entity.SignBlockEntity, boolean);
+  public void openMinecartCommandBlock(net.minecraft.world.entity.vehicle.minecart.MinecartCommandBlock);
+  public void openCommandBlock(net.minecraft.world.level.block.entity.CommandBlockEntity);
+  public void openStructureBlock(net.minecraft.world.level.block.entity.StructureBlockEntity);
+  public void openTestBlock(net.minecraft.world.level.block.entity.TestBlockEntity);
+  public void openTestInstanceBlock(net.minecraft.world.level.block.entity.TestInstanceBlockEntity);
+  public void openJigsawBlock(net.minecraft.world.level.block.entity.JigsawBlockEntity);
+  public net.minecraft.world.entity.player.Inventory getInventory();
+
+=== SoundEvents NOTE/TOTEM/UI_BUTTON ===
+  public static final net.minecraft.sounds.SoundEvent ANVIL_LAND;
+  public static final net.minecraft.sounds.SoundEvent ENDERMAN_TELEPORT;
+  public static final net.minecraft.core.Holder$Reference<net.minecraft.sounds.SoundEvent> NOTE_BLOCK_PLING;
+  public static final net.minecraft.sounds.SoundEvent TOTEM_USE;
+  public static final net.minecraft.core.Holder$Reference<net.minecraft.sounds.SoundEvent> UI_BUTTON_CLICK;
+
+=== AbstractArrow getOwner/isVisible/shot ===
+
+=== EntityType category ===
+  private final net.minecraft.world.entity.MobCategory category;
+  public net.minecraft.world.entity.EntityType(net.minecraft.world.entity.EntityType$EntityFactory<T>, net.minecraft.world.entity.MobCategory, boolean, boolean, boolean, boolean, net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>, net.minecraft.world.entity.EntityDimensions, float, int, int, java.lang.String, java.util.Optional<net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>>, net.minecraft.world.flag.FeatureFlagSet, boolean);
+  public net.minecraft.world.entity.MobCategory getCategory();
+
+=== VFP-подобные: ServerList getServer/selected ===
+public class net.minecraft.client.multiplayer.ServerList {
+  public net.minecraft.client.multiplayer.ServerList(net.minecraft.client.Minecraft);
+  public void load();
+  public void save();
+  public net.minecraft.client.multiplayer.ServerData get(int);
+  public net.minecraft.client.multiplayer.ServerData get(java.lang.String);
+  public net.minecraft.client.multiplayer.ServerData unhide(java.lang.String);
+  public void remove(net.minecraft.client.multiplayer.ServerData);
+  public void add(net.minecraft.client.multiplayer.ServerData, boolean);
+  public int size();
+  public void swap(int, int);
+  public void replace(int, net.minecraft.client.multiplayer.ServerData);
+  public static void saveSingleServer(net.minecraft.client.multiplayer.ServerData);
+
+=== ServerData ===
+  public java.lang.String name;
+  public net.minecraft.network.chat.Component version;
+  public void copyNameIconFrom(net.minecraft.client.multiplayer.ServerData);
+
+=== Minecraft#pauseGame & disconnect ===
+  public void stop();
+  public void pauseGame(boolean);
+  public void setScreenAndShow(net.minecraft.client.gui.screens.Screen);
+  public boolean isLocalServer();
+  public net.minecraft.client.server.IntegratedServer getSingleplayerServer();
+
+=== WorldVersion ===
+Compiled from "WorldVersion.java"
+public interface net.minecraft.WorldVersion {
+  public abstract net.minecraft.world.level.storage.DataVersion dataVersion();
+  public abstract java.lang.String id();
+  public abstract java.lang.String name();
+  public abstract int protocolVersion();
+  public abstract net.minecraft.server.packs.metadata.pack.PackFormat packVersion(net.minecraft.server.packs.PackType);
+  public abstract java.util.Date buildTime();
+  public abstract boolean stable();
+}
+
+=== GameConfigHandler? ===
+net/minecraft/client/main/GameConfig.class
+net/minecraft/client/multiplayer/ClientConfigurationPacketListenerImpl.class
+net/minecraft/client/renderer/PostChainConfig.class
+
+=== KeyBindsScreen конструктор ===
+Compiled from "KeyBindsScreen.java"
+public class net.minecraft.client.gui.screens.options.controls.KeyBindsScreen extends net.minecraft.client.gui.screens.options.OptionsSubScreen {
+  private static final net.minecraft.network.chat.Component TITLE;
+  public net.minecraft.client.KeyMapping selectedKey;
+  public long lastKeySelection;
+  private net.minecraft.client.gui.screens.options.controls.KeyBindsList keyBindsList;
+  private net.minecraft.client.gui.components.Button resetButton;
+  public net.minecraft.client.gui.screens.options.controls.KeyBindsScreen(net.minecraft.client.gui.screens.Screen, net.minecraft.client.Options);
