@@ -14,10 +14,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * «Человечные» довороты для легитных режимов AutoMine и KillAura.
  *
- * {@code Entity#setRot(float, float)} — точка, через которую игра, Baritone и наши
- * модули выставляют игроку абсолютные углы поворота. Пока работает один из легитных
- * режимов, «скачковые» запросы (сразу на десятки градусов — Baritone мгновенно
- * наводится на блок) заменяются плавным доворотом с промахом — вся математика в
+ * {@code Entity#setRot(float, float)} — точка, через которую Baritone выставляет
+ * игроку абсолютные углы поворота. Пока работает легитный AutoMine, «скачковые»
+ * запросы (сразу на десятки градусов — Baritone мгновенно наводится на блок)
+ * заменяются плавным доворотом с промахом — вся математика в
  * {@link RotationHumanizer}. Обычная мышь и мелкие доводки проходят насквозь.
  *
  * Миксин висит на всех сущностях, но работает только с нашим игроком — для остальных
@@ -27,7 +27,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class EntityMixin {
 
 	@Shadow
-	public abstract void setRot(float yRot, float xRot);
+	protected abstract void setRot(float yRot, float xRot);
 
 	/** Защита от рекурсии: наш собственный вызов setRot должен пройти как есть. */
 	@Unique
@@ -40,7 +40,7 @@ public abstract class EntityMixin {
 		}
 
 		Minecraft client = Minecraft.getInstance();
-		if (client == null || client.player != this) {
+		if (client == null || client.player != (Object) this) {
 			return;
 		}
 		LocalPlayer player = client.player;

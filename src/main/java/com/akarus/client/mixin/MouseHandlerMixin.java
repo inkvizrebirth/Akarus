@@ -14,9 +14,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Мышь во время FreeLook крутит камеру, а не игрока.
  *
  * {@code MouseHandler#turnPlayer} — место, где игра перекладывает движение мыши в
- * поворот игрока (с учётом чувствительности из настроек). Мы запоминаем поворот до
- * вызова, смотрим, на сколько игрок повернулся после, и если FreeLook активен —
- * откатываем игроку его поворот, а дельту отдаём камере:
+ * поворот игрока (с учётом чувствительности из настроек; в 26.2 метод приватный и
+ * принимает дельту кадра). Мы запоминаем поворот до вызова, смотрим, на сколько
+ * игрок повернулся после, и если FreeLook активен — откатываем игроку его поворот,
+ * а дельту отдаём камере:
  * <ul>
  *   <li>чувствительность и плавность — ровно игровые, дельту посчитала сама игра;</li>
  *   <li>игрок не поворачивается ни на градус — Baritone, который во время добычи
@@ -33,7 +34,7 @@ public abstract class MouseHandlerMixin {
 	private float akarus$pitchBeforeTurn;
 
 	@Inject(method = "turnPlayer", at = @At("HEAD"), require = 0)
-	private void akarus$rememberPlayerRotation(CallbackInfo ci) {
+	private void akarus$rememberPlayerRotation(double timeDelta, CallbackInfo ci) {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client == null ? null : client.player;
 		if (player == null) {
@@ -44,7 +45,7 @@ public abstract class MouseHandlerMixin {
 	}
 
 	@Inject(method = "turnPlayer", at = @At("TAIL"), require = 0)
-	private void akarus$turnFreeLookCamera(CallbackInfo ci) {
+	private void akarus$turnFreeLookCamera(double timeDelta, CallbackInfo ci) {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client == null ? null : client.player;
 		if (player == null) {

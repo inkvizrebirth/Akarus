@@ -10,10 +10,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.ArmorStand;
-import net.minecraft.world.entity.Enemy;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
@@ -28,7 +28,7 @@ import java.util.UUID;
  * <ul>
  *   <li><b>Быстрый</b> — доворот мгновенный и точный, удар сразу, как только
  *       восстановилась сила удара. Максимум эффективности, никакого камуфляжа;</li>
- *   <li><b>Легитный</b> — повороты проходят через {@link RotationHumanizer}: камера
+ *   <li><b>Легитный</b> — повороты идут через {@link RotationHumanizer}: камера
  *       доворачивается к цели плавно, с промахом и переменной скоростью, удар — только
  *       когда прицел уже наведён, и с человеческой паузой между целями и ударами.</li>
  * </ul>
@@ -118,10 +118,16 @@ public class KillAuraModule extends Module {
 
 		float[] aim = aimAt(player, target);
 		if (isLegit()) {
-			// Доворот проходит через RotationHumanizer (перехватывает EntityMixin):
-			// плавно, с промахом и переменной скоростью
-			player.setRot(aim[0], aim[1]);
-			RotationHumanizer.tick(player);
+			// Доворот через RotationHumanizer: плавно, с промахом и переменной скоростью.
+			// Пишем публичными setYRot/setXRot — они не перехватываются миксином
+			float[] rotation = RotationHumanizer.aimTowards(player, aim[0], aim[1]);
+			if (rotation != null) {
+				player.setYRot(rotation[0]);
+				player.setXRot(rotation[1]);
+			} else {
+				player.setYRot(aim[0]);
+				player.setXRot(aim[1]);
+			}
 
 			// Бьём только наведённым прицелом: удар мимо взгляда — читерский почерк
 			if (!RotationHumanizer.arrived()
@@ -130,7 +136,8 @@ public class KillAuraModule extends Module {
 				return;
 			}
 		} else {
-			player.setRot(aim[0], aim[1]);
+			player.setYRot(aim[0]);
+			player.setXRot(aim[1]);
 		}
 
 		if (this.attackDelay > 0) {
@@ -194,7 +201,7 @@ public class KillAuraModule extends Module {
 			if (!attackPlayers.isEnabled()) {
 				return false;
 			}
-		} else if (entity instanceof Enemy) {
+		} else if (entity.getType().getCategory() == MobCategory.MONSTER) {
 			if (!attackMobs.isEnabled()) {
 				return false;
 			}

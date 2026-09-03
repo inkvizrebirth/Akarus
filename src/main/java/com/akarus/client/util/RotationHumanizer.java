@@ -17,8 +17,17 @@ import java.util.Random;
  * прицел никогда не промахивается, скорость доворота всё время одинаковая. Античиты
  * ловят такое в первую очередь.
  *
- * Этот слой перехватывает «скачковые» установки поворота (миксин {@code EntityMixin}
- * на {@code Entity#setRot}) и заменяет их плавным доворотом:
+ * Два входа:
+ * <ul>
+ *   <li>{@link #adjust(float, float, float, float)} — перехват чужих установок поворота
+ *       (Baritone пишет в {@code Entity#setRot}, миксин {@code EntityMixin} отдаёт запрос
+ *       сюда). Большой скачок заменяется плавным доворотом;</li>
+ *   <li>{@link #aimTowards(LocalPlayer, float, float)} — собственное прицеливание
+ *       киллауры: делает шаг к «человеческой» цели и возвращает углы, которые модуль
+ *       пишет игроку уже публичными {@code setYRot}/{@code setXRot}.</li>
+ * </ul>
+ *
+ * Что именно «человечного» в довороте:
  * <ul>
  *   <li><b>не всегда в центр</b> — у каждой новой цели свой «промах» до пары градусов,
  *       который держится, пока цель та же: человек не перезаново промахивается каждый тик;</li>
@@ -29,9 +38,6 @@ import java.util.Random;
  *   <li><b>обычная мышь не трогается</b> — её дельты маленькие и проходят насквозь
  *       (порог {@link #CONTINUATION_DELTA}).</li>
  * </ul>
- *
- * Доворот живёт своей жизнью между установками поворота: {@link #tick(LocalPlayer)}
- * подталкивает его раз в тик, даже если Baritone выдал цель давно и молчит.
  */
 public final class RotationHumanizer {
 
@@ -75,9 +81,6 @@ public final class RotationHumanizer {
 	/** Первый вызов после включения: углы ещё не синхронизированы с игроком. */
 	private static boolean stale = true;
 
-	/** Идёт запись из {@link #tick}: она должна пройти в игрока как есть. */
-	private static boolean internalWrite;
-
 	private static long lastNewTarget;
 	private static long lastStep;
 
@@ -95,11 +98,11 @@ public final class RotationHumanizer {
 	}
 
 	/**
-	 * Вызывается из {@code EntityMixin} при каждой установке поворота нашего игрока.
+	 * Перехват чужой установки поворота (Baritone → {@code Entity#setRot} → миксин → сюда).
 	 *
-	 * @param yaw        запрошенные углы (что хотят поставить)
-	 * @param pitch      — // —
-	 * @param actualYaw  где игрок реально смотрит прямо сейчас (до установки)
+	 * @param yaw         запрошенные углы (что хотят поставить)
+	 * @param pitch       — // —
+	 * @param actualYaw   где игрок реально смотрит прямо сейчас (до установки)
 	 * @param actualPitch — // —
 	 * @return углы, которыми заменить запрошенные, или null — пропустить запрошенные
 	 * как есть (мышь, мелкие доводки, слой выключен)
@@ -108,11 +111,6 @@ public final class RotationHumanizer {
 		if (!active()) {
 			stale = true;
 			pending = false;
-			return null;
-		}
-
-		// Наша собственная запись из tick(): состояние уже обновлено шагом — просто пропускаем
-		if (internalWrite) {
 			return null;
 		}
 
@@ -130,11 +128,7 @@ public final class RotationHumanizer {
 		// продолжаем доворот, не пропуская «точный» угол насквозь
 		if (pending && Math.abs(Mth.wrapDegrees(yaw - pendingYaw)) < CONTINUATION_DELTA
 				&& Math.abs(pitch - pendingPitch) < CONTINUATION_DELTA) {
-			pendingYaw = yaw;
-			pendingPitch = pitch;
-			targetYaw = pendingYaw + missYaw;
-			targetPitch = clampPitch(pendingPitch + missPitch);
-			return step();
+			return continueTarget(yaw, pitch);
 		}
 
 		float deltaYaw = Mth.wrapDegrees(yaw - currentYaw);
@@ -148,7 +142,91 @@ public final class RotationHumanizer {
 			return null;
 		}
 
-		// Большой скачок: Baritone наводится на очередной блок (или киллаура — на цель)
+		// Большой скачок: Baritone наводится на очередной блок
+		return beginOrContinue(yaw, pitch);
+	}
+
+	/**
+	 * Собственное прицеливание легитной киллауры: шаг к «человеческой» цели.
+	 *
+	 * @return углы, которые надо записать игроку через {@code setYRot}/{@code setXRot},
+	 * или null, если слой сейчас не активен (тогда киллаура целится точно)
+	 */
+	public static float[] aimTowards(LocalPlayer player, float yaw, float pitch) {
+		if (!active()) {
+			pending = false;
+			return null;
+		}
+
+		if (stale) {
+			stale = false;
+			pending = false;
+			if (player != null) {
+				currentYaw = player.getYRot();
+				currentPitch = player.getXRot();
+			} else {
+				currentYaw = yaw;
+				currentPitch = pitch;
+			}
+		}
+
+		if (pending && Math.abs(Mth.wrapDegrees(yaw - pendingYaw)) < CONTINUATION_DELTA
+				&& Math.abs(pitch - pendingPitch) < CONTINUATION_DELTA) {
+			return continueTarget(yaw, pitch);
+		}
+
+		if (Math.abs(Mth.wrapDegrees(yaw - currentYaw)) < CONTINUATION_DELTA
+				&& Math.abs(pitch - currentPitch) < CONTINUATION_DELTA) {
+			// Прицел и так на цели — мгновенной доводки не требуется
+			currentYaw = yaw;
+			currentPitch = pitch;
+			pending = false;
+			return null;
+		}
+
+		return beginOrContinue(yaw, pitch);
+	}
+
+	/**
+	 * Подталкивает незаконченный доворот Baritone между его установками поворота:
+	 * цель выдаётся не каждый тик, а камера должна двигаться каждый.
+	 */
+	public static void tick(LocalPlayer player) {
+		if (!pending || player == null) {
+			return;
+		}
+		float[] moved = step();
+		if (moved != null) {
+			player.setYRot(moved[0]);
+			player.setXRot(moved[1]);
+		}
+	}
+
+	/**
+	 * Закончен ли доворот до «человеческой» цели. Киллаура ждёт этого, чтобы бить:
+	 * удар мимо прицела — первый шаг к бану.
+	 */
+	public static boolean arrived() {
+		return !pending
+				|| (Math.abs(Mth.wrapDegrees(targetYaw - currentYaw)) < 2.0F
+						&& Math.abs(targetPitch - currentPitch) < 2.0F);
+	}
+
+	// ------------------------------------------------------------------
+	// Внутреннее
+	// ------------------------------------------------------------------
+
+	/** Та же цель (или её плавное смещение) — держим промах и темп, шаг вперёд. */
+	private static float[] continueTarget(float yaw, float pitch) {
+		pendingYaw = yaw;
+		pendingPitch = pitch;
+		targetYaw = pendingYaw + missYaw;
+		targetPitch = clampPitch(pendingPitch + missPitch);
+		return step();
+	}
+
+	/** Большой скачок: новая цель, если она действительно новая — со своим промахом и темпом. */
+	private static float[] beginOrContinue(float yaw, float pitch) {
 		long now = Util.getMillis();
 		if (!pending
 				|| Math.abs(Mth.wrapDegrees(yaw - pendingYaw)) > NEW_TARGET_DELTA
@@ -162,35 +240,6 @@ public final class RotationHumanizer {
 			targetPitch = clampPitch(pendingPitch + missPitch);
 		}
 		return step();
-	}
-
-	/**
-	 * Подталкивает незаконченный доворот между установками поворота: Baritone выдаёт
-	 * цель не каждый тик, а камера должна двигаться каждый.
-	 */
-	public static void tick(LocalPlayer player) {
-		if (!pending || player == null) {
-			return;
-		}
-		float[] moved = step();
-		if (moved != null) {
-			internalWrite = true;
-			try {
-				player.setRot(moved[0], moved[1]);
-			} finally {
-				internalWrite = false;
-			}
-		}
-	}
-
-	/**
-	 * Закончен ли доворот до «человеческой» цели. Киллаура ждёт этого, чтобы бить:
-	 * удар мимо прицела — первый шаг к бану.
-	 */
-	public static boolean arrived() {
-		return !pending
-				|| (Math.abs(Mth.wrapDegrees(targetYaw - currentYaw)) < 2.0F
-						&& Math.abs(targetPitch - currentPitch) < 2.0F);
 	}
 
 	/**
