@@ -1,9 +1,8 @@
 name: api-audit
 
-# Аудит имён Minecraft 26.2: локально нет доступа к maven'ам и к артефактам
-# Actions (blob-storage недоступен из песочницы). Поэтому полный лог кладётся
-# в артефакт, а для песочницы результат режется на чанки и отдаётся через
-# check-run annotations (по 50 на джобу) — читаются API gh.
+# Аудит имён Minecraft 26.2: локально нет доступа к maven'ам и артефактам,
+# поэтому реальные сигнатуры снимает CI (javap по deobf-jar) и коммитит результат
+# файлом в ветку запуска.
 on:
   workflow_dispatch:
   push:
@@ -11,13 +10,11 @@ on:
     paths: ['.github/workflows/api-audit.yml']
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   audit:
     runs-on: ubuntu-latest
-    outputs:
-      chunks: ${{ steps.split.outputs.chunks }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -39,167 +36,107 @@ jobs:
         run: |
           MC=$(find ~/.gradle/caches/fabric-loom -name '*deobf*.jar' 2>/dev/null | head -1)
           [ -z "$MC" ] && MC=$(find ~/.gradle/caches/fabric-loom -name 'minecraft*.jar' 2>/dev/null | grep -v sources | head -1)
-          [ -z "$MC" ] && MC=$(find ~/.gradle/caches/fabric-loom -name '*.jar' 2>/dev/null | xargs -I{} sh -c 'unzip -l "{}" 2>/dev/null | grep -q "net/minecraft/client/gui/screens/Screen.class" && echo {} && exit 0' | head -1)
-          echo "MC_JAR=$MC"
-          ls ~/.gradle/caches/fabric-loom 2>/dev/null | head -10
           {
-            echo "=== Screen ==="
-            javap -p -cp "$MC" net.minecraft.client.gui.screens.Screen 2>&1
-            echo; echo "=== TitleScreen ==="
-            javap -p -cp "$MC" net.minecraft.client.gui.screens.TitleScreen 2>&1 | head -40
-            echo; echo "=== GuiGraphicsExtractor ==="
-            javap -cp "$MC" net.minecraft.client.gui.GuiGraphicsExtractor 2>&1 | head -220
-            echo; echo "=== Button / AbstractWidget ==="
-            javap -p -cp "$MC" net.minecraft.client.gui.components.Button 2>&1 | head -40
-            javap -p -cp "$MC" net.minecraft.client.gui.components.AbstractWidget 2>&1 | head -70
-            echo; echo "=== Options ==="
-            javap -p -cp "$MC" net.minecraft.client.Options 2>&1 | head -420
-            echo; echo "=== PauseScreen / GameMenuScreen / Options screen ==="
-            javap -p -cp "$MC" net.minecraft.client.gui.screens.PauseScreen 2>&1 | head -30 || true
-            javap -p -cp "$MC" net.minecraft.client.gui.screens.GameMenuScreen 2>&1 | head -40 || true
-            javap -p -cp "$MC" net.minecraft.client.gui.screens.Options 2>&1 | head -25
-            echo; echo "=== Экраны выбора серверов (классы) ==="
-            unzip -l "$MC" | grep -iE 'serverselection|SelectServer|JoinMultiplayer|LanServer|ServerList' | grep -v '\$' | head -20
-            echo; echo "=== Minecraft (GUI/версия) ==="
-            javap -p -cp "$MC" net.minecraft.client.Minecraft 2>&1 | grep -iE 'screen|title|pause|stop|SoundManager|Language|version|brand|resize|user|scheduleTick|stop\(|setDefaultText' | head -40
-            echo; echo "=== SharedConstants ==="
-            javap -p -cp "$MC" net.minecraft.SharedConstants 2>&1 | grep -iE 'version|protocol|release' | head -20
-            echo; echo "=== MultiPlayerGameMode ==="
-            javap -p -cp "$MC" net.minecraft.client.multiplayer.MultiPlayerGameMode 2>&1 | head -100
+            echo "=== Screen (все public/protected) ==="
+            javap -p -cp "$MC" net.minecraft.client.gui.screens.Screen 2>&1 | grep -E 'public|protected'
+            echo; echo "=== AbstractContainerEventHandler / GuiEventListener ==="
+            javap -p -cp "$MC" net.minecraft.client.gui.components.events.GuiEventListener 2>&1
+            javap -p -cp "$MC" net.minecraft.client.gui.components.events.AbstractContainerEventHandler 2>&1 | grep -E 'public'
+            echo; echo "=== GuiManager ==="
+            javap -p -cp "$MC" net.minecraft.client.GuiManager 2>&1 | head -40
+            echo; echo "=== Minecraft поля/методы ==="
+            javap -p -cp "$MC" net.minecraft.client.Minecraft 2>&1 | grep -E 'public' | grep -iE 'screen|gui|level|player|options|gameMode|sound|texture|window|font|connection|version|brand|isRunning|stop\(|language|getSingleplayerServer|hitResult|interaction|user|profile' | head -40
+            echo; echo "=== screens классы ==="
+            unzip -l "$MC" | grep -oE 'net/minecraft/client/gui/screens(/[a-z]+)?/[A-Za-z]+\.class' | sort -u | grep -iE 'ultiplayer|erver|elect|ook|ause|itle|ptions|onnect|eneric|elected' | head -30
+            echo; echo "=== JoinMultiplayerScreen ==="
+            javap -p -cp "$MC" net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen 2>&1 | grep -E 'public|protected' | head -30
+            echo; echo "=== GameMenuScreen ==="
+            javap -p -cp "$MC" net.minecraft.client.gui.screens.GameMenuScreen 2>&1 | grep -E 'public|protected' | head -20
+            echo; echo "=== Options public ==="
+            javap -p -cp "$MC" net.minecraft.client.Options 2>&1 | grep -E 'public' | head -160
+            echo; echo "=== OptionInstance public ==="
+            javap -p -cp "$MC" net.minecraft.client.OptionInstance 2>&1 | grep -E 'public' | head -24
+            echo; echo "=== GuiGraphicsExtractor public ==="
+            javap -cp "$MC" net.minecraft.client.gui.GuiGraphicsExtractor 2>&1 | grep -E 'public' | head -140
+            echo; echo "=== blit аргументы (имена параметров) ==="
+            javap -v -cp "$MC" net.minecraft.client.gui.GuiGraphicsExtractor 2>&1 | grep -B2 -A14 'blit(' | head -100
+            echo; echo "=== RenderPipelines GUI ==="
+            javap -p -cp "$MC" net.minecraft.client.renderer.RenderPipelines 2>&1 | grep -iE 'public static final' | head -30
+            echo; echo "=== MultiPlayerGameMode public ==="
+            javap -p -cp "$MC" net.minecraft.client.multiplayer.MultiPlayerGameMode 2>&1 | grep -E 'public' | head -40
             echo; echo "=== ContainerInput ==="
             javap -p -cp "$MC" net.minecraft.world.inventory.ContainerInput 2>&1
             echo; echo "=== AbstractContainerMenu / InventoryMenu ==="
-            javap -p -cp "$MC" net.minecraft.world.inventory.AbstractContainerMenu 2>&1 | grep -iE 'clickMenuButton|broadcastCarriedItems|getSlot|slots|containerId' | head -12
-            javap -p -cp "$MC" net.minecraft.world.inventory.InventoryMenu 2>&1 | head -20
-            echo; echo "=== Inventory ==="
-            javap -cp "$MC" net.minecraft.world.entity.player.Inventory 2>&1 | head -90
-            echo; echo "=== Player (руки/еда/здоровье) ==="
-            javap -p -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | grep -iE 'hand|Using|inventor|swap|Health|Ability|experience|eat|getFood|block' | head -60
-            echo; echo "=== LivingEntity ==="
-            javap -p -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'Health|swing|blocking|Using|fall|hurt|jump|Effect|equipment|weapon|absorption|shield|attack' | head -80
-            echo; echo "=== Entity ==="
-            javap -p -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'DeltaMovement|position\(|positionVector|YRot|XRot|onGround|fire|getId|getUUID|getViewVector|distanceTo|getType|tickCount|isRemoved|setRot' | head -50
-            echo; echo "=== Projectile/Arrow/Mace ==="
-            unzip -l "$MC" | grep -iE 'projectile/.*\.class' | grep -viE '\$' | head -14
-            javap -p -cp "$MC" net.minecraft.world.entity.projectile.Projectile 2>&1 | grep -iE 'getOwner|position' | head -6
-            javap -p -cp "$MC" net.minecraft.world.entity.projectile.AbstractArrow 2>&1 | grep -iE 'pickup|shooter|critical|inGround|life|isVisible' | head -10
+            javap -p -cp "$MC" net.minecraft.world.inventory.AbstractContainerMenu 2>&1 | grep -E 'public|protected' | grep -iE 'click|broadcast|getSlot|slots|containerId|remote' | head -14
+            javap -p -cp "$MC" net.minecraft.world.inventory.InventoryMenu 2>&1 | head -16
+            echo; echo "=== Inventory public ==="
+            javap -cp "$MC" net.minecraft.world.entity.player.Inventory 2>&1 | grep -E 'public' | head -60
+            echo; echo "=== Player public ==="
+            javap -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | grep -E 'public' | head -80
+            echo; echo "=== LivingEntity public (hp/item/swing) ==="
+            javap -p -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -E 'public|protected' | grep -iE 'Health|swing|Blocking|Using|fall|hurt|jump|Effect|Item|absor|attack|equip' | head -60
+            echo; echo "=== Entity public (движение) ==="
+            javap -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -E 'public' | grep -iE 'delta|position|ViewVector|LookAngle|Eye|Rot|distance|Ground|fire|getId|UUID|getType|tick|level|removed|age' | head -40
+            echo; echo "=== Projectile / AbstractArrow ==="
+            javap -cp "$MC" net.minecraft.world.entity.projectile.Projectile 2>&1 | grep -E 'public' | head -14
+            javap -cp "$MC" net.minecraft.world.entity.projectile.AbstractArrow 2>&1 | grep -E 'public' | grep -iE 'pickup|shooter|Owner|crit|inGround|life' | head -8
             echo; echo "=== Items ==="
-            javap -p -cp "$MC" net.minecraft.world.item.Items 2>&1 | grep -iE 'TOTEM|APPLE|SHIELD|SWORD|MACE|TRIDENT|BUCKET|BREAD|PEARL|BOW|CROSSBOW' | head -30
-            echo; echo "=== ItemStack ==="
-            javap -cp "$MC" net.minecraft.world.item.ItemStack 2>&1 | grep -iE 'isEmpty|getItem|getCount|is\(|copy' | head -10
-            echo; echo "=== Item/Consumable (use/eat) ==="
-            javap -p -cp "$MC" net.minecraft.world.item.Item 2>&1 | grep -iE 'use|finishUsing|getUseDuration|applyConsumption' | head -12
-            javap -p -cp "$MC" net.minecraft.world.item.component.Consumable 2>&1 | grep -iE 'public' | head -12
-            echo; echo "=== ClientLevel ==="
-            javap -p -cp "$MC" net.minecraft.client.multiplayer.ClientLevel 2>&1 | grep -iE 'entit|getEntity|players|registry' | head -24
-            echo; echo "=== AABB ==="
-            javap -cp "$MC" net.minecraft.world.phys.AABB 2>&1 | grep -iE 'public' | head -40
+            javap -p -cp "$MC" net.minecraft.world.item.Items 2>&1 | grep -iE 'TOTEM|APPLE|SHIELD|SWORD|AXE|MACE|TRIDENT|BUCKET|BREAD|PEARL|BOW;|CROSSBOW|HEAVY_CORE|SNOWBALL' | head -40
+            echo; echo "=== ItemStack public ==="
+            javap -cp "$MC" net.minecraft.world.item.ItemStack 2>&1 | grep -E 'public' | head -46
             echo; echo "=== Util / OperatingSystem ==="
-            javap -p -cp "$MC" net.minecraft.util.Util 2>&1 | head -28
-            javap -p -cp "$MC" net.minecraft.util.OperatingSystem 2>&1 | head -28
-            echo; echo "=== SoundManager / SimpleSoundInstance / SoundEvents ==="
-            javap -p -cp "$MC" net.minecraft.client.sounds.SoundManager 2>&1 | head -28
-            javap -p -cp "$MC" net.minecraft.client.resources.sounds.SimpleSoundInstance 2>&1 | head -22
-            javap -p -cp "$MC" net.minecraft.sounds.SoundEvents 2>&1 | grep -iE 'UI_BUTTON|PLAY_DISC|STOP_DISC|NOTE_BLOCK' | head -8
+            javap -cp "$MC" net.minecraft.util.Util 2>&1 | grep -E 'public' | head -16
+            javap -cp "$MC" net.minecraft.util.OperatingSystem 2>&1 | grep -E 'public' | head -16
             echo; echo "=== Gui / Hud ==="
-            javap -p -cp "$MC" net.minecraft.client.gui.Gui 2>&1 | grep -iE 'public' | head -30
-            echo; echo "=== RenderPipelines (GUI) ==="
-            javap -p -cp "$MC" net.minecraft.client.renderer.RenderPipelines 2>&1 | grep -iE 'GUI|TEXT' | head -24
-            echo; echo "=== MobEffects / Mob ==="
-            javap -p -cp "$MC" net.minecraft.world.effect.MobEffects 2>&1 | grep -iE 'STRENGTH|SPEED|REGEN|RESISTANCE|POISON|WITHER' | head -8
-            javap -p -cp "$MC" net.minecraft.world.entity.Mob 2>&1 | grep -iE 'getTarget|setTarget' | head -4
-            echo; echo "=== EquipmentSlot ==="
-            javap -p -cp "$MC" net.minecraft.world.entity.EquipmentSlot 2>&1 | grep -iE 'OFFHAND|MAINHAND|public static' | head -12
-            echo; echo "=== Attributes/AttributesInstance ==="
-            javap -p -cp "$MC" net.minecraft.world.entity.ai.attributes.Attributes 2>&1 | grep -iE 'ATTACK_DAMAGE|ARMOR|MOVEMENT_SPEED' | head -6
-            javap -p -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'getAttribute|getValue' | head -8
-            echo; echo "=== KeyMapping ==="
-            javap -p -cp "$MC" net.minecraft.client.KeyMapping 2>&1 | grep -iE 'public' | head -34
+            javap -p -cp "$MC" net.minecraft.client.gui.Gui 2>&1 | grep -E 'public' | head -26
+            javap -p -cp "$MC" net.minecraft.client.gui.Hud 2>&1 | grep -E 'public' | head -40
+            echo; echo "=== SoundManager / SimpleSoundInstance / SoundEvents ==="
+            javap -p -cp "$MC" net.minecraft.client.sounds.SoundManager 2>&1 | grep -E 'public' | head -18
+            javap -p -cp "$MC" net.minecraft.client.resources.sounds.SimpleSoundInstance 2>&1 | grep -E 'public' | head -12
+            javap -p -cp "$MC" net.minecraft.sounds.SoundEvents 2>&1 | grep -iE 'UI_BUTTON|TOTEM|DISPENSER_FAIL|ANVIL|ENDERMAN|CHORUS|NOTE_BLOCK_HARP|FIREWORK' | head -10
+            echo; echo "=== DeltaTracker / Input / PlayerInfo ==="
+            javap -cp "$MC" net.minecraft.client.DeltaTracker 2>&1 | grep -E 'public' | head -10
+            javap -cp "$MC" net.minecraft.world.entity.player.Input 2>&1 | grep -E 'public' | head -14
+            javap -cp "$MC" net.minecraft.client.multiplayer.PlayerInfo 2>&1 | grep -iE 'latency' | head -4
+            echo; echo "=== MobEffects / Mob / MobCategory / EquipmentSlot ==="
+            javap -p -cp "$MC" net.minecraft.world.effect.MobEffects 2>&1 | grep -iE 'STRENGTH|SPEED|RESISTANCE|REGEN|INVISIBILITY' | head -8
+            javap -cp "$MC" net.minecraft.world.entity.Mob 2>&1 | grep -iE 'Target' | head -6
+            javap -p -cp "$MC" net.minecraft.world.entity.EquipmentSlot 2>&1 | grep -E 'public' | head -14
+            echo; echo "=== EquipmentUser getItemBySlot ==="
+            javap -p -cp "$MC" net.minecraft.world.entity.EquipmentUser 2>&1 | head -14
+            echo; echo "=== Attributes ==="
+            javap -p -cp "$MC" net.minecraft.world.entity.ai.attributes.Attributes 2>&1 | grep -iE 'ATTACK_DAMAGE|ARMOR' | head -6
+            javap -p -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'getAttribute' | head -6
+            javap -p -cp "$MC" net.minecraft.world.entity.ai.attributes.AttributeInstance 2>&1 | grep -E 'public' | head -8
+            echo; echo "=== SharedConstants ==="
+            javap -p -cp "$MC" net.minecraft.SharedConstants 2>&1 | grep -iE 'public static' | head -20
+            echo; echo "=== Button (ванильный виджет) ==="
+            javap -p -cp "$MC" net.minecraft.client.gui.components.Button 2>&1 | grep -E 'public' | head -24
             echo; echo "=== Level getEntities ==="
             javap -p -cp "$MC" net.minecraft.world.level.Level 2>&1 | grep -iE 'getEntities' | head -8
-            echo; echo "=== MobCategory / EntityType ==="
-            javap -p -cp "$MC" net.minecraft.world.entity.MobCategory 2>&1 | grep -iE 'public' | head -14
-            javap -p -cp "$MC" net.minecraft.world.entity.EntityType 2>&1 | grep -iE 'getCategory|category' | head -4
-            echo; echo "=== GuiGraphicsExtractor текстуры/blit ==="
-            javap -cp "$MC" net.minecraft.client.gui.GuiGraphicsExtractor 2>&1 | grep -iE 'texture|blit|sprite|submit|extract' | head -80
-            echo; echo "=== DynamicTexture/NativeImage ==="
-            javap -p -cp "$MC" net.minecraft.client.renderer.texture.DynamicTexture 2>&1 | head -26
-            javap -p -cp "$MC" net.minecraft.client.renderer.texture.NativeImage 2>&1 | grep -iE 'read|getHeight|getWidth|writeToFile|applyToSync' | head -12
-            echo; echo "=== Input / DeltaTracker / PlayerInfo ==="
-            javap -p -cp "$MC" net.minecraft.world.entity.player.Input 2>&1 | head -18
-            javap -p -cp "$MC" net.minecraft.client.DeltaTracker 2>&1 | grep -iE 'public' | head -12
-            javap -p -cp "$MC" net.minecraft.client.multiplayer.PlayerInfo 2>&1 | grep -iE 'latency|ping' | head -4
-            echo; echo "=== net.minecraft.client классы ==="
-            unzip -l "$MC" | grep -oE 'net/minecraft/client/[A-Za-z]+\.class' | sort -u | head -60
-            echo; echo "=== screens классы ==="
-            unzip -l "$MC" | grep -oE 'net/minecraft/client/gui/screens/[A-Za-z]+\.class' | sort -u | head -60
-            echo; echo "=== multiplayer screens классы ==="
-            unzip -l "$MC" | grep -oE 'net/minecraft/client/gui/screens/[a-z]+/[A-Za-z]+\.class' | sort -u | head -40
-            echo; echo "=== GuiManager ==="
-            javap -p -cp "$MC" net.minecraft.client.GuiManager 2>&1 | head -40
-            echo; echo "=== LocalPlayer swap/offhand ==="
-            javap -p -cp "$MC" net.minecraft.client.player.LocalPlayer 2>&1 | grep -iE 'swap|offhand|connection|unsynced|hasImpulse' | head -12
-            echo; echo "=== Options getters (OptionInstance) ==="
-            javap -p -cp "$MC" net.minecraft.client.Options 2>&1 | grep -E 'public' | grep -iE 'fov|sensitivity|renderDistance|gamma|fullscreen|vsync|mouse|chat|particle|entity|bobView|hideName|pause|sound|language|guiScale|joi|invert|zoom|viewBob|distortion|dramatic|biomeBlend|mipmap|cloud|glow|nametag|limb|voxel|subpix|ambient|entityShadows|prioritize|onlyCrisp|smooth|mipmap|text|fontRes' | head -40
-            echo; echo "=== OptionInstance ==="
-            javap -p -cp "$MC" net.minecraft.client.OptionInstance 2>&1 | grep -E 'public' | head -18
-            echo; echo "=== Player публичный API ==="
-            javap -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | head -80
-            echo; echo "=== LivingEntity публичные item/hp ==="
-            javap -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'Item|Health|swing|Blocking|Using|abs|effect' | head -50
-            echo; echo "=== Entity публичные движение ==="
-            javap -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'getDeltaMovement|setDeltaMovement|position\(|getViewVector|distanceTo|getLookAngle|getEyePosition|isRemoved|onGround|getYRot|getXRot|getId|getUUID|getType|tick\(\)|getLevel|level\(\)|getX\(\)|getY\(\)|getZ\(\)' | head -30
-            echo; echo "=== WindCharge / Level.getEntities ==="
-            unzip -l "$MC" | grep -iE 'WindCharge|Trident|projectile/Projectile.class|projectile/ThrowableProjectile' | head -8
-            javap -p -cp "$MC" net.minecraft.world.level.Level 2>&1 | grep -iE 'getEntities|getEntity' | head -12
-            echo; echo "=== Inventory публичный ==="
-            javap -cp "$MC" net.minecraft.world.entity.player.Inventory 2>&1 | head -60
-            echo; echo "=== ContainerInput весь ==="
-            javap -p -cp "$MC" net.minecraft.world.inventory.ContainerInput 2>&1 | head -30
-            echo; echo "=== MultiPlayerGameMode handle* ==="
-            javap -p -cp "$MC" net.minecraft.client.multiplayer.MultiPlayerGameMode 2>&1 | grep -iE 'handle|click|useItem|attack' | head -14
-            echo; echo "=== Minecraft setScreen/stop/pause ==="
-            javap -p -cp "$MC" net.minecraft.client.Minecraft 2>&1 | grep -iE 'setScreen|closeScreen|scheduleTick|stop\(|onWindowFocus|resizeDisplay|getGuiScale|isLocalServer|getSingleplayerServer|level\(.*\)|isRunning|tell|execute' | head -18
+            echo; echo "=== ClientLevel getEntitiesOfClass? ==="
+            javap -p -cp "$MC" net.minecraft.client.multiplayer.ClientLevel 2>&1 | grep -iE 'entit' | head -12
+            echo; echo "=== Component (для подсказок) ==="
+            javap -p -cp "$MC" net.minecraft.network.chat.Component 2>&1 | grep -iE 'public static' | head -12
+            echo; echo "=== LocalPlayer swap ==="
+            javap -p -cp "$MC" net.minecraft.client.player.LocalPlayer 2>&1 | grep -iE 'swap|impulse|chat\(|sendChatMessage|swing' | head -12
+            echo; echo "=== Identifier класс ==="
+            javap -p -cp "$MC" net.minecraft.resources.Identifier 2>&1 | grep -iE 'public static|fromNamespace' | head -8
+            echo; echo "=== OperatingSystem open ==="
+            javap -v -cp "$MC" net.minecraft.util.OperatingSystem 2>&1 | grep -B1 -A8 'open(' | head -40
           } > api-audit2-result.txt 2>&1
           wc -l api-audit2-result.txt
 
-      - name: Count chunks
-        id: split
+      - name: Push results
         run: |
-          lines=$(wc -l < api-audit2-result.txt)
-          chunks=$(( (lines + 29) / 30 ))
-          [ $chunks -gt 30 ] && chunks=30
-          echo "chunks=$chunks" >> "$GITHUB_OUTPUT"
-          echo "lines=$lines chunks=$chunks"
-
-      - name: Upload full result
-        uses: actions/upload-artifact@v4
-        with:
-          name: api-audit2-result
-          path: api-audit2-result.txt
-
-  report:
-    needs: audit
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        chunk: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29]
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: api-audit2-result
-
-      - name: Annotate chunk ${{ matrix.chunk }}
-        run: |
-          total=$(wc -l < api-audit2-result.txt)
-          start=$(( ${{ matrix.chunk }} * 30 + 1 ))
-          if [ $start -gt $total ]; then exit 0; fi
-          sed -n "${start},$(( start + 29 ))p" api-audit2-result.txt \
-            | cat -n \
-            | sed -E "s/^ *([0-9]+)/[$(( ${{ matrix.chunk }} * 30 ))|\1] /; s/%/%25/g; s/#/%23/g; s/,/%2C/g" \
-            | while IFS= read -r line; do
-                echo "::notice file=api.txt,line=1::${line}"
-              done
-          exit 0
+          git config user.name "arena-ai-coding-agent"
+          git config user.email "arena-ai-coding-agent@users.noreply.github.com"
+          git add -f api-audit2-result.txt
+          git commit -m "ci: аудит API 26.2 (v4, полный дамп)"
+          for i in 1 2 3; do
+            git fetch -q origin "${{ github.ref_name }}" && \
+            git rebase -q "origin/${{ github.ref_name }}" 2>/dev/null;
+            if git push -q origin "HEAD:refs/heads/${{ github.ref_name }}"; then break; fi
+            sleep 5
+          done
+          echo "::notice::audit lines=$(wc -l < api-audit2-result.txt)"
