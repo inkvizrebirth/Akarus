@@ -1,6 +1,9 @@
 name: probe
 on:
   workflow_dispatch:
+  push:
+    branches: [arena/**]
+    paths: ['.github/workflows/probe.yml']
 permissions:
   contents: write
 jobs:
