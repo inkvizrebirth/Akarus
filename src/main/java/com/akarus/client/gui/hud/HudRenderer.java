@@ -8,6 +8,7 @@ import com.akarus.client.module.impl.AutoWalkModule;
 import com.akarus.client.module.impl.FreeCamModule;
 import com.akarus.client.module.impl.FreeLookModule;
 import com.akarus.client.module.impl.HudInfoModule;
+import com.akarus.client.module.impl.MediaPlayerModule;
 import com.akarus.client.util.RenderUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.DeltaTracker;
@@ -60,6 +61,100 @@ public final class HudRenderer {
 		HudElementRegistry.addLast(
 				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "free_cam"),
 				HudRenderer::renderFreeCam);
+
+		// Карточка медиаплеера: свой правый нижний угол, чтобы не сталкиваться
+		// с инфопанелью и списком модулей
+		HudElementRegistry.addLast(
+				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "media"),
+				HudRenderer::renderMedia);
+	}
+
+	/**
+	 * Карточка MediaPlayer: трек, прогресс, время и эквалайзер.
+	 *
+	 * Рисуем и в меню (карточка — часть интерфейса, играет музыка или нет — не важно),
+	 * но прячем при F1. Панель всегда «чёрное стекло»: мягкая тень, скругления,
+	 * акцентная полоска прогресса.
+	 */
+	private static void renderMedia(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.player == null || client.level == null || client.gui.hud.isHidden()) {
+			return;
+		}
+		MediaPlayerModule media = ModuleManager.find(MediaPlayerModule.class);
+		if (media == null || !media.isEnabled() || !media.showsHudCard()) {
+			return;
+		}
+
+		Font font = client.font;
+		int screenWidth = client.getWindow().getGuiScaledWidth();
+		int screenHeight = client.getWindow().getGuiScaledHeight();
+
+		int width = Math.min(150, screenWidth - 24);
+		int height = 34 + font.lineHeight;
+		int x = screenWidth - width - 6;
+		int y = screenHeight - height - 6;
+
+		int accent = ModuleCategory.HUD.getAccent();
+		long time = Util.getMillis();
+
+		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 4);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6, PANEL_BORDER, 0xD2080809);
+
+		String title;
+		String subtitle;
+		boolean playing = media.isPlaying();
+
+		if (media.hasError()) {
+			title = "Ошибка звука";
+			subtitle = RenderUtils.clamp(font, media.errorText(), width - 16);
+		} else if (media.hasTrack()) {
+			title = RenderUtils.clamp(font, stripExtension(media.currentName()), width - 24 - font.width(playing ? "▶" : "❚❚"));
+			long position = media.positionMillis();
+			long duration = Math.max(1L, media.durationMillis());
+			subtitle = formatTime(position) + " / " + formatTime(duration);
+		} else {
+			title = "Медиаплеер";
+			subtitle = media.trackCount() > 0 ? "Трек не выбран" : "Папка akarus/media пуста";
+		}
+
+		// Заголовок с иконкой состояния
+		graphics.text(font, playing ? "\u25B6" : "\u275A\u275A", x + 8, y + 7, RenderUtils.withAlpha(accent, playing ? 0.95f : 0.5f), true);
+		graphics.text(font, title, x + 20, y + 7, TEXT_COLOR, true);
+
+		// Полоска прогресса: тонкая, с бегущим бликом во время воспроизведения
+		int barX = x + 8;
+		int barY = y + 7 + font.lineHeight + 4;
+		int barWidth = width - 16;
+		float progress = media.hasTrack() && media.durationMillis() > 0
+				? Math.min(1.0f, (float) media.positionMillis() / (float) media.durationMillis())
+				: 0.0f;
+		RenderUtils.drawSlider(graphics, barX, barY, barWidth, 4, progress, accent);
+
+		graphics.text(font, subtitle, x + 8, barY + 7, 0xFFA6A6B2, true);
+
+		// Мини-эквалайзер: семь штрихов, живых только когда играет
+		int barsX = x + width - 8 - (7 * 3 - 1);
+		int barsY = barY + 7;
+		for (int bar = 0; bar < 7; bar++) {
+			float wave = playing
+					? 0.5f + 0.5f * (float) Math.sin(time / (140.0 + bar * 47.0) + bar * 1.7)
+					: 0.15f;
+			int barHeight = 2 + Math.round(wave * 8.0f);
+			graphics.fill(barsX + bar * 3, barsY + 9 - barHeight,
+					barsX + bar * 3 + 2, barsY + 9,
+					RenderUtils.withAlpha(accent, 0.25f + 0.7f * wave));
+		}
+	}
+
+	private static String stripExtension(String name) {
+		int dot = name.lastIndexOf('.');
+		return dot > 0 ? name.substring(0, dot) : name;
+	}
+
+	private static String formatTime(long millis) {
+		long seconds = Math.max(0L, millis / 1000L);
+		return String.format(java.util.Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60);
 	}
 
 	/**
