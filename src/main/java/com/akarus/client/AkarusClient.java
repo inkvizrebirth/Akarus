@@ -5,6 +5,7 @@ import com.akarus.client.gui.ClickGuiScreen;
 import com.akarus.client.gui.hud.HudRenderer;
 import com.akarus.client.module.ModuleManager;
 import com.akarus.client.module.impl.AutoWalkModule;
+import com.akarus.client.module.impl.FreeCamModule;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.ClientModInitializer;
@@ -23,7 +24,7 @@ public class AkarusClient implements ClientModInitializer {
 
 	public static final String MOD_ID = "akarus";
 	public static final String MOD_NAME = "Akarus";
-	public static final String MOD_VERSION = "0.4.0";
+	public static final String MOD_VERSION = "0.5.0";
 
 	public static final Logger LOGGER = LogUtils.getLogger();
 
@@ -51,7 +52,11 @@ public class AkarusClient implements ClientModInitializer {
 
 		// Перехват ПКМ делаем в начале тика: игра обрабатывает «использовать» позже,
 		// внутри того же тика, поэтому успеваем нажатие погасить
-		ClientTickEvents.START_CLIENT_TICK.register(AutoWalkModule::handleInput);
+		ClientTickEvents.START_CLIENT_TICK.register(client -> {
+			AutoWalkModule.handleInput(client);
+			// FreeCam: снимаем нажатия передвижения, чтобы игрок не пошёл за камерой
+			FreeCamModule.handleInput(client);
+		});
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (clickGuiKey.consumeClick()) {

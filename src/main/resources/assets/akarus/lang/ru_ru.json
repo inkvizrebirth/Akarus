@@ -4,5 +4,7 @@
   "key.akarus.hud_info": "Модуль: HUD-инфо",
   "key.akarus.free_cam": "Модуль: FreeCam",
   "key.akarus.auto_mine": "Модуль: AutoMine",
-  "key.akarus.auto_walk": "Модуль: AutoWalk"
+  "key.akarus.auto_walk": "Модуль: AutoWalk",
+  "key.akarus.hand_shader": "Модуль: Обводка рук",
+  "key.akarus.view_model": "Модуль: ViewModel"
 }

@@ -7,6 +7,7 @@ import com.akarus.client.settings.BooleanSetting;
 import com.akarus.client.settings.ButtonSetting;
 import com.akarus.client.settings.ColorSetting;
 import com.akarus.client.settings.IntSetting;
+import com.akarus.client.settings.ModeSetting;
 import com.akarus.client.settings.Setting;
 import com.akarus.client.settings.StringSetting;
 import com.google.gson.Gson;
@@ -105,6 +106,9 @@ public final class ConfigManager {
 			try {
 				if (setting instanceof ColorSetting colorSetting) {
 					colorSetting.trySetHex(value.getAsString());
+				} else if (setting instanceof ModeSetting modeSetting) {
+					// Неизвестный вариант (например, после обновления мода) оставляем как есть
+					modeSetting.trySetId(value.getAsString());
 				} else if (setting instanceof BooleanSetting) {
 					setRaw(setting, value.getAsBoolean());
 				} else if (setting instanceof IntSetting intSetting) {
@@ -137,6 +141,11 @@ public final class ConfigManager {
 					if (setting instanceof ColorSetting colorSetting) {
 						// Цвет держим строкой: так конфиг удобно править руками
 						settings.addProperty(setting.getId(), "#" + colorSetting.getHex());
+						continue;
+					}
+					if (setting instanceof ModeSetting modeSetting) {
+						// Вариант храним id-шником, а не подписью
+						settings.addProperty(setting.getId(), modeSetting.getValue());
 						continue;
 					}
 					Object value = setting.getValue();

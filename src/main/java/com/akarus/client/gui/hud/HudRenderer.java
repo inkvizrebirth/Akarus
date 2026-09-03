@@ -5,6 +5,7 @@ import com.akarus.client.module.Module;
 import com.akarus.client.module.ModuleCategory;
 import com.akarus.client.module.ModuleManager;
 import com.akarus.client.module.impl.AutoWalkModule;
+import com.akarus.client.module.impl.FreeCamModule;
 import com.akarus.client.module.impl.HudInfoModule;
 import com.akarus.client.util.RenderUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -18,6 +19,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -52,6 +54,11 @@ public final class HudRenderer {
 		HudElementRegistry.addLast(
 				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "auto_walk"),
 				HudRenderer::renderAutoWalk);
+
+		// Отдельная плашка свободной камеры: координаты взгляда и расстояние до игрока
+		HudElementRegistry.addLast(
+				Identifier.fromNamespaceAndPath(AkarusClient.MOD_ID, "free_cam"),
+				HudRenderer::renderFreeCam);
 	}
 
 	/**
@@ -75,12 +82,26 @@ public final class HudRenderer {
 
 		Font font = client.font;
 		boolean walking = autoWalk.isWalking();
-		BlockPos position = walking && autoWalk.getTarget() != null ? autoWalk.getTarget() : player.blockPosition();
 
-		String title = (walking ? "Цель: " : "FreeCam: ") + AutoWalkModule.format(position);
+		FreeCamModule freeCam = ModuleManager.find(FreeCamModule.class);
+		boolean flying = freeCam != null && freeCam.isEnabled();
+		// Точку берём там, где сейчас «глаза»: во время осмотра это камера, а не игрок —
+		// игрок стоит на месте, и его координаты для выбора точки бесполезны
+		BlockPos position;
+		if (walking && autoWalk.getTarget() != null) {
+			position = autoWalk.getTarget();
+		} else if (flying) {
+			position = BlockPos.containing(freeCam.position());
+		} else {
+			position = player.blockPosition();
+		}
+
+		String title = (walking ? "Цель: " : flying ? "Смотрю на: " : "Иду к: ") + AutoWalkModule.format(position);
 		String hint = walking
-				? "Осталось " + Math.round(autoWalk.getDistance()) + " м   •   ПКМ — выбрать другую точку"
-				: "ПКМ — Baritone пойдёт сюда";
+				? "Осталось " + Math.round(autoWalk.getDistance()) + " м   •   ПКМ — отменить маршрут"
+				: flying
+						? "Высота " + Math.round(freeCam.distanceToPlayer()) + " м от игрока   •   ПКМ — идти сюда"
+						: "ПКМ — Baritone пойдёт на эту точку";
 
 		int screenWidth = client.getWindow().getGuiScaledWidth();
 		int screenHeight = client.getWindow().getGuiScaledHeight();
@@ -106,6 +127,44 @@ public final class HudRenderer {
 		int dotX = x + width - PADDING - 3;
 		int dotY = y + PADDING + (font.lineHeight - 4) / 2;
 		graphics.fill(dotX, dotY, dotX + 4, dotY + 4, RenderUtils.withAlpha(accent, pulse));
+	}
+
+	/**
+	 * Компактная плашка свободной камеры: где летим и как далеко от игрока.
+	 *
+	 * Пока AutoWalk включён, координаты показывает его панель — дублировать их
+	 * двумя плашками незачем.
+	 */
+	private static void renderFreeCam(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.player == null || client.level == null || client.gui.screen() != null || client.gui.hud.isHidden()) {
+			return;
+		}
+
+		FreeCamModule freeCam = ModuleManager.find(FreeCamModule.class);
+		if (freeCam == null || !freeCam.isEnabled() || !freeCam.showsHudInfo()) {
+			return;
+		}
+
+		AutoWalkModule autoWalk = ModuleManager.find(AutoWalkModule.class);
+		if (autoWalk != null && autoWalk.isEnabled()) {
+			return;
+		}
+
+		Vec3 position = freeCam.position();
+		BlockPos block = BlockPos.containing(position);
+		String title = "FreeCam " + block.getX() + " " + block.getY() + " " + block.getZ();
+		String hint = "Игрок в " + String.format(java.util.Locale.ROOT, "%.1f", freeCam.distanceToPlayer()) + " м   •   N — выключить";
+
+		Font font = client.font;
+		int screenWidth = client.getWindow().getGuiScaledWidth();
+		int x = (screenWidth - font.width(title)) / 2;
+		int y = client.getWindow().getGuiScaledHeight() - 58;
+
+		int accent = ModuleCategory.MOVEMENT.getAccent();
+
+		graphics.text(font, title, x, y, TEXT_COLOR, true);
+		graphics.text(font, hint, x, y + font.lineHeight + 1, RenderUtils.withAlpha(accent, 0.9f), true);
 	}
 
 	private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
