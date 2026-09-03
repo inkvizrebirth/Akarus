@@ -158,6 +158,12 @@ jobs:
               javap -cp "$MC" net.minecraft.resources.Identifier 2>&1 | grep -iE 'getPath|getNamespace' | head -4 || true
               echo; echo "=== Inventory (поля) ==="
               javap -p -cp "$MC" net.minecraft.world.entity.player.Inventory 2>&1 | grep -iE 'List|items|offhand' | head -12 || true
+              echo; echo "=== LivingEntity (removeEffect) ==="
+              javap -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'removeEffect|removeEffects' | head -6 || true
+              echo; echo "=== Hud (fire/overlay) ==="
+              javap -p -cp "$MC" net.minecraft.client.gui.Hud 2>&1 | grep -iE 'fire|overlay|portal|freeze|texture' | head -20 || true
+              echo; echo "=== HudRenderState-подобные ==="
+              unzip -l "$MC" | grep -iE 'client/gui/.*RenderState|renderstate/.*Hud' | head -10 || true
               echo; echo "=== EntityType ==="
               javap -cp "$MC" net.minecraft.world.entity.EntityType 2>&1 | grep -iE 'category|classification'
               echo; echo "=== MobCategory (константы) ==="
