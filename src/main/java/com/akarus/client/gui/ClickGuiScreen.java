@@ -3,6 +3,7 @@ package com.akarus.client.gui;
 import com.akarus.client.AkarusClient;
 import com.akarus.client.gui.theme.ClientTheme;
 import com.akarus.client.module.impl.ClickGuiModule;
+import com.akarus.client.settings.BlockListSetting;
 import com.akarus.client.settings.ElementListSetting;
 import net.minecraft.client.renderer.RenderPipelines;
 import com.akarus.client.config.ConfigManager;
@@ -647,6 +648,8 @@ public class ClickGuiScreen extends Screen {
 			drawToggleRow(graphics, booleanSetting, key, box, accent, mouseX, mouseY);
 		} else if (setting instanceof ElementListSetting elementList) {
 			drawElementListRow(graphics, elementList, key, box, accent, mouseX, mouseY);
+		} else if (setting instanceof BlockListSetting blockList) {
+			drawBlockListRow(graphics, blockList, key, box, accent, mouseX, mouseY);
 		}
 	}
 
@@ -704,6 +707,134 @@ public class ClickGuiScreen extends Screen {
 		for (int i = 0; i < setting.getElements().size(); i++) {
 			rows.add(new Hitbox(box.x() + 3, y, box.width() - 6, rowHeight));
 			y += rowHeight;
+		}
+		return rows;
+	}
+
+	// ------------------------------------------------------------------
+	// Список блоков (BlockESP): раскрытие, поиск, множественный выбор
+	// ------------------------------------------------------------------
+
+	/** Состояние раскрытого списка блоков: поиск, скролл, время раскрытия. */
+	private final Map<String, String> blockSearches = new HashMap<>();
+	private final Map<String, Float> blockSearchAnimations = new HashMap<>();
+	private final Map<String, Integer> blockScrolls = new HashMap<>();
+	private final Map<String, Long> blockOpenedAt = new HashMap<>();
+	private String focusedBlockList;
+
+	private void drawBlockListRow(GuiGraphicsExtractor graphics, BlockListSetting setting, String key,
+			Hitbox box, int accent, int mouseX, int mouseY) {
+		Font font = this.font;
+		boolean open = key.equals(focusedBlockList);
+		float hover = hoverProgress(key, box.contains(mouseX, mouseY));
+
+		// Анимация раскрытия: список «выезжает» из-под заголовка
+		long openedAt = blockOpenedAt.getOrDefault(key, 0L);
+		float expand = open ? Math.min(1.0f, (Util.getMillis() - openedAt) / 220.0f) : 0.0f;
+		float eased = expand * expand * (3.0f - 2.0f * expand);
+
+		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height(), 5,
+				RenderUtils.mix(0x10FFFFFF, accent, Math.max(hover, eased * 0.5f) * 0.35f),
+				RenderUtils.mix(0x80000000, 0x14FFFFFF, Math.max(hover, eased * 0.5f) * 0.6f));
+
+		// Заголовок: имя настройки и сколько блоков выбрано
+		int textY = box.y() + 4;
+		String summary = setting.count() == 0 ? "ничего не выбрано"
+				: setting.count() == 1 ? "1 блок" : setting.count() + " блоков";
+		RenderUtils.textFlat(graphics, font, setting.getName() + " · " + summary, box.x() + 9, textY,
+				setting.count() == 0 ? TEXT_DIM : TEXT_SECONDARY);
+
+		int markX = box.x() + box.width() - 14;
+		drawIcon(graphics, open ? "arrow_up" : "arrow_down", markX, box.y() + 4, 9,
+				RenderUtils.mix(TEXT_DIM, TEXT_SECONDARY, hover));
+
+		if (eased <= 0.01f) {
+			return;
+		}
+
+		int headerH = TEXT_ROW_HEIGHT - 2;
+
+		// Поле поиска
+		int searchY = box.y() + headerH;
+		int searchH = 12;
+		RenderUtils.fillRounded(graphics, box.x() + 4, searchY, box.width() - 8, searchH, 6,
+				RenderUtils.mix(0x66000000, 0x14FFFFFF, 0.4f));
+		String query = blockSearches.getOrDefault(key, "");
+		if (query.isEmpty()) {
+			RenderUtils.textFlat(graphics, font,
+					RenderUtils.clamp(font, "поиск по " + BlockListSetting.allBlocks().size() + " блокам…", box.width() - 20),
+					box.x() + 10, searchY + 2, TEXT_DIM);
+		} else {
+			String shown = query + ((Util.getMillis() / 500L) % 2 == 0 ? "|" : "");
+			RenderUtils.textFlat(graphics, font, RenderUtils.clamp(font, shown, box.width() - 20),
+					box.x() + 10, searchY + 2, TEXT_PRIMARY);
+		}
+
+		// Строки блоков
+		int rowH = 12;
+		int listTop = searchY + searchH + 2;
+		int visibleRows = Math.min(7, BlockListSetting.search(query).size());
+		int listPixels = Math.round((visibleRows * rowH) * eased);
+		if (listPixels <= 0) {
+			return;
+		}
+
+		graphics.enableScissor(box.x() + 2, listTop, box.x() + box.width() - 2, listTop + listPixels);
+		List<com.akarus.client.settings.BlockListSetting.BlockEntry> found = BlockListSetting.search(query);
+		int scroll = blockScrolls.getOrDefault(key, 0);
+		int rowsShown = Math.min(7, found.size());
+		int startIndex = Math.min(scroll, Math.max(0, found.size() - rowsShown));
+		int y = listTop;
+		for (int i = startIndex; i < found.size() && i < startIndex + rowsShown; i++) {
+			var entry = found.get(i);
+			boolean selectedBlock = setting.isSelected(entry.id());
+			boolean rowHover = mouseY >= y && mouseY < y + rowH && mouseX >= box.x() && mouseX < box.x() + box.width();
+
+			if (rowHover) {
+				RenderUtils.fillRounded(graphics, box.x() + 4, y, box.width() - 8, rowH - 1, 3,
+						RenderUtils.withAlpha(0xFFFFFFFF, 0.06f * eased));
+			}
+			int boxSize = 8;
+			int checkX = box.x() + 9;
+			int checkY = y + (rowH - 1 - boxSize) / 2;
+			float toggle = toggleProgress(key + ":" + entry.id(), selectedBlock);
+			RenderUtils.fillRounded(graphics, checkX, checkY, boxSize, boxSize, 2,
+					RenderUtils.mix(0x33FFFFFF, accent, toggle));
+			if (toggle > 0.5f) {
+				RenderUtils.textFlat(graphics, font, "\u2713", checkX + 1, checkY - 1,
+						RenderUtils.withAlpha(0xFF101014, (toggle - 0.5f) * 2.0f));
+			}
+			String label = RenderUtils.clamp(font, entry.id(), box.width() - 34);
+			RenderUtils.textFlat(graphics, font, label, checkX + boxSize + 5, y + 1,
+					selectedBlock ? TEXT_PRIMARY : TEXT_DIM);
+			y += rowH;
+		}
+		graphics.disableScissor();
+
+		// Счётчик найденных, если поиск что-то отфильтровал
+		if (found.size() > 7) {
+			String more = (found.size() - 7) + " ещё · колесо";
+			RenderUtils.textFlat(graphics, font, more, box.x() + box.width() - 9 - RenderUtils.width(font, more),
+					box.y() + box.height() - font.lineHeight - 2, RenderUtils.withAlpha(TEXT_DIM, eased));
+		}
+	}
+
+	/** Геометрия строк блоков (совпадает с отрисовкой; список должен быть раскрыт). */
+	private List<Hitbox> blockRowBoxes(BlockListSetting setting, String key, Hitbox box) {
+		List<Hitbox> rows = new ArrayList<>();
+		if (!key.equals(focusedBlockList)) {
+			return rows;
+		}
+		List<com.akarus.client.settings.BlockListSetting.BlockEntry> found =
+				BlockListSetting.search(blockSearches.getOrDefault(key, ""));
+		int rowH = 12;
+		int rowsShown = Math.min(7, found.size());
+		int scroll = blockScrolls.getOrDefault(key, 0);
+		int startIndex = Math.min(scroll, Math.max(0, found.size() - rowsShown));
+		int y = box.y() + TEXT_ROW_HEIGHT - 2 + 12 + 2;
+		for (int i = startIndex; i < found.size() && i < startIndex + rowsShown; i++) {
+			rows.add(new Hitbox(box.x() + 4, y, box.width() - 8, rowH));
+			y += rowH;
 		}
 		return rows;
 	}
@@ -1173,6 +1304,7 @@ public class ClickGuiScreen extends Screen {
 					selected = entry.category();
 					expanded = null;
 					bindingModule = null;
+					focusedBlockList = null;
 					scrollTarget = 0;
 					scroll = 0;
 					contentSwitchAt = Util.getMillis();
@@ -1180,6 +1312,7 @@ public class ClickGuiScreen extends Screen {
 					playClick();
 				}
 				case MODULE -> {
+					focusedBlockList = null;
 					boolean hasSettings = !entry.module().getSettings().isEmpty();
 					boolean onExpandMark = hasSettings && expandMark(box).contains(mouseX, mouseY);
 					pressAnimations.put("module:" + entry.module().getId(), Util.getMillis());
@@ -1221,6 +1354,9 @@ public class ClickGuiScreen extends Screen {
 
 	private void handleSettingClick(LayoutEntry entry, Hitbox box, double mouseX, int button) {
 		Setting<?> setting = entry.setting();
+		if (!(setting instanceof BlockListSetting)) {
+			focusedBlockList = null;
+		}
 
 		if (setting instanceof IntSetting intSetting && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
 			draggingSetting = intSetting;
@@ -1263,6 +1399,50 @@ public class ClickGuiScreen extends Screen {
 			booleanSetting.toggle();
 			entry.module().onSettingsChanged();
 			ConfigManager.save();
+			playClick();
+			return;
+		}
+
+		if (setting instanceof BlockListSetting blockList && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+			boolean open = key.equals(focusedBlockList);
+
+			if (open) {
+				int headerH = TEXT_ROW_HEIGHT - 2;
+				// Клик по строке блока — переключить выбор
+				List<Hitbox> rows = blockRowBoxes(blockList, key, box);
+				for (int i = 0; i < rows.size(); i++) {
+					if (rows.get(i).contains(mouseX, mouseYOfSettingClick)) {
+						List<com.akarus.client.settings.BlockListSetting.BlockEntry> found =
+								BlockListSetting.search(blockSearches.getOrDefault(key, ""));
+						int scroll = blockScrolls.getOrDefault(key, 0);
+						int rowsShown = Math.min(7, found.size());
+						int startIndex = Math.min(scroll, Math.max(0, found.size() - rowsShown));
+						int entryIndex = startIndex + i;
+						if (entryIndex >= 0 && entryIndex < found.size()) {
+							blockList.toggle(found.get(entryIndex).id());
+							if (entry.module() != null) {
+								entry.module().onSettingsChanged();
+							}
+							ConfigManager.save();
+							playClick();
+						}
+						return;
+					}
+				}
+				// Клик по полю поиска — он и так принимает ввод, ничего не меняем
+				Hitbox searchBox = new Hitbox(box.x() + 4, box.y() + headerH, box.width() - 8, 12);
+				if (searchBox.contains(mouseX, mouseYOfSettingClick)) {
+					return;
+				}
+				// Клик мимо строк (по заголовку) — свернуть
+				focusedBlockList = null;
+				playClick();
+				return;
+			}
+
+			// Закрыт: заголовок раскрывает список
+			focusedBlockList = key;
+			blockOpenedAt.put(key, Util.getMillis());
 			playClick();
 			return;
 		}
@@ -1389,6 +1569,29 @@ public class ClickGuiScreen extends Screen {
 		// Колесо над строкой настройки меняет значение на шаг: слайдером в такое
 		// поле попадать мышью неудобно, а «±1» нужен постоянно (например, чтобы
 		// поймать толщину обводки в 3 пикселя, а не 2 или 4)
+		if (direction != 0 && focusedBlockList != null) {
+			// Раскрытый список блоков прокручивается колесом
+			String key = focusedBlockList;
+			LayoutEntry owner = null;
+			for (LayoutEntry entry : buildLayout()) {
+				if (entry.kind() == Kind.SETTING && (entry.module() == null ? "" : entry.module().getId() + ":")
+						.concat(entry.setting().getId()).equals(key)) {
+					owner = entry;
+					break;
+				}
+			}
+			if (owner != null && owner.box().contains(mouseX, mouseY)
+					&& owner.setting() instanceof BlockListSetting) {
+				List<com.akarus.client.settings.BlockListSetting.BlockEntry> found =
+						BlockListSetting.search(blockSearches.getOrDefault(key, ""));
+				int rowsShown = Math.min(7, found.size());
+				int max = Math.max(0, found.size() - rowsShown);
+				int scroll = blockScrolls.getOrDefault(key, 0);
+				blockScrolls.put(key, Math.max(0, Math.min(max, scroll - direction)));
+				return true;
+			}
+		}
+
 		if (direction != 0) {
 			for (LayoutEntry entry : buildLayout()) {
 				if (entry.kind() != Kind.SETTING || !entry.box().contains(mouseX, mouseY)) {
@@ -1415,6 +1618,18 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean charTyped(CharacterEvent event) {
+		// Поиск внутри раскрытого списка блоков
+		if (focusedBlockList != null && focusedSetting == null) {
+			if (event.isAllowedChatCharacter()) {
+				String query = blockSearches.getOrDefault(focusedBlockList, "");
+				if (query.length() < 40) {
+					blockSearches.put(focusedBlockList, query + event.codepointAsString());
+					blockScrolls.put(focusedBlockList, 0);
+				}
+			}
+			return true;
+		}
+
 		if (searchFocused) {
 			if (event.isAllowedChatCharacter() && searchQuery.length() < 40) {
 				searchQuery += event.codepointAsString();
@@ -1446,6 +1661,22 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
+		if (focusedBlockList != null && focusedSetting == null) {
+			switch (event.key()) {
+				case GLFW.GLFW_KEY_BACKSPACE -> {
+					String query = blockSearches.getOrDefault(focusedBlockList, "");
+					if (!query.isEmpty()) {
+						blockSearches.put(focusedBlockList, query.substring(0, query.length() - 1));
+						blockScrolls.put(focusedBlockList, 0);
+					}
+				}
+				case GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> focusedBlockList = null;
+				default -> {
+				}
+			}
+			return true;
+		}
+
 		if (searchFocused) {
 			switch (event.key()) {
 				case GLFW.GLFW_KEY_BACKSPACE -> {
@@ -1576,9 +1807,13 @@ public class ClickGuiScreen extends Screen {
 		return layout;
 	}
 
-	private static int settingHeight(Setting<?> setting) {
+	private int settingHeight(Setting<?> setting) {
 		if (setting instanceof ElementListSetting elementList) {
 			return elementList.getElements().size() * 12 + 8;
+		}
+		if (setting instanceof BlockListSetting) {
+			// Раскрытый список занимает и высоту под поиск, и строки
+			return TEXT_ROW_HEIGHT + (isBlockListOpen(setting) ? 14 + 7 * 12 : 0);
 		}
 		if (setting instanceof IntSetting) {
 			return SLIDER_ROW_HEIGHT;
@@ -1588,6 +1823,15 @@ public class ClickGuiScreen extends Screen {
 			return TEXT_ROW_HEIGHT;
 		}
 		return TOGGLE_ROW_HEIGHT;
+	}
+
+	private boolean isBlockListOpen(Setting<?> setting) {
+		if (focusedBlockList == null) {
+			return false;
+		}
+		// Ключ фокуса — «ownerId:settingId»; сверяем хвост
+		String suffix = ":" + setting.getId();
+		return focusedBlockList.endsWith(suffix);
 	}
 
 	private int contentHeight() {

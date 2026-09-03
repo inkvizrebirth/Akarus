@@ -45,6 +45,13 @@ public final class WorldRenderHook {
 
 	private static void extract(LevelExtractionContext context) {
 		try {
+			// BlockESP: боксы собраны самим модулем в тике — берем снапшот
+			com.akarus.client.module.impl.BlockEspModule blockEsp =
+					ModuleManager.find(com.akarus.client.module.impl.BlockEspModule.class);
+			blockBoxes = blockEsp != null && blockEsp.wantsBoxes()
+					? List.copyOf(blockEsp.blockBoxes())
+					: List.of();
+
 			EspModule esp = ModuleManager.find(EspModule.class);
 			if (esp == null || !esp.wantsBoxes()) {
 				espBoxes = List.of();
@@ -72,6 +79,7 @@ public final class WorldRenderHook {
 		} catch (Exception error) {
 			espBoxes = List.of();
 			targetBar = null;
+			blockBoxes = List.of();
 		}
 	}
 
@@ -80,6 +88,9 @@ public final class WorldRenderHook {
 	}
 
 	private static TargetBar targetBar;
+
+	/** Боксы BlockESP (целые координаты). */
+	private static List<com.akarus.client.module.impl.BlockEspModule.BlockBox> blockBoxes = List.of();
 
 	private static void render(LevelRenderContext context) {
 		try {
@@ -117,6 +128,9 @@ public final class WorldRenderHook {
 						}
 						if (targetBar != null) {
 							drawTargetBar(targetBar, pose, buffer, camX, camY, camZ, unitsPerPixel);
+						}
+						if (!blockBoxes.isEmpty()) {
+							drawBlockBoxes(blockBoxes, pose, buffer, camX, camY, camZ, unitsPerPixel);
 						}
 					});
 		} catch (Exception ignored) {
@@ -278,6 +292,43 @@ public final class WorldRenderHook {
 		if (health > 0.01f) {
 			WorldGeometryRenderer.line(buffer, pose, ax, centerY, az, healthColor, hx, centerY, hz, healthColor,
 					3.5F, unitsPerPixel);
+		}
+	}
+
+	/** Боксы BlockESP: рамка или «уголки» вокруг каждого выбранного блока. */
+	private static void drawBlockBoxes(List<com.akarus.client.module.impl.BlockEspModule.BlockBox> boxes,
+			PoseStack.Pose pose, VertexConsumer buffer,
+			double camX, double camY, double camZ, float unitsPerPixel) {
+		com.akarus.client.module.impl.BlockEspModule blockEsp =
+				ModuleManager.find(com.akarus.client.module.impl.BlockEspModule.class);
+		if (blockEsp == null) {
+			return;
+		}
+		float width = blockEsp.lineWidth();
+		boolean corners = blockEsp.cornersOnly();
+
+		for (com.akarus.client.module.impl.BlockEspModule.BlockBox box : boxes) {
+			double minX = box.x() - camX;
+			double minY = box.y() - camY;
+			double minZ = box.z() - camZ;
+			double maxX = minX + 1.0;
+			double maxY = minY + 1.0;
+			double maxZ = minZ + 1.0;
+			int color = withAlpha(blockEsp.lineColor(box.phase()), 0xE0);
+
+			if (corners) {
+				drawCornerBrackets(pose, buffer, minX, minY, minZ, maxX, maxY, maxZ, color, color, width, unitsPerPixel);
+			} else {
+				for (int[] edge : BOX_EDGES) {
+					double x0 = edge[0] == 0 ? minX : maxX;
+					double y0 = edge[1] == 0 ? minY : maxY;
+					double z0 = edge[2] == 0 ? minZ : maxZ;
+					double x1 = edge[3] == 0 ? minX : maxX;
+					double y1 = edge[4] == 0 ? minY : maxY;
+					double z1 = edge[5] == 0 ? minZ : maxZ;
+					WorldGeometryRenderer.line(buffer, pose, x0, y0, z0, color, x1, y1, z1, color, width, unitsPerPixel);
+				}
+			}
 		}
 	}
 

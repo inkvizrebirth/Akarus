@@ -102,7 +102,7 @@ public class AkarusVersionSelectScreen extends AkarusScreen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
 		drawDarkBackdrop(graphics);
-		graphics.centeredText(font, "Версия протокола", width / 2, 18, 0xFFF4F4FA);
+		RenderUtils.textCentered(graphics, font, "Версия протокола", width / 2, 18, 0xFFF4F4FA, false);
 
 		boolean via = ViaIntegration.available();
 		String subtitle = !via
@@ -110,7 +110,7 @@ public class AkarusVersionSelectScreen extends AkarusScreen {
 				: ViaIntegration.canChangeVersionNow()
 						? "влияет на подключение к серверам от имени клиента"
 						: "смена версии недоступна, пока открыт мир или сервер";
-		graphics.centeredText(font, subtitle, width / 2, 30,
+		graphics.text(font, RenderUtils.styled(subtitle), width / 2 - RenderUtils.width(font, subtitle) / 2, 30,
 				ViaIntegration.canChangeVersionNow() || !via ? 0xFF9E9EAE : 0xFFFFC66C);
 
 		int x = width / 2 - PANEL_WIDTH / 2;
@@ -144,7 +144,7 @@ public class AkarusVersionSelectScreen extends AkarusScreen {
 		graphics.disableScissor();
 
 		if (visibleRows.isEmpty()) {
-			graphics.centeredText(font, "ничего не найдено", width / 2, listTop + 10, 0xFF80808C);
+			RenderUtils.textCentered(graphics, font, "ничего не найдено", width / 2, listTop + 10, 0xFF80808C, false);
 		} else {
 			drawScrollbar(graphics, x + PANEL_WIDTH + 3, listTop, listHeight, scroll, visible, visibleRows.size(), ACCENT);
 		}
@@ -165,10 +165,10 @@ public class AkarusVersionSelectScreen extends AkarusScreen {
 
 		int textY = y + (ROW_HEIGHT - font.lineHeight) / 2;
 		int textColor = row.current ? 0xFFFFFFFF : RenderUtils.mix(0xFFC9C9D4, 0xFFF6F6F8, row.hover);
-		graphics.text(font, RenderUtils.clamp(font, row.label, w - 16 - font.width(row.hint) - 10),
+		graphics.text(font, RenderUtils.styled(RenderUtils.clamp(font, row.label, w - 16 - RenderUtils.width(font, row.hint) - 10)),
 				x + 10, textY, textColor, false);
 		if (!row.hint.isEmpty()) {
-			graphics.text(font, row.hint, x + w - 10 - font.width(row.hint), textY,
+			graphics.text(font, RenderUtils.styled(row.hint), x + w - 10 - RenderUtils.width(font, row.hint), textY,
 					row.current ? ACCENT : 0xFF6B6B78, false);
 		}
 

@@ -82,6 +82,22 @@ public class AkarusPauseScreen extends AkarusScreen {
 		super.onClose();
 	}
 
+	/** Короткая подпись о том, где стоит игра: локальный мир или сервер. */
+	private String pauseContext() {
+		Minecraft client = this.minecraft;
+		if (client == null) {
+			return "";
+		}
+		if (client.getCurrentServer() != null) {
+			return "сервер · " + client.getCurrentServer().ip;
+		}
+		if (client.isLocalServer() && client.getSingleplayerServer() != null) {
+			String world = client.getSingleplayerServer().getWorldData().getLevelName();
+			return "одиночная игра" + (world == null || world.isEmpty() ? "" : " · " + world);
+		}
+		return "";
+	}
+
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
 		// Полупрозрачность: мир за стеклом остаётся виден — как в ваниле, но темнее
@@ -97,6 +113,14 @@ public class AkarusPauseScreen extends AkarusScreen {
 		graphics.fill(width / 2 - lineW / 2, titleY + font.lineHeight + 3,
 				width / 2 + lineW / 2, titleY + font.lineHeight + 4,
 				RenderUtils.withAlpha(ACCENT, 0.30f + 0.5f * pulse));
+
+		// Контекст: где именно мы остановились
+		String context = pauseContext();
+		if (!context.isEmpty()) {
+			RenderUtils.textFlat(graphics, font, context,
+					width / 2 - RenderUtils.width(font, context) / 2,
+					titleY + font.lineHeight + 7, 0xFF8A8A96);
+		}
 
 		int total = items.size() * BUTTON_HEIGHT + (items.size() - 1) * BUTTON_GAP;
 		int x = width / 2 - BUTTON_WIDTH / 2;

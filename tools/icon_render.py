@@ -271,6 +271,32 @@ def icon_arrow_up():
     return icon
 
 
+
+
+def icon_spider():
+    # паутина-лестница: диагональ со ступеньками и «капля» воды
+    icon = Icon()
+    icon.line(8, 32, 8, 8, 3.4)
+    icon.line(8, 8, 32, 8, 3.4)
+    icon.line(32, 8, 32, 32, 3.4)
+    icon.line(16, 8, 16, 16, 2.6)
+    icon.line(16, 16, 24, 16, 2.6)
+    icon.line(24, 16, 24, 24, 2.6)
+    icon.dot(24, 30, 2.2)
+    return icon
+
+
+def icon_block_esp():
+    # куб в рамке-скобках + пик
+    icon = Icon()
+    icon.rrect([12, 12, 28, 28], 2, 3.0)
+    icon.line(12, 12, 7, 7, 2.6)
+    icon.line(28, 12, 33, 7, 2.6)
+    icon.line(12, 28, 7, 33, 2.6)
+    icon.line(28, 28, 33, 33, 2.6)
+    icon.dot(20, 20, 2.4)
+    return icon
+
 ICONS = {
     "hud_info": icon_hud_info,
     "free_cam": icon_freecam,
@@ -290,6 +316,8 @@ ICONS = {
     "esp": icon_esp,
     "click_gui": icon_click_gui,
     "target_esp": icon_target_esp,
+    "block_esp": icon_block_esp,
+    "spider": icon_spider,
     "arrow_down": icon_arrow_down,
     "arrow_up": icon_arrow_up,
 }

@@ -34,33 +34,33 @@ import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Экран выбора миров в стиле клиента вместо ванильного SelectWorldScreen.
+ * Экран выбора миров — «полка», а не список.
  *
- * Список миров грузится теми же API, что и в ваниле
- * ({@code findLevelCandidates()} → {@code loadLevelSummaries()}), но рисуется
- * наш: стеклянная панель, иконки миров, чипы действий, инлайн-подтверждение
- * удаления. Всё тяжёлое (чтение level.dat и иконок) уходит в фон — экран
- * открывается мгновенно и сначала показывает «Загрузка…».
- *
- * Создание и редактирование мира остаются за ванильными экранами
- * (CreateWorldScreen и EditWorldScreen) — это большие формы с генерацией,
- * датапаками и бэкапами, клонировать их себе дороже.
+ * Уникальная композиция: слева — крупная карточка выбранного мира (иконка
+ * во весь рост, имя, подробности, метки), справа — узкая колонка строк
+ * с мини-иконками для навигации. Строки въезжают «лесницей» при открытии,
+ * новая выборка подсвечивается волной. Создание/редактирование — ванильные
+ * экраны (большие формы клонировать себе дороже), всё остальное — наше.
  */
 public class AkarusWorldsScreen extends AkarusScreen {
 
 	private static final int ACCENT = 0xFF7C6CFF;
-	private static final int PANEL_WIDTH = 420;
-	private static final int ROW_HEIGHT = 40;
-	private static final int ROW_GAP = 4;
-	private static final int LIST_TOP = 52;
-	private static final int LIST_BOTTOM = 58;
+	private static final int PANEL_WIDTH = 460;
+	private static final int ROW_HEIGHT = 30;
+	private static final int ROW_GAP = 3;
+	private static final int LIST_TOP = 44;
+	private static final int LIST_BOTTOM = 46;
+	/** Ширина левой карточки-превью. */
+	private static final int CARD_WIDTH = 196;
 
-	/** Одна строка списка: мир и его иконка. */
+	/** Одна строка списка: мир и его иконка + анимации. */
 	private static final class WorldRow {
 		final LevelSummary summary;
 		final FaviconTexture icon;
 
 		float hover;
+		/** Появление строки (0..1, «лестница» при загрузке списка). */
+		float appear;
 		int y;
 
 		WorldRow(LevelSummary summary, FaviconTexture icon) {
@@ -77,6 +77,8 @@ public class AkarusWorldsScreen extends AkarusScreen {
 	private boolean failure;
 	private boolean confirmDelete;
 	private int listHeight = 1;
+	/** Анимация подсветки карточки при смене выбора. */
+	private float cardFlash;
 
 	public AkarusWorldsScreen(Screen parent) {
 		super("Одиночная игра");
@@ -116,6 +118,9 @@ public class AkarusWorldsScreen extends AkarusScreen {
 				rows.add(new WorldRow(summary,
 						FaviconTexture.forWorld(this.minecraft.getTextureManager(), summary.getLevelId())));
 			}
+			if (!rows.isEmpty()) {
+				selected = 0;
+			}
 			loading = false;
 			uploadIcons();
 		}));
@@ -123,8 +128,6 @@ public class AkarusWorldsScreen extends AkarusScreen {
 
 	/**
 	 * Читает иконки миров в фоне, а заливает их в GPU на потоке игры — как ваниль.
-	 * Файлы маленькие (64×64), но диск бывает медленным, и читать его в рендере
-	 * не стоит.
 	 */
 	private void uploadIcons() {
 		List<WorldRow> snapshot = new ArrayList<>(rows);
@@ -177,50 +180,59 @@ public class AkarusWorldsScreen extends AkarusScreen {
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
 		drawDarkBackdrop(graphics);
 
-		graphics.centeredText(font, "Одиночная игра", width / 2, 18, 0xFFF4F4FA);
-		graphics.centeredText(font,
-				loading ? "загрузка миров…" : rows.size() + " мир(ов) · двойной клик — играть",
-				width / 2, 30, 0xFF9E9EAE);
+		// Заголовок слева (композиция несимметричная — как обложка)
+		RenderUtils.textBold(graphics, font, "Одиночная игра", 18, 16, 0xFFF4F4FA);
+		String subtitle = loading ? "загрузка…" : rows.size() + " мир(ов)";
+		RenderUtils.textFlat(graphics, font, subtitle, 18, 16 + font.lineHeight + 3, 0xFF80808C);
 
-		int panelWidth = Math.min(PANEL_WIDTH, width - 16);
-		int x = width / 2 - panelWidth / 2;
-		int listTop = LIST_TOP;
-		listHeight = Math.max(1, height - listTop - LIST_BOTTOM);
-		int visible = Math.max(1, listHeight / (ROW_HEIGHT + ROW_GAP));
+		int panelWidth = Math.min(PANEL_WIDTH, width - 24);
+		int panelX = 18;
+		int panelY = LIST_TOP;
+		listHeight = Math.max(1, height - panelY - LIST_BOTTOM);
+		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
 
-		drawGlassPanel(graphics, x - 8, listTop - 8, panelWidth + 16, listHeight + 16, 10, 1.0f, ACCENT);
+		// Строки справа: узкая колонка
+		int listWidth = panelWidth - CARD_WIDTH - 12;
+		int listX = panelX + CARD_WIDTH + 12;
+
+		drawGlassPanel(graphics, panelX, panelY, panelWidth, listHeight, 12, 1.0f, ACCENT);
 
 		if (failure) {
-			graphics.centeredText(font, "Не удалось прочитать список миров", width / 2, listTop + 14, 0xFFFF8095);
-			graphics.centeredText(font, "подробности — в журнале игры", width / 2, listTop + 26, 0xFF80808C);
-		} else if (loading && rows.isEmpty()) {
-			graphics.centeredText(font, "Загрузка…", width / 2, listTop + 18, 0xFF9E9EAE);
-		} else if (rows.isEmpty()) {
-			graphics.centeredText(font, "Миров пока нет", width / 2, listTop + 12, 0xFFE8E8F0);
-			graphics.centeredText(font, "создай первый — кнопка «Создать» внизу", width / 2, listTop + 24, 0xFF80808C);
-		} else {
-			graphics.enableScissor(x - 4, listTop - 4, x + panelWidth + 4, listTop + listHeight + 4);
-			int y = listTop;
-			for (int i = 0; i < rows.size(); i++) {
-				WorldRow row = rows.get(i);
+			RenderUtils.text(graphics, font, "Не удалось прочитать список миров", panelX + 14, panelY + 16, 0xFFFF8095);
+			RenderUtils.text(graphics, font, "подробности — в журнале игры", panelX + 14, panelY + 28, 0xFF80808C);
+		} else if (rows.isEmpty() && !loading) {
+			RenderUtils.text(graphics, font, "Миров пока нет", panelX + 14, panelY + 14, 0xFFE8E8F0);
+			RenderUtils.text(graphics, font, "«Создать» — первый мир", panelX + 14, panelY + 26, 0xFF80808C);
+		} else if (!rows.isEmpty()) {
+			// Левая карточка выбранного мира
+			LevelSummary selection = selected >= 0 && selected < rows.size() ? rows.get(selected).summary : null;
+			if (selection != null) {
+				drawWorldCard(graphics, rows.get(selected), panelX + 10, panelY + 8, CARD_WIDTH, listHeight - 16);
+			}
+
+			// Правая колонка строк
+			graphics.enableScissor(listX - 2, panelY + 4, listX + listWidth + 4, panelY + listHeight - 4);
+			int y = panelY + 8;
+			int index = 0;
+			for (WorldRow row : rows) {
 				row.y = y;
-				if (i >= scroll && i < scroll + visible) {
-					drawWorldRow(graphics, row, i, x, y, panelWidth, mouseX, mouseY);
+				if (index >= scroll && index < scroll + visible) {
+					drawWorldRow(graphics, row, index, listX, y, listWidth, mouseX, mouseY);
 					y += ROW_HEIGHT + ROW_GAP;
 				}
+				index++;
 			}
 			graphics.disableScissor();
-			drawScrollbar(graphics, x + panelWidth + 3, listTop, listHeight, scroll, visible, rows.size(), ACCENT);
+			drawScrollbar(graphics, listX + listWidth + 3, panelY + 8, listHeight - 16, scroll, visible, rows.size(), ACCENT);
 		}
 
 		// Ряд действий
 		chips.clear();
-		LevelSummary selection = selected >= 0 && selected < rows.size() ? rows.get(selected).summary : null;
-		if (confirmDelete && selection != null) {
-			Chip confirm = chip("удалить", this::deleteSelected, true);
-			chips.add(confirm);
+		if (confirmDelete && selected >= 0) {
+			chips.add(chip("удалить мир", this::deleteSelected, true));
 			chips.add(chip("отмена", () -> confirmDelete = false));
 		} else {
+			LevelSummary selection = selected >= 0 && selected < rows.size() ? rows.get(selected).summary : null;
 			Chip play = chip("Играть", () -> joinWorld(selection));
 			play.enabled = selection != null && selection.primaryActionActive();
 			chips.add(play);
@@ -234,7 +246,60 @@ public class AkarusWorldsScreen extends AkarusScreen {
 			chips.add(delete);
 		}
 		chips.add(chip("Назад", this::onClose));
-		drawChipRow(graphics, width / 2, height - 44, 20, 5, ACCENT, mouseX, mouseY);
+		drawChipRow(graphics, width / 2, height - 36, 20, 5, ACCENT, mouseX, mouseY);
+	}
+
+	/** Крупная карточка выбранного мира: иконка, имя, детали, метки состояния. */
+	private void drawWorldCard(GuiGraphicsExtractor graphics, WorldRow row, int x, int y, int w, int h) {
+		LevelSummary summary = row.summary;
+
+		// Вспышка при смене выбора
+		cardFlash = ease(cardFlash, 0.0f, 0.12f);
+		if (cardFlash > 0.02f) {
+			RenderUtils.fillRounded(graphics, x, y, w, h, 10, RenderUtils.withAlpha(ACCENT, 0.10f * cardFlash));
+		}
+
+		// Иконка крупно, со сглаженной подложкой
+		int iconSize = Math.min(96, w - 24);
+		int iconX = x + (w - iconSize) / 2;
+		int iconY = y + 12;
+		RenderUtils.drawSoftShadow(graphics, iconX - 2, iconY - 2, iconSize + 4, iconSize + 4, 8, 3);
+		graphics.fill(iconX - 2, iconY - 2, iconX + iconSize + 2, iconY + iconSize + 2, 0x50000000);
+		graphics.blit(RenderPipelines.GUI_TEXTURED, row.icon.textureLocation(),
+				iconX, iconY, 0.0F, 0.0F, iconSize, iconSize, 64, 64);
+
+		// Имя крупно (жирным), под ним — режим и версия
+		String name = RenderUtils.clamp(font, summary.getLevelName(), w - 16);
+		RenderUtils.textCentered(graphics, font, name, x + w / 2, iconY + iconSize + 8, 0xFFF4F4FA, false);
+		String info = RenderUtils.clamp(font, summary.getInfo().getString(), w - 16);
+		RenderUtils.textCentered(graphics, font, info, x + w / 2, iconY + iconSize + 8 + font.lineHeight + 2,
+				0xFFA6A6B2, false);
+
+		// Дата игры
+		String date = RenderUtils.clamp(font, "играли: " + formatDate(summary.getLastPlayed()), w - 16);
+		RenderUtils.textCentered(graphics, font, date, x + w / 2, iconY + iconSize + 8 + font.lineHeight * 2 + 5,
+				0xFF6B6B78, false);
+
+		// Метки состояния — пилюли внизу карточки
+		int pillY = y + h - 16;
+		int pillX = x + 8;
+		if (summary.isExperimental()) {
+			pillX = drawPill(graphics, "эксперименты", pillX, pillY, 0xFFFFC66C);
+		}
+		if (!summary.isCompatible()) {
+			pillX = drawPill(graphics, "другая версия", pillX, pillY, 0xFFFF8095);
+		}
+		if (summary.shouldBackup()) {
+			drawPill(graphics, "бэкап", pillX, pillY, 0xFF8DE06C);
+		}
+	}
+
+	/** Пилюля-метка; возвращает X следующей. */
+	private int drawPill(GuiGraphicsExtractor graphics, String label, int x, int y, int color) {
+		int w = RenderUtils.width(font, label) + 10;
+		RenderUtils.fillRounded(graphics, x, y, w, font.lineHeight + 4, 4, RenderUtils.withAlpha(color, 0.20f));
+		RenderUtils.textFlat(graphics, font, label, x + 5, y + 2, color);
+		return x + w + 4;
 	}
 
 	private void drawWorldRow(GuiGraphicsExtractor graphics, WorldRow row, int index, int x, int y, int w,
@@ -242,49 +307,41 @@ public class AkarusWorldsScreen extends AkarusScreen {
 		LevelSummary summary = row.summary;
 		boolean selectedRow = index == selected;
 		boolean inside = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + ROW_HEIGHT;
+
+		// «Лестница» появления: строка №index стартует с задержкой index*7%
+		row.appear = ease(row.appear, 1.0f, 0.18f);
+		float delay = Math.min(0.5f, index * 0.07f);
+		float appear = Math.max(0.0f, Math.min(1.0f, (row.appear - delay) / Math.max(0.05f, 1.0f - delay)));
+		int slideX = Math.round((1.0f - appear) * 10.0f);
+
 		row.hover = ease(row.hover, inside ? 1.0f : 0.0f, 0.22);
 
 		int background = selectedRow
-				? RenderUtils.mix(0xCC101015, RenderUtils.withAlpha(ACCENT, 0xFF), 0.18f + 0.08f * row.hover)
-				: RenderUtils.mix(0xB8101013, 0x16FFFFFF, row.hover * 0.5f);
+				? RenderUtils.mix(0xCC101015, RenderUtils.withAlpha(ACCENT, 0xFF), 0.20f + 0.08f * row.hover)
+				: RenderUtils.mix(0xA0101013, 0x16FFFFFF, row.hover * 0.5f);
 		int border = selectedRow
 				? RenderUtils.withAlpha(ACCENT, 0.55f + 0.35f * row.hover)
-				: RenderUtils.mix(0x12FFFFFF, ACCENT, row.hover * 0.25f);
-		RenderUtils.fillRoundedBorder(graphics, x, y, w, ROW_HEIGHT, 6, border, background);
+				: RenderUtils.mix(0x10FFFFFF, ACCENT, row.hover * 0.25f);
+		background = RenderUtils.withAlpha(background, appear);
+		border = RenderUtils.withAlpha(border, appear);
+		RenderUtils.fillRoundedBorder(graphics, x + slideX, y, w, ROW_HEIGHT, 6, border, background);
 
-		// Иконка 32×32 с подложкой
-		int iconX = x + 5;
-		int iconY = y + (ROW_HEIGHT - 32) / 2;
-		graphics.fill(iconX - 1, iconY - 1, iconX + 33, iconY + 33, 0x40000000);
+		// Мини-иконка 18×18
+		int iconX = x + slideX + 5;
+		int iconY = y + (ROW_HEIGHT - 18) / 2;
+		graphics.fill(iconX - 1, iconY - 1, iconX + 19, iconY + 19, 0x40000000);
 		graphics.blit(RenderPipelines.GUI_TEXTURED, row.icon.textureLocation(),
-				iconX, iconY, 0.0F, 0.0F, 32, 32, 32, 32);
+				iconX, iconY, 0.0F, 0.0F, 18, 18, 64, 64);
 
-		int textX = iconX + 36;
-		int nameLimit = w - 36 - 8;
+		int textX = iconX + 22;
+		int nameLimit = w - 22 - 8;
 		boolean locked = summary.isLocked() || !summary.primaryActionActive();
-		graphics.text(font, RenderUtils.clamp(font, summary.getLevelName(), nameLimit), textX, y + 5,
-				locked ? 0xFF9E9EAE : selectedRow ? 0xFFFFFFFF : 0xFFE8E8F0, false);
-		graphics.text(font, RenderUtils.clamp(font, summary.getInfo().getString(), nameLimit), textX, y + 16,
-				0xFFA6A6B2, false);
-		graphics.text(font, RenderUtils.clamp(font, formatDate(summary.getLastPlayed()), nameLimit),
-				textX, y + 27, 0xFF6B6B78, false);
-
-		// Ярлык состояния справа сверху
-		String tag = null;
-		int tagColor = 0xFF9E9EAE;
-		if (summary.isExperimental()) {
-			tag = "экспер.";
-			tagColor = 0xFFFFC66C;
-		} else if (!summary.isCompatible()) {
-			tag = "другая версия";
-			tagColor = 0xFFFF8095;
-		} else if (summary.shouldBackup()) {
-			tag = "бэкап";
-			tagColor = 0xFF8DE06C;
-		}
-		if (tag != null) {
-			graphics.text(font, tag, x + w - font.width(tag) - 8, y + 5, tagColor, false);
-		}
+		String name = RenderUtils.clamp(font, summary.getLevelName(), nameLimit);
+		RenderUtils.textFlat(graphics, font, name, textX, y + 5,
+				RenderUtils.withAlpha(locked ? 0xFF9E9EAE : selectedRow ? 0xFFFFFFFF : 0xFFE8E8F0, appear));
+		String date = RenderUtils.clamp(font, shortDate(summary.getLastPlayed()), nameLimit);
+		RenderUtils.textFlat(graphics, font, date, textX, y + 17,
+				RenderUtils.withAlpha(0xFF6B6B78, appear));
 	}
 
 	private static String formatDate(long millis) {
@@ -295,6 +352,14 @@ public class AkarusWorldsScreen extends AkarusScreen {
 		return DateTimeFormatter.ofPattern("d MMM yyyy · HH:mm", Locale.forLanguageTag("ru")).format(time);
 	}
 
+	private static String shortDate(long millis) {
+		if (millis <= 0L) {
+			return "—";
+		}
+		ZonedDateTime time = ZonedDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault());
+		return DateTimeFormatter.ofPattern("d MMM yyyy", Locale.forLanguageTag("ru")).format(time);
+	}
+
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		if (clickChips(event)) {
@@ -303,14 +368,17 @@ public class AkarusWorldsScreen extends AkarusScreen {
 
 		double mx = event.x();
 		double my = event.y();
-		int panelWidth = Math.min(PANEL_WIDTH, width - 16);
-		int x = width / 2 - panelWidth / 2;
-		if (mx >= x && mx < x + panelWidth && my >= LIST_TOP && my < LIST_TOP + listHeight) {
-			int visible = Math.max(1, listHeight / (ROW_HEIGHT + ROW_GAP));
-			int index = scroll + (int) ((my - LIST_TOP) / (ROW_HEIGHT + ROW_GAP));
+		int panelWidth = Math.min(PANEL_WIDTH, width - 24);
+		int listWidth = panelWidth - CARD_WIDTH - 12;
+		int listX = 18 + CARD_WIDTH + 12;
+		int panelY = LIST_TOP;
+		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
+		if (mx >= listX && mx < listX + listWidth && my >= panelY + 4 && my < panelY + listHeight - 4) {
+			int index = scroll + (int) ((my - panelY - 8) / (ROW_HEIGHT + ROW_GAP));
 			if (index >= scroll && index < Math.min(rows.size(), scroll + visible)) {
 				selected = index;
 				confirmDelete = false;
+				cardFlash = 1.0f;
 				if (doubleClick) {
 					joinWorld(rows.get(index).summary);
 				} else {
@@ -324,7 +392,7 @@ public class AkarusWorldsScreen extends AkarusScreen {
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-		int visible = Math.max(1, listHeight / (ROW_HEIGHT + ROW_GAP));
+		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
 		int max = Math.max(0, rows.size() - visible);
 		scroll = Math.max(0, Math.min(max, scroll - (int) Math.signum(scrollY)));
 		return true;

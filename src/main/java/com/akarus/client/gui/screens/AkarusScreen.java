@@ -96,12 +96,12 @@ public abstract class AkarusScreen extends Screen {
 			int textY = y + (height - font.lineHeight) / 2;
 			boolean blink = (Util.getMillis() / 500L) % 2 == 0;
 			if (value.isEmpty() && !focused) {
-				graphics.text(font, hint, x + 8, textY, 0x6680808C, false);
+				RenderUtils.textFlat(graphics, font, hint, x + 8, textY, 0x6680808C);
 			} else {
 				String shown = RenderUtils.clamp(font, value, width - 16);
-				graphics.text(font, shown, x + 8, textY, focused ? 0xFFF6F6F8 : 0xFFC9C9D4, false);
+				RenderUtils.textFlat(graphics, font, shown, x + 8, textY, focused ? 0xFFF6F6F8 : 0xFFC9C9D4);
 				if (focused && blink && shown.equals(value)) {
-					int cursorX = x + 8 + font.width(shown) + 1;
+					int cursorX = x + 8 + RenderUtils.width(font, shown) + 1;
 					graphics.fill(cursorX, textY - 1, cursorX + 1, textY + font.lineHeight - 1, accent);
 				}
 			}
@@ -179,12 +179,16 @@ public abstract class AkarusScreen extends Screen {
 
 		int textY = y + (h - font.lineHeight) / 2;
 		int textColor = RenderUtils.mix(0xFFE8E8F0, 0xFFFFFFFF, item.hover);
-		graphics.text(font, Component.literal(item.label), x + 12, textY, textColor, true);
+		String label = RenderUtils.clamp(font, item.label, w - 24);
+		RenderUtils.text(graphics, font, label, x + 12, textY, textColor);
 
 		if (item.hint != null && !item.hint.isEmpty()) {
 			int hintColor = RenderUtils.withAlpha(0xFFA6A6B2, 0.55f + 0.45f * item.hover);
-			graphics.text(font, Component.literal(item.hint),
-					x + w - 12 - font.width(item.hint), textY, hintColor, true);
+			String hint = RenderUtils.clamp(font, item.hint, w - 24 - RenderUtils.width(font, label) - 12);
+			if (!hint.isEmpty()) {
+				RenderUtils.text(graphics, font, hint,
+						x + w - 12 - RenderUtils.width(font, hint), textY, hintColor);
+			}
 		}
 
 		if (item.hover > 0.02f) {
@@ -215,8 +219,9 @@ public abstract class AkarusScreen extends Screen {
 		int textColor = chip.enabled
 				? RenderUtils.mix(0xFFC9C9D4, 0xFFFFFFFF, chip.hover)
 				: 0xFF54545E;
-		graphics.text(font, RenderUtils.clamp(font, chip.label, w - 8),
-				x + (w - font.width(RenderUtils.clamp(font, chip.label, w - 8))) / 2, textY, textColor, false);
+		String label = RenderUtils.clamp(font, chip.label, w - 8);
+		RenderUtils.textFlat(graphics, font, label,
+				x + (w - RenderUtils.width(font, label)) / 2, textY, textColor);
 	}
 
 	/** Строка чипов одинаковой высоты; возвращает итоговую ширину ряда. */
@@ -224,7 +229,7 @@ public abstract class AkarusScreen extends Screen {
 	                          int accent, int mouseX, int mouseY) {
 		int total = 0;
 		for (Chip chip : chips) {
-			chip.width = Math.max(46, font.width(chip.label) + 18);
+			chip.width = Math.max(46, RenderUtils.width(font, chip.label) + 18);
 			total += chip.width;
 		}
 		total += gap * (chips.size() - 1);

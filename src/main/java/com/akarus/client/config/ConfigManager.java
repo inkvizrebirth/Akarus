@@ -6,6 +6,7 @@ import com.akarus.client.module.ModuleManager;
 import com.akarus.client.settings.BooleanSetting;
 import com.akarus.client.settings.ButtonSetting;
 import com.akarus.client.settings.ColorSetting;
+import com.akarus.client.settings.BlockListSetting;
 import com.akarus.client.settings.ElementListSetting;
 import com.akarus.client.settings.IntSetting;
 import com.akarus.client.settings.ModeSetting;
@@ -128,6 +129,9 @@ public final class ConfigManager {
 				} else if (setting instanceof ElementListSetting elementList) {
 					// Список выбранных элементов HUD хранится строкой «id,id,...»
 					elementList.applySaved(value.getAsString());
+				} else if (setting instanceof BlockListSetting blockList) {
+					// Список блоков BlockESP — тоже строкой «id,id,...»
+					blockList.applySaved(value.getAsString());
 				}
 			} catch (RuntimeException exception) {
 				AkarusClient.LOGGER.warn("Не удалось применить настройку {}.{}", module.getId(), setting.getId(), exception);
@@ -163,8 +167,8 @@ public final class ConfigManager {
 						settings.addProperty(setting.getId(), modeSetting.getValue());
 						continue;
 					}
-					if (setting instanceof ElementListSetting) {
-						// Список выбранных элементов — строкой через запятую
+					if (setting instanceof ElementListSetting || setting instanceof BlockListSetting) {
+						// Списки выбранных элементов/блоков — строкой через запятую
 						settings.addProperty(setting.getId(), setting.getValue().toString());
 						continue;
 					}

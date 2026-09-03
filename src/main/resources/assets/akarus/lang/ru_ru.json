@@ -16,5 +16,7 @@
   "key.akarus.auto_totem": "Модуль: AutoTotem",
   "key.akarus.media_player": "Модуль: MediaPlayer",
   "key.akarus.trails": "Модуль: Trails",
-  "key.akarus.esp": "Модуль: ESP"
+  "key.akarus.esp": "Модуль: ESP",
+  "key.akarus.block_esp": "Модуль: BlockESP",
+  "key.akarus.spider": "Модуль: Spider"
 }

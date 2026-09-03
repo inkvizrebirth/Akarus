@@ -5,6 +5,8 @@ import com.akarus.client.config.ConfigManager;
 import com.akarus.client.module.impl.AutoMineModule;
 import com.akarus.client.module.impl.AutoTotemModule;
 import com.akarus.client.module.impl.AutoWalkModule;
+import com.akarus.client.module.impl.BlockEspModule;
+import com.akarus.client.module.impl.SpiderModule;
 import com.akarus.client.module.impl.ClickGuiModule;
 import com.akarus.client.module.impl.EspModule;
 import com.akarus.client.module.impl.FreeCamModule;
@@ -51,6 +53,8 @@ public final class ModuleManager {
 		register(new MediaPlayerModule());
 		register(new TrailsModule());
 		register(new EspModule());
+		register(new BlockEspModule());
+		register(new SpiderModule());
 	}
 
 	public static void register(Module module) {

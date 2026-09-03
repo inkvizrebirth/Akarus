@@ -201,9 +201,10 @@ public class AkarusSettingsScreen extends AkarusScreen {
 		int visible = Math.min(rows.size(), (height - 120) / (ROW_HEIGHT + ROW_GAP));
 		int listHeight = visible * (ROW_HEIGHT + ROW_GAP) - ROW_GAP;
 		int x = width / 2 - PANEL_WIDTH / 2;
-		int y0 = 44;
+		int y0 = 52;
 
-		graphics.centeredText(font, "Настройки", width / 2, 20, 0xFFF4F4FA);
+		RenderUtils.textCentered(graphics, font, "Настройки", width / 2, 18, 0xFFF4F4FA, false);
+		RenderUtils.textFlat(graphics, font, "клиент · управление · язык", width / 2, 31, 0xFF80808C);
 
 		drawGlassPanel(graphics, x - 10, y0 - 12, PANEL_WIDTH + 20, listHeight + 24, 10, 1.0f, ACCENT);
 
@@ -231,8 +232,8 @@ public class AkarusSettingsScreen extends AkarusScreen {
 		{
 			float hover = easeBack(mouseX, mouseY, x + (PANEL_WIDTH - backWidth) / 2, backY, backWidth, 20);
 			drawGlassPanel(graphics, x + (PANEL_WIDTH - backWidth) / 2, backY, backWidth, 20, 8, hover, ACCENT);
-			graphics.text(font, "Готово", x + PANEL_WIDTH / 2 - font.width("Готово") / 2,
-					backY + (20 - font.lineHeight) / 2, 0xFFE8E8F0, true);
+			RenderUtils.textFlat(graphics, font, "Готово", x + PANEL_WIDTH / 2 - RenderUtils.width(font, "Готово") / 2,
+					backY + (20 - font.lineHeight) / 2, 0xFFE8E8F0);
 		}
 	}
 
@@ -254,7 +255,7 @@ public class AkarusSettingsScreen extends AkarusScreen {
 		}
 
 		int textY = y + (ROW_HEIGHT - font.lineHeight) / 2;
-		graphics.text(font, row.label, x + 6, textY, 0xFFE8E8F0, true);
+		graphics.text(font, RenderUtils.styled(RenderUtils.clamp(font, row.label, PANEL_WIDTH - 90)), x + 6, textY, 0xFFE8E8F0, true);
 
 		switch (row.kind) {
 			case TOGGLE -> {
@@ -285,10 +286,10 @@ public class AkarusSettingsScreen extends AkarusScreen {
 			case CYCLE -> {
 				int idx = row.cycleGet.getAsInt();
 				String shown = idx >= 0 && idx < row.cycleLabels.length ? row.cycleLabels[idx] : "?";
-				graphics.text(font, shown, x + PANEL_WIDTH - 10 - font.width(shown), textY,
+				graphics.text(font, RenderUtils.styled(shown), x + PANEL_WIDTH - 10 - RenderUtils.width(font, shown), textY,
 						RenderUtils.withAlpha(ACCENT, 0.95f), true);
 			}
-			case ACTION -> graphics.text(font, "\u2192", x + PANEL_WIDTH - 12, textY, 0xFFA6A6B2, true);
+			case ACTION -> graphics.text(font, RenderUtils.styled("\u2192"), x + PANEL_WIDTH - 12, textY, 0xFFA6A6B2, true);
 			default -> {
 			}
 		}
@@ -300,7 +301,7 @@ public class AkarusSettingsScreen extends AkarusScreen {
 		int sx = x + PANEL_WIDTH - 12 - sliderWidth - font.width(valueLabel) - 8;
 		int sy = y + (ROW_HEIGHT - 4) / 2;
 		RenderUtils.drawSlider(graphics, sx, sy, sliderWidth, 4, (float) fraction01, ACCENT);
-		graphics.text(font, valueLabel, sx + sliderWidth + 8, textY, 0xFFB9B9C6, true);
+		graphics.text(font, RenderUtils.styled(valueLabel), sx + sliderWidth + 8, textY, 0xFFB9B9C6, true);
 		row.intValue = sx; // левый край слайдера запоминаем: по нему кликом ставим значение
 	}
 
