@@ -4,7 +4,7 @@ import com.akarus.client.AkarusClient;
 import com.akarus.client.util.RenderUtils;
 import com.akarus.client.util.ViaIntegration;
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.platform.RenderPipelines;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DirectJoinServerScreen;

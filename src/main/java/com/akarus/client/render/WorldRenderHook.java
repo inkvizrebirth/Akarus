@@ -50,7 +50,7 @@ public final class WorldRenderHook {
 				espBoxes = List.of();
 				return;
 			}
-			var camera = context.camera().getPosition();
+			var camera = context.camera().position();
 			espBoxes = List.copyOf(esp.collectBoxes(
 					context.level().entitiesForRendering(),
 					camera.x, camera.y, camera.z));

@@ -3,7 +3,7 @@ package com.akarus.client.gui.screens;
 import com.akarus.client.AkarusClient;
 import com.akarus.client.util.RenderUtils;
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.platform.RenderPipelines;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.screens.worldselection.EditWorldScreen;
