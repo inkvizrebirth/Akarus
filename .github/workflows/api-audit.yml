@@ -85,6 +85,20 @@ jobs:
               javap -cp "$MC" net.minecraft.world.phys.AABB 2>&1 | grep -iE 'minX|maxX|minY|maxY|minZ|maxZ|inflate'
               echo; echo "=== Options (keys) ==="
               javap -cp "$MC" net.minecraft.client.Options 2>&1 | grep -iE 'keySprint|keyJump|keyUp|keyShift|keyUse|keyAttack'
+              echo; echo "=== Player (items/hands/slots, шире) ==="
+              javap -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | grep -iE 'item|hand|slot|inventor'
+              echo; echo "=== LivingEntity (items/hands/slots) ==="
+              javap -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'item|hand|slot|inventor'
+              echo; echo "=== EquipmentUser ==="
+              javap -cp "$MC" net.minecraft.world.entity.EquipmentUser 2>&1 || echo "нет класса EquipmentUser"
+              echo; echo "=== EquipmentSlot ==="
+              javap -cp "$MC" net.minecraft.world.entity.EquipmentSlot 2>&1 | grep -iE 'MAINHAND|OFFHAND|static'
+              echo; echo "=== Inventory ==="
+              javap -cp "$MC" net.minecraft.world.entity.player.Inventory 2>&1 | grep -iE 'getItem|offhand|held|selected' | head -20
+              echo; echo "=== ItemCooldowns ==="
+              javap -cp "$MC" net.minecraft.world.item.ItemCooldowns 2>&1 | grep -iE 'cooldown'
+              echo; echo "=== Entity (water/lava) ==="
+              javap -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'isInWater|isInLava|isInWaterRainOrBubble'
               echo; echo "=== EntityType ==="
               javap -cp "$MC" net.minecraft.world.entity.EntityType 2>&1 | grep -iE 'category|classification'
               echo; echo "=== MobCategory (константы) ==="
