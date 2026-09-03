@@ -76,7 +76,7 @@ public class AutoMineModule extends Module {
 
 	private static void notify(String message) {
 		Minecraft client = Minecraft.getInstance();
-		if (client.gui == null) {
+		if (client == null || client.gui == null) {
 			return;
 		}
 		client.gui.hud.getChat().addClientSystemMessage(Component.literal(message));

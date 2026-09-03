@@ -71,7 +71,10 @@ public class AutoWalkModule extends Module {
 			return;
 		}
 
-		if (Minecraft.getInstance().player == null) {
+		// Клиент может быть ещё не готов: модуль мог быть включён сохранённым
+		// конфигом во время onInitializeClient — NPE здесь ронял бы игру на старте
+		Minecraft client = Minecraft.getInstance();
+		if (client == null || client.player == null) {
 			setEnabledSilently(false);
 			return;
 		}
@@ -310,7 +313,7 @@ public class AutoWalkModule extends Module {
 
 	private static void notify(String message) {
 		Minecraft client = Minecraft.getInstance();
-		if (client.gui == null) {
+		if (client == null || client.gui == null) {
 			return;
 		}
 		client.gui.hud.getChat().addClientSystemMessage(Component.literal(message));

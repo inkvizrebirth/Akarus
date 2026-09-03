@@ -4,6 +4,7 @@ import com.akarus.client.AkarusClient;
 import com.akarus.client.viewmodel.ViewModelProfile.Parameter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -40,8 +41,15 @@ public final class ViewModelConfig {
 				return profile;
 			}
 			for (Parameter parameter : Parameter.values()) {
-				if (root.has(parameter.name()) && root.get(parameter.name()).isJsonPrimitive()) {
-					profile.set(parameter, root.get(parameter.name()).getAsFloat());
+				JsonElement element = root.get(parameter.name());
+				if (element == null || !element.isJsonPrimitive()) {
+					continue;
+				}
+				// Один битый параметр не должен отменять остальные
+				try {
+					profile.set(parameter, element.getAsFloat());
+				} catch (RuntimeException exception) {
+					AkarusClient.LOGGER.warn("Не удалось прочитать параметр раскладки {}", parameter.name(), exception);
 				}
 			}
 		} catch (IOException | RuntimeException exception) {

@@ -36,8 +36,8 @@ HUD в игре выглядит так:
 
 1. **GitHub Actions (рекомендуется, если локально нет JDK 25 или нет доступа к Gradle):**
    готовый jar лежит в [Releases](https://github.com/inkvizrebirth/Akarus/releases) —
-   например [Akarus v0.4.0](https://github.com/inkvizrebirth/Akarus/releases/tag/v0.4.0),
-   файл `akarus-0.4.0.jar`.
+   например [Akarus v0.5.0](https://github.com/inkvizrebirth/Akarus/releases/tag/v0.5.0),
+   файл `akarus-0.5.0.jar`.
    Либо: вкладка **Actions** → workflow **build** → **Run workflow** → после завершения
    скачать артефакт `akarus` из секции Artifacts (там же всегда лежит `akarus-build-log` с логом сборки).
 2. **Локально:**

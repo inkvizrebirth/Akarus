@@ -46,7 +46,7 @@ public final class ConfigManager {
 	}
 
 	/** Читает файл конфига в память. Значения применяются в {@link #applyTo(Module)}. */
-	public static void load() {
+	public static synchronized void load() {
 		pending = null;
 
 		if (!Files.exists(PATH)) {
@@ -77,15 +77,24 @@ public final class ConfigManager {
 			return;
 		}
 
-		if (data.has("enabled")) {
-			module.setEnabledSilently(data.get("enabled").getAsBoolean());
-		}
+		// Состояние модуля применяем «мягко»: файл правится руками, и значение вроде
+		// "enabled": null или "enabled": {} раньше бросало исключение прямо из
+		// onInitializeClient — и игра падала на старте. JsonNull и вложенные объекты
+		// здесь не примитивы, поэтому просто пропускаются.
+		try {
+			JsonElement enabled = data.get("enabled");
+			if (enabled != null && enabled.isJsonPrimitive()) {
+				module.setEnabledSilently(enabled.getAsBoolean());
+			}
 
-		// Бинд хранится именем клавиши, например key.keyboard.n или key.mouse.middle
-		if (data.has("bind") && data.get("bind").isJsonPrimitive()) {
-			module.setBindByName(data.get("bind").getAsString());
+			// Бинд хранится именем клавиши, например key.keyboard.n или key.mouse.middle
+			JsonElement bind = data.get("bind");
+			if (bind != null && bind.isJsonPrimitive()) {
+				module.setBindByName(bind.getAsString());
+			}
+		} catch (RuntimeException exception) {
+			AkarusClient.LOGGER.warn("Не удалось применить сохранённое состояние модуля {}", module.getId(), exception);
 		}
-
 		JsonObject settings = getObject(data, "settings");
 		if (settings == null) {
 			return;
@@ -123,7 +132,9 @@ public final class ConfigManager {
 	}
 
 	/** Сохраняет состояние всех модулей на диск. */
-	public static void save() {
+	// synchronized: save вызывается и из тика/меню, и из shutdown-hook при выходе —
+	// без блокировки два потока могли бы писать один файл одновременно и испортить его
+	public static synchronized void save() {
 		JsonObject root = new JsonObject();
 		JsonObject modules = new JsonObject();
 
@@ -170,8 +181,7 @@ public final class ConfigManager {
 			Files.writeString(PATH, GSON.toJson(root), StandardCharsets.UTF_8);
 		} catch (IOException exception) {
 			AkarusClient.LOGGER.error("Не удалось сохранить конфиг {}", PATH, exception);
-		}
-	}
+		}	}
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	private static void setRaw(Setting setting, Object value) {

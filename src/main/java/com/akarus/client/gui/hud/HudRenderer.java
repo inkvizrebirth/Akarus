@@ -75,8 +75,10 @@ public final class HudRenderer {
 			return;
 		}
 
-		AutoWalkModule autoWalk = ModuleManager.getModule(AutoWalkModule.class);
-		if (!autoWalk.isEnabled()) {
+		// find, а не getModule: HUD рисуется каждый кадр, и исключение из-за
+		// незарегистрированного модуля уронило бы рендер
+		AutoWalkModule autoWalk = ModuleManager.find(AutoWalkModule.class);
+		if (autoWalk == null || !autoWalk.isEnabled()) {
 			return;
 		}
 
@@ -176,8 +178,8 @@ public final class HudRenderer {
 			return;
 		}
 
-		HudInfoModule hud = ModuleManager.getModule(HudInfoModule.class);
-		if (!hud.isEnabled()) {
+		HudInfoModule hud = ModuleManager.find(HudInfoModule.class);
+		if (hud == null || !hud.isEnabled()) {
 			return;
 		}
 
