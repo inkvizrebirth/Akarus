@@ -99,6 +99,34 @@ jobs:
               javap -cp "$MC" net.minecraft.world.item.ItemCooldowns 2>&1 | grep -iE 'cooldown'
               echo; echo "=== Entity (water/lava) ==="
               javap -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'isInWater|isInLava|isInWaterRainOrBubble'
+              echo; echo "=== GameRenderer (fov/nausea/fog/bob) ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | grep -iE 'fov|nausea|fog|bob|panorama|posteffect|depthof'
+              echo; echo "=== Player/LivingEntity (fov modifier) ==="
+              javap -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | grep -iE 'fov|FieldOfView'
+              javap -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'fov|FieldOfView'
+              javap -p -cp "$MC" net.minecraft.client.player.AbstractClientPlayer 2>&1 | grep -iE 'fov|FieldOfView' || echo "нет AbstractClientPlayer по этому пути"
+              echo; echo "=== Gui (оверлеи: огонь/тыква/портал) ==="
+              javap -p -cp "$MC" net.minecraft.client.gui.Gui 2>&1 | grep -iE 'fire|pumpkin|portal|overlay|textureatlas|layer|freeze|vignette' | head -40
+              echo; echo "=== GuiRenderState (оверлеи) ==="
+              javap -p -cp "$MC" net.minecraft.client.gui.GuiRenderState 2>&1 | grep -iE 'fire|pumpkin|portal|overlay|freeze|vignette' | head -30 || echo "нет GuiRenderState"
+              echo; echo "=== LevelRenderer (fog) ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.LevelRenderer 2>&1 | grep -iE 'fog' | head -15
+              echo; echo "=== BlockHitResult (конструкторы) ==="
+              javap -cp "$MC" net.minecraft.world.phys.BlockHitResult 2>&1 | head -12
+              echo; echo "=== HitResult ==="
+              javap -cp "$MC" net.minecraft.world.phys.HitResult 2>&1 | head -12
+              echo; echo "=== InventoryClick ==="
+              javap -cp "$MC" net.minecraft.world.inventory.InventoryClick 2>&1 | head -25 || echo "нет InventoryClick"
+              echo; echo "=== MultiPlayerGameMode (клики инвентаря) ==="
+              javap -cp "$MC" net.minecraft.client.multiplayer.MultiPlayerGameMode 2>&1 | grep -iE 'handleInventoryMouseClick|clickSlot|swap'
+              echo; === вёдра ===
+              javap -cp "$MC" net.minecraft.world.item.Items 2>&1 | grep -iE 'BUCKET|WATER_BUCKET'
+              javap -p -cp "$MC" net.minecraft.world.item.BucketItem 2>&1 | head -20 || echo "нет BucketItem"
+              echo; echo "=== Blocks (water) ==="
+              javap -cp "$MC" net.minecraft.world.level.block.Blocks 2>&1 | grep -iE 'WATER;'
+              echo; echo "=== BlockState (water) ==="
+              javap -cp "$MC" net.minecraft.world.level.block.state.BlockBehaviour'\''$BlockStateBase 2>&1 | grep -iE 'isSourceBlock|liquid|getFluidState' || true
+              javap -cp "$MC" net.minecraft.world.level.block.state.BlockState 2>&1 | grep -iE 'is\(|getFluidState' | head -6 || true
               echo; echo "=== EntityType ==="
               javap -cp "$MC" net.minecraft.world.entity.EntityType 2>&1 | grep -iE 'category|classification'
               echo; echo "=== MobCategory (константы) ==="
