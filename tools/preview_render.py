@@ -492,7 +492,7 @@ def render_hud(path):
     x, y = 6, 6
 
     # Водяной знак: чёрная пилюля, радужный текст
-    brand = "Akarus 0.7.0"
+    brand = "Akarus 0.7.1"
     pill_w = canvas.text_width(brand) + 26
     pill_h = LINE_HEIGHT + 8
     canvas.rrect(x, y, pill_w, pill_h, 5, argb(0xE0070708))
@@ -623,7 +623,7 @@ def render_menu(path):
             canvas.text(bx + bw - 12 - canvas.text_width(hint), by + (bh - LINE_HEIGHT) // 2,
                         hint, with_alpha(0xFFA6A6B2, 0.9))
         by += bh + gap
-    canvas.text(6, H - 10, "Akarus 0.7.0   \u00b7   Minecraft 26.2", argb(0xFF80808C))
+    canvas.text(6, H - 10, "Akarus 0.7.1   \u00b7   Minecraft 26.2", argb(0xFF80808C))
     canvas.save(path)
 
 
