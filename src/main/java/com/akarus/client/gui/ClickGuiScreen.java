@@ -42,7 +42,10 @@ public class ClickGuiScreen extends Screen {
 
 	// --- Геометрия ---
 	private static final int GUI_WIDTH = 480;
-	private static final int GUI_HEIGHT = 300;
+	/** Максимальная высота окна: дальше список уходит в прокрутку. */
+	private static final int GUI_MAX_HEIGHT = 300;
+	/** Минимальная высота — в ней целиком видно столбик категорий. */
+	private static final int GUI_MIN_HEIGHT = 208;
 	private static final int HEADER_HEIGHT = 34;
 	private static final int CATEGORY_WIDTH = 124;
 	private static final int CATEGORY_ROW_HEIGHT = 22;
@@ -92,6 +95,8 @@ public class ClickGuiScreen extends Screen {
 
 	private float scroll;
 	private float scrollTarget;
+	/** Текущая (сглаженная) высота окна — см. {@link #panelHeight()}. */
+	private float panelHeightAnim = GUI_MIN_HEIGHT;
 
 	private Setting<?> focusedSetting;
 	/** То, что сейчас напечатали в поле цвета (без «#»), пока поле в фокусе. */
@@ -121,11 +126,26 @@ public class ClickGuiScreen extends Screen {
 
 		// При первом открытии ставим окно в центр экрана
 		if (!positioned) {
+			panelHeightAnim = targetPanelHeight();
 			guiX = (this.width - GUI_WIDTH) / 2.0f;
-			guiY = (this.height - GUI_HEIGHT) / 2.0f;
+			guiY = (this.height - panelHeight()) / 2.0f;
 			positioned = true;
 		}
 		clampPanel();
+	}
+
+	/**
+	 * Высота окна подгоняется под содержимое: на двух-трёх модулях панель на 300 пикселей
+	 * выглядит пустой рамкой, а при раскрытых настройках список упирался бы в низ.
+	 * Значение сглаживается, поэтому раскрытие модуля не «дёргает» окно.
+	 */
+	private int panelHeight() {
+		return Math.round(panelHeightAnim);
+	}
+
+	private int targetPanelHeight() {
+		int needed = HEADER_HEIGHT + PADDING * 2 + FOOTER_HEIGHT + contentHeight() + 4;
+		return Math.max(GUI_MIN_HEIGHT, Math.min(GUI_MAX_HEIGHT, needed));
 	}
 
 	@Override
@@ -179,7 +199,8 @@ public class ClickGuiScreen extends Screen {
 		// отрисовку, а проверка попаданий мыши работает целыми числами — на первые
 		// полсекунды курсор «не совпадал» бы с кнопками. Поэтому окно просто
 		// проявляется вместе с затемнением фона (см. extractBackground).
-		RenderUtils.drawSoftShadow(graphics, x, y, GUI_WIDTH, GUI_HEIGHT, PANEL_RADIUS, SHADOW_LAYERS);
+		int panelHeight = panelHeight();
+		RenderUtils.drawSoftShadow(graphics, x, y, GUI_WIDTH, panelHeight, PANEL_RADIUS, SHADOW_LAYERS);
 		drawPanel(graphics, x, y, accent);
 		drawCategories(graphics, x, y, mouseX, mouseY);
 		drawModules(graphics, x, y, mouseX, mouseY, accent);
@@ -191,14 +212,15 @@ public class ClickGuiScreen extends Screen {
 		}
 
 		// Волна по клику в любом месте панели
-		drawRipples(graphics, new Hitbox(x, y, GUI_WIDTH, GUI_HEIGHT), accent);
+		drawRipples(graphics, new Hitbox(x, y, GUI_WIDTH, panelHeight), accent);
 	}
 
 	private void drawPanel(GuiGraphicsExtractor graphics, int x, int y, int accent) {
 		// Рамка и двухтоновый фон: сверху чуть светлее, снизу — почти чёрный
-		RenderUtils.fillRounded(graphics, x, y, GUI_WIDTH, GUI_HEIGHT, PANEL_RADIUS, PANEL_OUTLINE);
-		RenderUtils.fillRounded(graphics, x + 1, y + 1, GUI_WIDTH - 2, GUI_HEIGHT - 2, PANEL_RADIUS - 1, PANEL_TOP);
-		RenderUtils.fillRoundedBottom(graphics, x + 1, y + (GUI_HEIGHT - 2) / 2, GUI_WIDTH - 2, (GUI_HEIGHT - 2) / 2,
+		int height = panelHeight();
+		RenderUtils.fillRounded(graphics, x, y, GUI_WIDTH, height, PANEL_RADIUS, PANEL_OUTLINE);
+		RenderUtils.fillRounded(graphics, x + 1, y + 1, GUI_WIDTH - 2, height - 2, PANEL_RADIUS - 1, PANEL_TOP);
+		RenderUtils.fillRoundedBottom(graphics, x + 1, y + (height - 2) / 2, GUI_WIDTH - 2, (height - 2) / 2,
 				PANEL_RADIUS - 1, PANEL_BOTTOM);
 
 		// Тонкий блик по верхней кромке — эффект стекла
@@ -270,7 +292,7 @@ public class ClickGuiScreen extends Screen {
 		int listX = x + PADDING + CATEGORY_WIDTH + PADDING;
 		int listY = y + HEADER_HEIGHT + PADDING;
 		int listWidth = GUI_WIDTH - CATEGORY_WIDTH - PADDING * 3;
-		int listHeight = GUI_HEIGHT - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
+		int listHeight = panelHeight() - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
 
 		RenderUtils.fillRounded(graphics, listX, listY, listWidth, listHeight, 6, LIST_BACKGROUND);
 
@@ -641,7 +663,7 @@ public class ClickGuiScreen extends Screen {
 	private void drawHint(GuiGraphicsExtractor graphics, int x, int y) {
 		String hint = "ЛКМ — вкл/выкл   •   ПКМ — настройки   •   СКМ — бинд   •   колесо — прокрутка   •   шапку можно таскать";
 		graphics.text(this.font, RenderUtils.clamp(this.font, hint, GUI_WIDTH - PADDING * 2),
-				x + PADDING, y + GUI_HEIGHT - PADDING - this.font.lineHeight + 1, TEXT_DIM, false);
+				x + PADDING, y + panelHeight() - PADDING - this.font.lineHeight + 1, TEXT_DIM, false);
 	}
 
 	/** Плашка «нажми кнопку для бинда» поверх панели. */
@@ -653,10 +675,10 @@ public class ClickGuiScreen extends Screen {
 		int width = Math.max(font.width(title), font.width(subtitle)) + 26;
 		int height = 48;
 		int boxX = x + (GUI_WIDTH - width) / 2;
-		int boxY = y + (GUI_HEIGHT - height) / 2;
+		int boxY = y + (panelHeight() - height) / 2;
 
 		// Приглушаем список, чтобы плашка читалась
-		graphics.fill(x + 1, y + 1, x + GUI_WIDTH - 1, y + GUI_HEIGHT - 1, 0xD205050A);
+		graphics.fill(x + 1, y + 1, x + GUI_WIDTH - 1, y + panelHeight() - 1, 0xD205050A);
 
 		RenderUtils.drawSoftShadow(graphics, boxX, boxY, width, height, 8, SHADOW_LAYERS);
 		RenderUtils.fillRounded(graphics, boxX, boxY, width, height, 8, PANEL_OUTLINE);
@@ -727,6 +749,7 @@ public class ClickGuiScreen extends Screen {
 		step = 1.0f - (float) Math.exp(-deltaSeconds * 22.0f);
 
 		openAnimation = approach(openAnimation, 1.0f);
+		panelHeightAnim = approach(panelHeightAnim, targetPanelHeight());
 		scroll = approach(scroll, scrollTarget);
 		ripples.removeIf(ripple -> now - ripple.startTime() >= RIPPLE_DURATION);
 	}
@@ -766,8 +789,9 @@ public class ClickGuiScreen extends Screen {
 		double mouseX = event.x();
 		double mouseY = event.y();
 
-		boolean insidePanel = isInside(mouseX, mouseY, guiX, guiY, GUI_WIDTH, GUI_HEIGHT);
-		Hitbox rippleBounds = insidePanel ? new Hitbox(Math.round(guiX), Math.round(guiY), GUI_WIDTH, GUI_HEIGHT) : null;
+		int panelHeight = panelHeight();
+		boolean insidePanel = isInside(mouseX, mouseY, guiX, guiY, GUI_WIDTH, panelHeight);
+		Hitbox rippleBounds = insidePanel ? new Hitbox(Math.round(guiX), Math.round(guiY), GUI_WIDTH, panelHeight) : null;
 
 		// Перетаскивание за шапку
 		if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT
@@ -790,8 +814,7 @@ public class ClickGuiScreen extends Screen {
 
 		int listX = Math.round(guiX) + PADDING + CATEGORY_WIDTH + PADDING;
 		int listY = Math.round(guiY) + HEADER_HEIGHT + PADDING;
-		int listWidth = GUI_WIDTH - CATEGORY_WIDTH - PADDING * 3;
-		int listHeight = GUI_HEIGHT - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
+		int listHeight = panelHeight() - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
 
 		// Ждём бинд: любая кнопка мыши становится новым биндом модуля
 		if (bindingModule != null) {
@@ -987,7 +1010,7 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-		int listHeight = GUI_HEIGHT - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
+		int listHeight = panelHeight() - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
 		int maxScroll = Math.max(0, contentHeight() - listHeight);
 		scrollTarget = clamp(scrollTarget - (float) scrollY * 16.0f, -maxScroll, 0);
 		return true;
@@ -1160,7 +1183,7 @@ public class ClickGuiScreen extends Screen {
 		float maxX = Math.max(minX, this.width - GUI_WIDTH - margin);
 		guiX = clamp(guiX, minX, maxX);
 
-		float maxY = Math.max(margin, this.height - HEADER_HEIGHT - margin);
+		float maxY = Math.max(margin, this.height - panelHeight() - margin);
 		guiY = clamp(guiY, margin, maxY);
 	}
 
