@@ -162,6 +162,33 @@ jobs:
             unzip -l "$MC" | grep -oE 'net/minecraft/client/[a-z]+/[A-Za-z]*Config[A-Za-z]*\.class' | sort -u | head -6
             echo; echo "=== KeyBindsScreen конструктор ==="
             javap -p -cp "$MC" net.minecraft.client.gui.screens.options.controls.KeyBindsScreen 2>&1 | head -8
+            echo; echo "=== V6 Items: класс и родителя ==="
+            javap -p -cp "$MC" net.minecraft.world.item.Items 2>&1 | head -4
+            echo; echo "--- счётчики ---"
+            javap -p -cp "$MC" net.minecraft.world.item.Items 2>&1 | grep -cE 'static final'
+            echo "--- SHIELD/TOTEM/MACE/TRIDENT/CROSSBOW/APPLE ---"
+            javap -p -cp "$MC" net.minecraft.world.item.Items 2>&1 | grep -E 'SHIELD|TOTEM|MACE|TRIDENT|CROSSBOW|APPLE;'
+            echo "--- классы item/*.java (где ещё лежат константы) ---"
+            unzip -l "$MC" | grep -oE 'net/minecraft/world/item/[A-Za-z]+\.class' | sort -u | grep -viE 'Item|Stack|Tier|Type|Group|Like|Base|Behavior|Category|Holder|Data|Display|Recipe|Sword|Axe|Tool|Armor|Bow|Shield|Bucket|Egg|Potion|Chorus|Dye|Trident|Fishing|Mace|Hoe|Pickaxe|Shovel|Shears|Flint|Skup|Spot' | head -30
+            echo; echo "=== V6 Entity position/velocity ==="
+            javap -p -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -E 'getDeltaMovement|setDeltaMovement|Vec3 position\(\)|double getX\(\)|double getY\(\)|double getZ\(\)|getYRot|getXRot|setYRot|setXRot|float getViewVector'
+            echo; echo "=== V6 projectile классы ==="
+            unzip -l "$MC" | grep -oE 'net/minecraft/world/entity/projectile/[A-Za-z]+\.class' | sort -u | grep -iE 'Arrow|Trident|Throwable|WindCharge|Abstract|Projectile|Exp' | head -20
+            echo; echo "=== V6 SelectWorldScreen ==="
+            javap -p -cp "$MC" net.minecraft.client.gui.screens.worldselection.SelectWorldScreen 2>&1 | head -8
+            echo; echo "=== V6 top options screens ==="
+            unzip -l "$MC" | grep -oE 'net/minecraft/client/gui/screens/[a-zA-Z/]*Options[A-Za-z]*\.class' | sort -u | head -16
+            echo; echo "=== V6 Options keySwapOffhand ==="
+            javap -p -cp "$MC" net.minecraft.client.Options 2>&1 | grep -iE 'keySwap|keyUse|keyAttack|keySpectator|fullscreen\(\)|fov\(\)|gamma\(\)|guiScale\(\)|hideGUI'
+            echo; echo "=== V6 Item getDescriptionId ==="
+            javap -cp "$MC" net.minecraft.world.item.Item 2>&1 | grep -iE 'getDescriptionId|getDescription'
+            echo; echo "=== V6 AbstractContainerMenu clickMenuButton ==="
+            javap -p -cp "$MC" net.minecraft.world.inventory.AbstractContainerMenu 2>&1 | grep -iE 'clickMenuButton|SLOT_OFFHAND'
+            javap -p -cp "$MC" net.minecraft.world.inventory.InventoryMenu 2>&1 | grep -iE 'clickMenuButton|OFFHAND|swap'
+            echo; echo "=== V6 Inventory SLOT_OFFHAND значение + ItemEntity ==="
+            javap -constants -cp "$MC" net.minecraft.world.entity.player.Inventory 2>&1 | grep -E 'SLOT_OFFHAND|NOT_FOUND'
+            echo; echo "=== V6 Identifier с конструктором path ==="
+            javap -p -cp "$MC" net.minecraft.resources.Identifier 2>&1 | grep -E 'public' | head -12
           } > api-audit2-result.txt 2>&1
           wc -l api-audit2-result.txt
 
