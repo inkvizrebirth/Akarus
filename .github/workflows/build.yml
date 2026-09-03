@@ -52,7 +52,8 @@ jobs:
           echo "--- refmap (информационно: в Loom 1.17 его нет, имена переписаны в байткод) ---"
           unzip -l "$JAR" | grep -E '\.refmap\.json' || echo "refmap отсутствует — это норма для Loom 1.17"
           echo "--- ссылка на конфиг миксинов в fabric.mod.json ---"
-          unzip -p "$JAR" fabric.mod.json | grep -o '"mixins"[^]]*]' || { echo "::error::fabric.mod.json не объявляет mixins!"; exit 1; }
+          unzip -p "$JAR" fabric.mod.json | grep -q 'akarus\.mixins\.json' || { echo "::error::fabric.mod.json не объявляет mixins!"; exit 1; }
+          echo "OK: fabric.mod.json ссылается на akarus.mixins.json"
           echo "--- refmap / intermediary (информационно) ---"
           # В Minecraft 26.2 нет intermediary-маппингов (26.2.tiny отсутствует в
           # FabricMC/intermediary), а runtime использует официальные имена Mojang,
