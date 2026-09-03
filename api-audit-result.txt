@@ -23,20 +23,20 @@
 MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 === классы мобов/врагов/манекенов ===
-        0  2026-09-03 11:42   assets/minecraft/textures/entity/armorstand/
+        0  2026-09-03 12:20   assets/minecraft/textures/entity/armorstand/
       809  1980-02-01 00:00   assets/minecraft/textures/entity/armorstand/armorstand.png
-        0  2026-09-03 11:42   net/minecraft/client/model/object/armorstand/
+        0  2026-09-03 12:20   net/minecraft/client/model/object/armorstand/
+      320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
      6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
      5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
-      320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
     11516  1980-02-01 00:00   net/minecraft/client/renderer/entity/ArmorStandRenderer.class
      1224  1980-02-01 00:00   net/minecraft/client/renderer/entity/state/ArmorStandRenderState.class
      2859  1980-02-01 00:00   net/minecraft/util/datafix/fixes/EntityArmorStandSilentFix.class
      3925  1980-02-01 00:00   net/minecraft/world/entity/MobCategory.class
     71991  1980-02-01 00:00   net/minecraft/world/entity/Mob.class
    157622  1980-02-01 00:00   net/minecraft/world/entity/LivingEntity.class
-     5673  1980-02-01 00:00   net/minecraft/world/entity/decoration/ArmorStand$ArmorStandPose.class
     31215  1980-02-01 00:00   net/minecraft/world/entity/decoration/ArmorStand.class
+     5673  1980-02-01 00:00   net/minecraft/world/entity/decoration/ArmorStand$ArmorStandPose.class
     84438  1980-02-01 00:00   net/minecraft/world/entity/player/Player.class
      5444  1980-02-01 00:00   net/minecraft/world/item/ArmorStandItem.class
 
@@ -371,6 +371,99 @@ public class net.minecraft.world.item.ItemCooldowns {
   public boolean isInWater();
   public boolean isInWaterOrRain();
   public boolean isInLava();
+
+=== GameRenderer (fov/nausea/fog/bob) ===
+  private static final float NAUSEA_SPINNING_SPEED;
+  protected final net.minecraft.client.renderer.Panorama panorama;
+  private final net.minecraft.client.renderer.fog.FogRenderer fogRenderer;
+  private net.minecraft.resources.Identifier postEffectId;
+  public void clearPostEffect();
+  public void togglePostEffect();
+  public void checkEntityPostEffect(net.minecraft.world.entity.Entity);
+  private void setPostEffect(net.minecraft.resources.Identifier);
+  public net.minecraft.resources.Identifier currentPostEffect();
+  private void bobHurt(net.minecraft.client.renderer.state.level.CameraRenderState, com.mojang.blaze3d.vertex.PoseStack);
+  private void bobView(net.minecraft.client.renderer.state.level.CameraRenderState, com.mojang.blaze3d.vertex.PoseStack);
+  public net.minecraft.client.renderer.Panorama panorama();
+  public void registerPanoramaTextures(net.minecraft.client.renderer.texture.TextureManager);
+
+=== Player/LivingEntity (fov modifier) ===
+  public float getFieldOfViewModifier(boolean, float);
+
+=== Gui (оверлеи: огонь/тыква/портал) ===
+  private net.minecraft.client.gui.screens.Overlay overlay;
+  private final net.minecraft.client.multiplayer.chat.ChatListener chatListener;
+  public net.minecraft.client.gui.screens.Overlay overlay();
+  public void setOverlay(net.minecraft.client.gui.screens.Overlay);
+  public net.minecraft.client.multiplayer.chat.ChatListener chatListener();
+
+=== GuiRenderState (оверлеи) ===
+
+=== LevelRenderer (fog) ===
+
+=== BlockHitResult (конструкторы) ===
+Compiled from "BlockHitResult.java"
+public class net.minecraft.world.phys.BlockHitResult extends net.minecraft.world.phys.HitResult {
+  public static net.minecraft.world.phys.BlockHitResult miss(net.minecraft.world.phys.Vec3, net.minecraft.core.Direction, net.minecraft.core.BlockPos);
+  public net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3, net.minecraft.core.Direction, net.minecraft.core.BlockPos, boolean);
+  public net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3, net.minecraft.core.Direction, net.minecraft.core.BlockPos, boolean, boolean);
+  public net.minecraft.world.phys.BlockHitResult withDirection(net.minecraft.core.Direction);
+  public net.minecraft.world.phys.BlockHitResult withPosition(net.minecraft.core.BlockPos);
+  public net.minecraft.world.phys.BlockHitResult hitBorder();
+  public net.minecraft.core.BlockPos getBlockPos();
+  public net.minecraft.core.Direction getDirection();
+  public net.minecraft.world.phys.HitResult$Type getType();
+  public boolean isInside();
+
+=== HitResult ===
+Compiled from "HitResult.java"
+public abstract class net.minecraft.world.phys.HitResult {
+  protected final net.minecraft.world.phys.Vec3 location;
+  protected net.minecraft.world.phys.HitResult(net.minecraft.world.phys.Vec3);
+  public double distanceTo(net.minecraft.world.entity.Entity);
+  public abstract net.minecraft.world.phys.HitResult$Type getType();
+  public net.minecraft.world.phys.Vec3 getLocation();
+}
+
+=== InventoryClick ===
+Error: class not found: net.minecraft.world.inventory.InventoryClick
+
+=== MultiPlayerGameMode (клики инвентаря) ===
+
+=== вёдра ===
+  public static final net.minecraft.world.item.Item BUCKET;
+  public static final net.minecraft.world.item.Item WATER_BUCKET;
+  public static final net.minecraft.world.item.Item LAVA_BUCKET;
+  public static final net.minecraft.world.item.Item POWDER_SNOW_BUCKET;
+  public static final net.minecraft.world.item.Item MILK_BUCKET;
+  public static final net.minecraft.world.item.Item PUFFERFISH_BUCKET;
+  public static final net.minecraft.world.item.Item SALMON_BUCKET;
+  public static final net.minecraft.world.item.Item COD_BUCKET;
+  public static final net.minecraft.world.item.Item TROPICAL_FISH_BUCKET;
+  public static final net.minecraft.world.item.Item AXOLOTL_BUCKET;
+  public static final net.minecraft.world.item.Item SULFUR_CUBE_BUCKET;
+  public static final net.minecraft.world.item.Item TADPOLE_BUCKET;
+Compiled from "BucketItem.java"
+public class net.minecraft.world.item.BucketItem extends net.minecraft.world.item.Item implements net.minecraft.world.item.DispensibleContainerItem {
+  protected final net.minecraft.world.level.material.Fluid content;
+  public net.minecraft.world.item.BucketItem(net.minecraft.world.level.material.Fluid, net.minecraft.world.item.Item$Properties);
+  public net.minecraft.world.InteractionResult use(net.minecraft.world.level.Level, net.minecraft.world.entity.player.Player, net.minecraft.world.InteractionHand);
+  public net.minecraft.world.level.ClipContext$Fluid getFluidContext();
+  public static net.minecraft.world.item.ItemStack getEmptySuccessItem(net.minecraft.world.item.ItemStack, net.minecraft.world.entity.player.Player);
+  public void checkExtraContent(net.minecraft.world.entity.LivingEntity, net.minecraft.world.level.Level, net.minecraft.world.item.ItemStack, net.minecraft.core.BlockPos);
+  public boolean emptyContents(net.minecraft.world.entity.LivingEntity, net.minecraft.world.level.Level, net.minecraft.core.BlockPos, net.minecraft.world.phys.BlockHitResult);
+  protected void playEmptySound(net.minecraft.world.entity.LivingEntity, net.minecraft.world.level.LevelAccessor, net.minecraft.core.BlockPos);
+  public net.minecraft.world.level.material.Fluid getContent();
+  private static void lambda$use$0(net.minecraft.world.entity.player.Player, net.minecraft.sounds.SoundEvent);
+}
+
+=== Blocks (water) ===
+  public static final net.minecraft.world.level.block.Block WATER;
+
+=== BlockState (water) ===
+  public net.minecraft.world.level.material.Fluid getType();
+  public boolean isSource();
+  public boolean isSourceOfType(net.minecraft.world.level.material.Fluid);
 
 === EntityType ===
   public net.minecraft.world.entity.EntityType(net.minecraft.world.entity.EntityType$EntityFactory<T>, net.minecraft.world.entity.MobCategory, boolean, boolean, boolean, boolean, net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>, net.minecraft.world.entity.EntityDimensions, float, int, int, java.lang.String, java.util.Optional<net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable>>, net.minecraft.world.flag.FeatureFlagSet, boolean);
