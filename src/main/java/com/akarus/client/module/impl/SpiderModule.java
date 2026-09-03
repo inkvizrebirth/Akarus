@@ -5,11 +5,12 @@ import com.akarus.client.module.ModuleCategory;
 import com.akarus.client.settings.ModeSetting;
 import com.akarus.client.util.Notifications;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.LocalPlayer;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.BlockHitResult;
@@ -172,7 +173,7 @@ public class SpiderModule extends Module {
 		}
 
 		Vec3 hitLocation = Vec3.atCenterOf(wallBlock).add(
-				Vec3.atLowerCornerOf(toPlayer.getNormal()).scale(0.5));
+				Vec3.atLowerCornerOf(toPlayer.getUnitVec3i()).scale(0.5));
 		BlockHitResult hit = new BlockHitResult(hitLocation, toPlayer, wallBlock, false);
 
 		selectSlot(player, slot);
@@ -209,11 +210,11 @@ public class SpiderModule extends Module {
 	// Помощники
 	// ------------------------------------------------------------------
 
-	private static boolean isBucket(ItemStack stack, Items target) {
+	private static boolean isBucket(ItemStack stack, Item target) {
 		return stack.is(target);
 	}
 
-	private int findBucketSlot(LocalPlayer player, Items item) {
+	private int findBucketSlot(LocalPlayer player, Item item) {
 		for (int i = 0; i < 9; i++) {
 			if (player.getInventory().getItem(i).is(item)) {
 				return i;
