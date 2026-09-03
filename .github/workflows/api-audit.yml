@@ -69,6 +69,16 @@ jobs:
               javap -cp "$MC" net.minecraft.client.multiplayer.MultiPlayerGameMode 2>&1 | grep -iE 'attack'
               echo; echo "=== EntityType ==="
               javap -cp "$MC" net.minecraft.world.entity.EntityType 2>&1 | grep -iE 'category|classification'
+              echo; echo "=== MobCategory (константы) ==="
+              javap -cp "$MC" net.minecraft.world.entity.MobCategory 2>&1 | head -30
+              echo; echo "=== Camera приватные (alignWithEntity) ==="
+              javap -p -cp "$MC" net.minecraft.client.Camera 2>&1 | grep -iE 'alignWithEntity|update\('
+              echo; echo "=== MouseHandler приватные (turn) ==="
+              javap -p -cp "$MC" net.minecraft.client.MouseHandler 2>&1 | grep -iE 'turn'
+              echo; echo "=== Minecraft поля ==="
+              javap -cp "$MC" net.minecraft.client.Minecraft 2>&1 | grep -iE 'gameMode|mouseHandler|public net.minecraft.client.multiplayer.ClientLevel|public net.minecraft.client.player.LocalPlayer|gui;'
+              echo; echo "=== Entity getView ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'getViewYRot|getViewXRot|view'
               echo; echo "=== KeyMapping ==="
               javap -cp "$MC" net.minecraft.client.KeyMapping 2>&1 | grep -iE 'setKey|resetMapping|consumeClick|isDown|setDown'
             fi
