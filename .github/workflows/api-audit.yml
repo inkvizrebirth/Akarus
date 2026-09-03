@@ -145,6 +145,19 @@ jobs:
               echo; echo "=== MobEffects (nausea/darkness/blindness) ==="
               javap -cp "$MC" net.minecraft.core.registries.BuiltInRegistries 2>&1 | grep -i mobeffect | head -4 || true
               unzip -l "$MC" | grep -iE 'MobEffects.class|effects/MobEffects' | head -5 || true
+              echo; echo "=== ContainerInput ==="
+              javap -cp "$MC" net.minecraft.world.inventory.ContainerInput 2>&1 | head -30 || true
+              echo; echo "=== MobEffects (константы) ==="
+              javap -cp "$MC" net.minecraft.world.effect.MobEffects 2>&1 | grep -iE 'NAUSEA|DARKNESS|BLINDNESS' | head -8 || true
+              echo; echo "=== fog environments ==="
+              unzip -l "$MC" | grep -iE 'fog/environment' | head -20 || true
+              echo; echo "=== gui layers/overlays ==="
+              unzip -l "$MC" | grep -iE 'client/gui/(layers|hud)' | head -25 || true
+              unzip -l "$MC" | grep -iE '(Vignette|SpyglassOverlay|PowderSnow|FireOverlay|GuiLayers|LayeredDraw)' | head -15 || true
+              echo; echo "=== Identifier ==="
+              javap -cp "$MC" net.minecraft.resources.Identifier 2>&1 | grep -iE 'getPath|getNamespace' | head -4 || true
+              echo; echo "=== Inventory (поля) ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.player.Inventory 2>&1 | grep -iE 'List|items|offhand' | head -12 || true
               echo; echo "=== EntityType ==="
               javap -cp "$MC" net.minecraft.world.entity.EntityType 2>&1 | grep -iE 'category|classification'
               echo; echo "=== MobCategory (константы) ==="
