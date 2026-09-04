@@ -88,6 +88,15 @@ public class KillAuraModule extends Module {
 	private final BooleanSetting attackMobs = bool("mobs", "Враждебные мобы", true);
 	private final BooleanSetting attackInvisible = bool("invisible", "Невидимые", false);
 	private final BooleanSetting throughWalls = bool("walls", "Через стены", false);
+	private final BooleanSetting ignoreTeams = bool("ignore_teams", "Не бить союзников/команду", true);
+	private final BooleanSetting ignoreCreative = bool("ignore_creative", "Не бить Creative/Spectator", true);
+	private final IntSetting fieldOfView = intSetting("fov", "Угол обзора, градусов", 360, 30, 360);
+	private final IntSetting attackStrength = intSetting("attack_strength", "Сила удара, %", 93, 50, 100);
+	private final ModeSetting aimPoint = mode("aim_point", "Точка прицела", "adaptive",
+			ModeSetting.option("adaptive", "Адаптивно"),
+			ModeSetting.option("head", "Голова"),
+			ModeSetting.option("chest", "Корпус"),
+			ModeSetting.option("legs", "Ноги"));
 
 	/**
 	 * Степень «человечности» легитного режима: 0 — почти без шума, максимум буста,
@@ -169,7 +178,7 @@ public class KillAuraModule extends Module {
 	private int lockTicks;
 
 	/** Куда по вертикали целимся по текущей цели: преимущественно корпус, иногда голова. */
-	private float aimOffsetY;
+	private float aimHeightFraction;
 
 	private int attackDelay;
 
@@ -192,6 +201,8 @@ public class KillAuraModule extends Module {
 	private boolean holdingForward;
 	private int holdingStrafe; // -1 — влево, 0 — нет, 1 — вправо
 	private boolean holdingJump;
+	/** Щит подняла именно аура — ручное блокирование игрока не снимаем при off/GUI. */
+	private boolean blockingByAura;
 
 	/** Фокусированный режим: накопленный «ультра-быстрый» доворот круга. */
 	private float spinYaw;
@@ -215,8 +226,13 @@ public class KillAuraModule extends Module {
 	@Override
 	protected void onEnable() {
 		this.targetId = null;
-		this.aimOffsetY = drawAimOffset();
+		this.aimHeightFraction = drawAimHeight();
 		this.attackDelay = 3;
+		this.blockCooldown = 0;
+		this.moveSuppressTicks = 0;
+		this.spinYaw = 0.0F;
+		this.orbitTicks = 0;
+		this.blockingByAura = false;
 		resetSequence();
 	}
 
@@ -230,6 +246,7 @@ public class KillAuraModule extends Module {
 		if (client != null && client.player != null) {
 			stopBlocking(client.player);
 		}
+		KeyOwnership.releaseAll(client, this);
 	}
 
 	public boolean isLegit() {
@@ -252,6 +269,7 @@ public class KillAuraModule extends Module {
 		// В меню и чате не воюем
 		if (client.gui != null && client.gui.screen() != null) {
 			releaseMovement();
+			stopBlocking(player);
 			return;
 		}
 
@@ -259,6 +277,7 @@ public class KillAuraModule extends Module {
 		// isUsingItem() истинен, и прерывать себя нельзя. Еда и тотем — по лимитам.
 		if (itemUsePausesAttack(player)) {
 			releaseMovement();
+			stopBlocking(player);
 			return;
 		}
 
@@ -278,7 +297,7 @@ public class KillAuraModule extends Module {
 		UUID id = target.getUUID();
 		if (!id.equals(this.targetId)) {
 			this.targetId = id;
-			this.aimOffsetY = drawAimOffset();
+			this.aimHeightFraction = drawAimHeight();
 			this.attackDelay = Math.max(this.attackDelay, 3 + RANDOM.nextInt(6));
 			this.wasTargetSwinging = target instanceof LivingEntity living && living.swinging;
 			resetSequence();
@@ -352,7 +371,7 @@ public class KillAuraModule extends Module {
 		// Обязательный RayTrace: луч из глаз по взгляду должен пересекать хитбокс
 		// И не упираться раньше в блок (block clip): иначе бьём «сквозь стену»
 		boolean rayHits = rayIntersectsHitbox(player, target, range.get())
-				&& !blockBlocksRay(player, target);
+				&& (throughWalls.isEnabled() || !blockBlocksRay(player, target));
 
 		// ---- Авто-Блок: держим щит, пока враг может ударить ----
 		InteractionHand shieldHand = shieldHand(player);
@@ -373,10 +392,12 @@ public class KillAuraModule extends Module {
 			// Спокойное состояние: поднять щит, если надо; бьём, когда всё готово
 			if (wantBlock && !player.isBlocking() && blockCooldown == 0) {
 				raiseShield(client, player, shieldHand);
+			} else if (!wantBlock && blockingByAura) {
+				stopBlocking(player);
 			}
 
 			boolean basicReady = attackDelay == 0 && aimReady && rayHits
-					&& player.getAttackStrengthScale(0.0F) >= 0.93F
+					&& player.getAttackStrengthScale(0.0F) >= attackStrength.get() / 100.0F
 					// «Никогда»-лимиты: оружие в руке, вода, прыжок, малое HP
 					&& limitsAllow(player);
 			// С Авто-Блоком первый удар — только реакция на замах врага (или враг сам
@@ -406,10 +427,10 @@ public class KillAuraModule extends Module {
 			// Смарт Крит: ждём окна крита (падение), таймаут — бьём с воздуха как есть
 			if (jumpHoldTicks > 0) {
 				jumpHoldTicks--;
-				client.options.keyJump.setDown(true);
+				KeyOwnership.hold(client, client.options.keyJump, this);
 				holdingJump = true;
 			} else if (holdingJump) {
-				KeyOwnership.release(client, client.options.keyJump);
+				KeyOwnership.releaseHold(client, client.options.keyJump, this);
 				holdingJump = false;
 			}
 			if (player.fallDistance > 0.0F || --critTimeout <= 0) {
@@ -421,17 +442,19 @@ public class KillAuraModule extends Module {
 		// Сброс спринта после удара: быстрый — снять спринт на тик; легитный — w-tap
 		if (sprintResetTicks > 0) {
 			sprintResetTicks--;
+			KeyOwnership.suppress(client, client.options.keySprint, this);
 			if (sprintReset.is(SPRINT_FAST)) {
-				KeyOwnership.release(client, client.options.keySprint);
 				player.setSprinting(false);
 			} else if (sprintReset.is(SPRINT_LEGIT)) {
 				// w-tap: на тик отпускаем спринт и — в легитной коррекции — W,
 				// который в этом режиме держит сам игрок
-				KeyOwnership.release(client, client.options.keySprint);
 				if (movement.is(MOVEMENT_LEGIT)) {
-					KeyOwnership.release(client, client.options.keyUp);
+					KeyOwnership.suppress(client, client.options.keyUp, this);
 				}
 			}
+		} else {
+			KeyOwnership.releaseSuppression(client, client.options.keySprint, this);
+			KeyOwnership.releaseSuppression(client, client.options.keyUp, this);
 		}
 	}
 
@@ -498,6 +521,7 @@ public class KillAuraModule extends Module {
 	private void beginAttackSequence(Minecraft client, LocalPlayer player, Entity target) {
 		if (player.isBlocking()) {
 			player.stopUsingItem();
+			blockingByAura = false;
 			this.sequence = Sequence.LOWERING;
 			this.lowerTicks = isLegit() ? 2 + RANDOM.nextInt(2) : 1;
 			this.blockCooldown = 5 + RANDOM.nextInt(5);
@@ -512,7 +536,7 @@ public class KillAuraModule extends Module {
 		this.sequence = Sequence.JUMPING;
 		this.critTimeout = 14;
 		this.jumpHoldTicks = 2;
-		client.options.keyJump.setDown(true);
+		KeyOwnership.hold(client, client.options.keyJump, this);
 		this.holdingJump = true;
 	}
 
@@ -526,7 +550,8 @@ public class KillAuraModule extends Module {
 		}
 
 		// Последняя проверка прямо перед ударом: прицел мог уйти за хитбокс
-		if (!rayIntersectsHitbox(player, target, range.get())) {
+		if (!rayIntersectsHitbox(player, target, range.get())
+				|| !throughWalls.isEnabled() && blockBlocksRay(player, target)) {
 			return;
 		}
 
@@ -546,6 +571,12 @@ public class KillAuraModule extends Module {
 	}
 
 	private void resetSequence() {
+		Minecraft client = Minecraft.getInstance();
+		if (client != null && client.options != null) {
+			releaseJump(client);
+			KeyOwnership.releaseSuppression(client, client.options.keySprint, this);
+			KeyOwnership.releaseSuppression(client, client.options.keyUp, this);
+		}
 		this.sequence = Sequence.NONE;
 		this.lowerTicks = 0;
 		this.critTimeout = 0;
@@ -568,17 +599,19 @@ public class KillAuraModule extends Module {
 		return null;
 	}
 
-	private static void raiseShield(Minecraft client, LocalPlayer player, InteractionHand hand) {
+	private void raiseShield(Minecraft client, LocalPlayer player, InteractionHand hand) {
 		if (client.gameMode != null && !player.isBlocking() && !player.isUsingItem()) {
 			client.gameMode.useItem(player, hand);
+			blockingByAura = true;
 		}
 	}
 
 	/** Опускаем щит, только если мы его держим (не трогаем чужое использование). */
-	private static void stopBlocking(LocalPlayer player) {
-		if (player.isBlocking()) {
+	private void stopBlocking(LocalPlayer player) {
+		if (blockingByAura && player.isBlocking()) {
 			player.stopUsingItem();
 		}
+		blockingByAura = false;
 	}
 
 	// ------------------------------------------------------------------
@@ -619,9 +652,9 @@ public class KillAuraModule extends Module {
 	private void holdForward(Minecraft client, boolean down) {
 		if (holdingForward != down) {
 			if (down) {
-				client.options.keyUp.setDown(true);
+				KeyOwnership.hold(client, client.options.keyUp, this);
 			} else {
-				KeyOwnership.release(client, client.options.keyUp);
+				KeyOwnership.releaseHold(client, client.options.keyUp, this);
 			}
 			holdingForward = down;
 		}
@@ -632,14 +665,14 @@ public class KillAuraModule extends Module {
 			return;
 		}
 		if (holdingStrafe == -1) {
-			KeyOwnership.release(client, client.options.keyLeft);
+			KeyOwnership.releaseHold(client, client.options.keyLeft, this);
 		} else if (holdingStrafe == 1) {
-			KeyOwnership.release(client, client.options.keyRight);
+			KeyOwnership.releaseHold(client, client.options.keyRight, this);
 		}
 		if (direction == -1) {
-			client.options.keyLeft.setDown(true);
+			KeyOwnership.hold(client, client.options.keyLeft, this);
 		} else if (direction == 1) {
-			client.options.keyRight.setDown(true);
+			KeyOwnership.hold(client, client.options.keyRight, this);
 		}
 		holdingStrafe = direction;
 	}
@@ -657,6 +690,11 @@ public class KillAuraModule extends Module {
 
 	private void releaseMovement() {
 		releaseHeldKeys();
+		Minecraft client = Minecraft.getInstance();
+		if (client != null && client.options != null) {
+			KeyOwnership.releaseSuppression(client, client.options.keySprint, this);
+			KeyOwnership.releaseSuppression(client, client.options.keyUp, this);
+		}
 		moveSuppressTicks = 0;
 	}
 
@@ -698,7 +736,7 @@ public class KillAuraModule extends Module {
 
 	private void releaseJump(Minecraft client) {
 		if (holdingJump) {
-			KeyOwnership.release(client, client.options.keyJump);
+			KeyOwnership.releaseHold(client, client.options.keyJump, this);
 			holdingJump = false;
 		}
 	}
@@ -780,6 +818,9 @@ public class KillAuraModule extends Module {
 			if (!attackPlayers.isEnabled()) {
 				return false;
 			}
+			if (ignoreCreative.isEnabled() && ((Player) entity).isCreative()) {
+				return false;
+			}
 		} else if (entity.getType().getCategory() == MobCategory.MONSTER) {
 			if (!attackMobs.isEnabled()) {
 				return false;
@@ -792,7 +833,13 @@ public class KillAuraModule extends Module {
 		if (entity.isInvisible() && !attackInvisible.isEnabled()) {
 			return false;
 		}
+		if (ignoreTeams.isEnabled() && player.isAlliedTo(entity)) {
+			return false;
+		}
 		if (player.distanceTo(entity) > range.get()) {
+			return false;
+		}
+		if (fieldOfView.get() < 360 && angleTo(player, entity) > fieldOfView.get() * 0.5) {
 			return false;
 		}
 		return throughWalls.isEnabled() || player.hasLineOfSight(entity);
@@ -877,9 +924,18 @@ public class KillAuraModule extends Module {
 	/** Углы, по которым игрок смотрит в точку прицеливания на теле цели. */
 	private float[] aimAt(LocalPlayer player, Entity target) {
 		Vec3 eye = player.getEyePosition();
-		Vec3 at = target.getEyePosition();
-		// Смещение по вертикали: корпус/ноги/голова — свой выбор на каждую цель
-		at = new Vec3(at.x, at.y + this.aimOffsetY, at.z);
+		AABB box = target.getBoundingBox();
+		float fraction = switch (aimPoint.getValue()) {
+			case "head" -> 0.86F;
+			case "chest" -> 0.62F;
+			case "legs" -> 0.28F;
+			default -> this.aimHeightFraction;
+		};
+		// Точка всегда внутри реального AABB. Старый расчёт прибавлял смещение
+		// к позиции глаз и иногда целился выше головы маленьких сущностей.
+		Vec3 at = new Vec3((box.minX + box.maxX) * 0.5,
+				box.minY + (box.maxY - box.minY) * fraction,
+				(box.minZ + box.maxZ) * 0.5);
 
 		double dx = at.x - eye.x;
 		double dy = at.y - eye.y;
@@ -911,11 +967,11 @@ public class KillAuraModule extends Module {
 	 * Точка прицеливания по вертикали: преимущественно корпус (вплоть до ног),
 	 * примерно каждый пятый раз — голова. На урон не влияет, а вот почерк меняет.
 	 */
-	private static float drawAimOffset() {
+	private static float drawAimHeight() {
 		if (RANDOM.nextFloat() < 0.2F) {
-			return 0.05F + RANDOM.nextFloat() * 0.25F;
+			return 0.76F + RANDOM.nextFloat() * 0.12F;
 		}
-		return 0.05F - 0.4F * RANDOM.nextFloat();
+		return 0.42F + 0.26F * RANDOM.nextFloat();
 	}
 
 	/** Можно ли критовать прямо сейчас: с земли, не в воде, не на лестнице. */

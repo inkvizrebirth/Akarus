@@ -5,6 +5,7 @@ import com.dreamcast.client.module.ModuleCategory;
 import com.dreamcast.client.settings.ModeSetting;
 import com.dreamcast.client.util.Notifications;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -50,6 +51,7 @@ public class SpiderModule extends Module {
 	private int bucketSlot = -1;
 	/** Позиция поставленного источника воды; null — воды сейчас нет. */
 	private BlockPos waterSource;
+	private ClientLevel activeLevel;
 
 	public SpiderModule() {
 		super("spider", "Spider", "Подъём по стенам: водой из ведра или прыжками",
@@ -62,15 +64,15 @@ public class SpiderModule extends Module {
 		LocalPlayer player = client == null ? null : client.player;
 		// Слот возвращаем всегда (клиентская операция); свою воду собираем,
 		// только если инвентарь наш и экран не контейнерный
-		if (player != null) {
-			if (previousSlot >= 0 && player.getInventory().getSelectedSlot() != previousSlot) {
-				player.getInventory().setSelectedSlot(previousSlot);
-			}
+		if (player != null && client.level == activeLevel) {
+			// Сначала убрать нашу воду (операция сама выберет ведро), затем уже
+			// окончательно вернуть слот игрока. Прежний порядок снова оставлял ведро.
 			if (waterSource != null && player.containerMenu == player.inventoryMenu
 					&& client.gameMode != null
 					&& client.level.getFluidState(waterSource).isSource()) {
 				pickWater(client, player, waterSource);
 			}
+			restoreSelection(player);
 		}
 		previousSlot = -1;
 		bucketSlotUsed = -1;
@@ -82,6 +84,19 @@ public class SpiderModule extends Module {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client == null ? null : client.player;
 		if (player == null || client.level == null) {
+			previousSlot = -1;
+			waterSource = null;
+			activeLevel = null;
+			return;
+		}
+		if (activeLevel != client.level) {
+			previousSlot = -1;
+			waterSource = null;
+			bucketSlot = -1;
+			activeLevel = client.level;
+		}
+		if (client.gui != null && client.gui.screen() != null
+				|| player.containerMenu != player.inventoryMenu) {
 			return;
 		}
 		if (cooldown > 0) {
@@ -93,6 +108,9 @@ public class SpiderModule extends Module {
 
 		if (mode.is("jump")) {
 			tickJump(player);
+			return;
+		}
+		if (client.gameMode == null) {
 			return;
 		}
 		tickWaterBucket(client, player);
@@ -119,7 +137,7 @@ public class SpiderModule extends Module {
 
 	private void tickWaterBucket(Minecraft client, LocalPlayer player) {
 		// Работаем только по зажатому прыжку — как обычный подъём
-		if (!client.options.keyJump.isDown() || client.gui.screen() != null) {
+		if (!client.options.keyJump.isDown()) {
 			return;
 		}
 
@@ -131,15 +149,24 @@ public class SpiderModule extends Module {
 		int feetY = feet.getY();
 		if (standableAt(client, ahead, feetY + 1)) {
 			if (waterSource != null) {
-				pickWater(client, player, waterSource);
+				if (client.level.getFluidState(waterSource).isSource()
+						&& !pickWater(client, player, waterSource)) {
+					return;
+				}
 			}
 			waterSource = null;
+			restoreSelection(player);
 			return;
 		}
 
 		// Стена начинается на уровне ног или головы — иначе это не подъём
 		if (!solid(client, ahead) && !solid(client, ahead.above())) {
+			if (waterSource != null && client.level.getFluidState(waterSource).isSource()
+					&& !pickWater(client, player, waterSource)) {
+				return;
+			}
 			waterSource = null;
+			restoreSelection(player);
 			return;
 		}
 
@@ -257,6 +284,14 @@ public class SpiderModule extends Module {
 			player.getInventory().setSelectedSlot(slot);
 			bucketSlotUsed = slot;
 		}
+	}
+
+	private void restoreSelection(LocalPlayer player) {
+		if (previousSlot >= 0 && player.getInventory().getSelectedSlot() != previousSlot) {
+			player.getInventory().setSelectedSlot(previousSlot);
+		}
+		previousSlot = -1;
+		bucketSlotUsed = -1;
 	}
 
 	private static boolean solid(Minecraft client, BlockPos pos) {

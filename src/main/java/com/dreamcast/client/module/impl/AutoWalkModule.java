@@ -7,6 +7,7 @@ import com.dreamcast.client.module.ModuleCategory;
 import com.dreamcast.client.module.ModuleManager;
 import com.dreamcast.client.settings.BooleanSetting;
 import com.dreamcast.client.settings.IntSetting;
+import com.dreamcast.client.util.KeyOwnership;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -120,6 +121,10 @@ public class AutoWalkModule extends Module {
 
 	@Override
 	protected void onDisable() {
+		Minecraft client = Minecraft.getInstance();
+		if (client != null && client.options != null) {
+			KeyOwnership.releaseSuppression(client, client.options.keyUse, this);
+		}
 		BaritoneBridge.stop();
 		this.phase = Phase.CHOOSING;
 		this.target = null;
@@ -274,12 +279,17 @@ public class AutoWalkModule extends Module {
 	 */
 	public static void handleInput(Minecraft client) {
 		AutoWalkModule module = ModuleManager.find(AutoWalkModule.class);
-		if (module == null || !module.isEnabled() || client.player == null || client.mouseHandler == null) {
+		if (module == null) {
+			return;
+		}
+		if (!module.isEnabled() || client.player == null || client.mouseHandler == null) {
+			KeyOwnership.releaseSuppression(client, client.options.keyUse, module);
 			return;
 		}
 
 		// В меню и инвентаре правая кнопка мыши работает как обычно
 		if (client.gui != null && client.gui.screen() != null) {
+			KeyOwnership.releaseSuppression(client, client.options.keyUse, module);
 			return;
 		}
 
@@ -292,7 +302,7 @@ public class AutoWalkModule extends Module {
 
 		// Гасим ПКМ до того, как его увидит игра
 		KeyMapping use = client.options.keyUse;
-		use.setDown(false);
+		KeyOwnership.suppress(client, use, module);
 		while (use.consumeClick()) {
 			// клик съеден, игра его не заметит
 		}

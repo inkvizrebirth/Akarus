@@ -75,9 +75,7 @@ public class ElementListSetting extends Setting<String> {
 				parsed.add(id);
 			}
 		}
-		if (parsed.isEmpty()) {
-			return false;
-		}
+		// Пустой набор тоже сохраняем: HUD разрешено полностью очистить.
 		selected.clear();
 		selected.addAll(parsed);
 		setValue(String.join(",", parsed));

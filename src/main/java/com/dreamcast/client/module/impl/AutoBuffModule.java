@@ -7,6 +7,7 @@ import com.dreamcast.client.settings.IntSetting;
 import com.dreamcast.client.settings.ModeSetting;
 import com.dreamcast.client.util.BuffPriority;
 import com.dreamcast.client.util.DrinkLogic;
+import com.dreamcast.client.util.KeyOwnership;
 import com.dreamcast.client.util.Notifications;
 import com.dreamcast.client.util.PendingRestores;
 import com.dreamcast.client.util.PotionLogic;
@@ -511,7 +512,7 @@ public class AutoBuffModule extends Module {
 		} else {
 			sawUsing = false;
 			client.gameMode.useItem(player, net.minecraft.world.InteractionHand.MAIN_HAND);
-			client.options.keyUse.setDown(true);
+			KeyOwnership.hold(client, client.options.keyUse, this);
 		}
 		phase = Phase.WAIT_RESULT;
 	}
@@ -561,7 +562,7 @@ public class AutoBuffModule extends Module {
 		} else if (!usingNow) {
 			// сорвалось (урон, движение) — перезапускаем использование
 			client.gameMode.useItem(player, net.minecraft.world.InteractionHand.MAIN_HAND);
-			client.options.keyUse.setDown(true);
+			KeyOwnership.hold(client, client.options.keyUse, this);
 		}
 	}
 
@@ -586,9 +587,11 @@ public class AutoBuffModule extends Module {
 			if (!free) {
 				if (net.minecraft.util.Util.getMillis() - phaseSince > 3000L) {
 					if (notify.isEnabled()) {
-						Notifications.warn("AutoBuff", "Предмет слота " + (RESERVE_SLOT + 1) + " не возвращён — контейнер занят");
+						Notifications.warn("AutoBuff", "Жду закрытия контейнера, чтобы вернуть предмет");
 					}
-					restorePlan.advance(); // не блокируем модуль навсегда
+					// SWAP_BACK нельзя пропускать: иначе резервный предмет и зелье
+					// навсегда останутся обменянными. Ждём безопасного inventoryMenu.
+					phaseSince = net.minecraft.util.Util.getMillis();
 				}
 				return;
 			}
@@ -775,7 +778,7 @@ public class AutoBuffModule extends Module {
 	private void releaseUseKey() {
 		Minecraft client = Minecraft.getInstance();
 		if (client != null && client.options != null) {
-			client.options.keyUse.setDown(false);
+			KeyOwnership.releaseHold(client, client.options.keyUse, this);
 		}
 	}
 }

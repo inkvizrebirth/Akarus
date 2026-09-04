@@ -8,6 +8,7 @@ import com.dreamcast.client.settings.IntSetting;
 import com.dreamcast.client.settings.ModeSetting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -29,6 +30,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 
 /**
  * AutoTotem — держит тотем бессмертия в левой руке и, что важнее, <b>предсказывает</b>
@@ -129,9 +131,11 @@ public class AutoTotemModule extends Module {
 
 	/** Был ли в прошлом сканировании хотя бы один живой противник в радиусе. */
 	private boolean hostileNearby;
+	/** Экземпляр мира, к которому относится текущая транзакция и история скоростей. */
+	private ClientLevel activeLevel;
 
 	/** История позиций для дельт: id → {x, y, z, tick}. */
-	private final Map<Integer, double[]> positionHistory = new HashMap<>();
+	private final Map<UUID, double[]> positionHistory = new HashMap<>();
 
 	private enum Phase {
 		IDLE,       // тотем не нужен, стоим
@@ -161,6 +165,8 @@ public class AutoTotemModule extends Module {
 		offhandWasOurs = false;
 		lastThreat = "";
 		hostileNearby = false;
+		Minecraft client = Minecraft.getInstance();
+		activeLevel = client == null ? null : client.level;
 		positionHistory.clear();
 	}
 
@@ -178,23 +184,20 @@ public class AutoTotemModule extends Module {
 			if (player != null && isHoldingTotem(player)) {
 				int backSlot = totemHotbarSlot >= 0 ? totemHotbarSlot
 						: player.getInventory().getSelectedSlot();
-				Runnable restore = () -> {
-					player.getInventory().setSelectedSlot(backSlot);
-					swapOffhand(client, player);
-					if (restoreHotbar >= 0
-							&& player.getInventory().getSelectedSlot() != restoreHotbar) {
-						player.getInventory().setSelectedSlot(restoreHotbar);
-					}
-				};
-				if (player.containerMenu == player.inventoryMenu) {
-					restore.run();
-				} else {
-					PendingRestores.add(c -> {
-						if (c.player == null || c.player.containerMenu != c.player.inventoryMenu) {
-							return false;
-						}
-						restore.run();
-						return true;
+					final int wantedSlot = restoreHotbar;
+					if (player.containerMenu == player.inventoryMenu) {
+						restoreTotem(client, player, backSlot, wantedSlot);
+					} else {
+						PendingRestores.add(c -> {
+							if (c.player == null || c.player.containerMenu != c.player.inventoryMenu) {
+								return false;
+							}
+							// Не используем захваченный LocalPlayer старого мира: после
+							// reconnect это другой объект и другая инвентарная сессия.
+							if (isHoldingTotem(c.player)) {
+								restoreTotem(c, c.player, backSlot, wantedSlot);
+							}
+							return true;
 					});
 				}
 			}
@@ -209,7 +212,13 @@ public class AutoTotemModule extends Module {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client == null ? null : client.player;
 		if (player == null || client.level == null || client.gameMode == null) {
+			clearTransientState();
 			return;
+		}
+		if (activeLevel != client.level) {
+			// Слоты/сущности из прошлого мира нельзя продолжать в новой сессии.
+			clearTransientState();
+			activeLevel = client.level;
 		}
 
 		Screen screen = client.gui == null ? null : client.gui.screen();
@@ -223,13 +232,20 @@ public class AutoTotemModule extends Module {
 		// ВАЖНО: прогноз читает историю ПОЗАПРОШЛОГО тика, поэтому трек
 		// позиций обновляем строго ПОСЛЕ predictIncomingDamage — иначе
 		// velocityOf вычитает текущую позицию из неё же и скорость всегда 0.
-		float incoming = prediction.isEnabled() ? predictIncomingDamage(client, player) : 0.0f;
+		float incoming;
+		if (prediction.isEnabled()) {
+			incoming = predictIncomingDamage(client, player);
+		} else {
+			incoming = 0.0f;
+			hostileNearby = hasHostileNearby(client, player);
+			lastThreat = "";
+		}
 		trackVelocities(client);
 		float effectiveHealth = player.getHealth() + player.getAbsorptionAmount();
 		boolean critical = effectiveHealth <= healthLine.get();
 		boolean burst = incoming >= Math.max(4.0f, player.getHealth());
 		boolean predictedDeath = incoming > 0.0f && effectiveHealth - incoming <= healthLine.get();
-		boolean holdWhileHostile = alwaysHold.isEnabled() && hostileNearby && !holding;
+		boolean holdWhileHostile = alwaysHold.isEnabled() && hostileNearby;
 		boolean danger = critical || burst || predictedDeath || holdWhileHostile;
 
 		if (danger) {
@@ -385,6 +401,33 @@ public class AutoTotemModule extends Module {
 		}
 	}
 
+	private static void restoreTotem(Minecraft client, LocalPlayer player, int backSlot, int wantedSlot) {
+		if (client == null || player == null || client.gameMode == null || !isHoldingTotem(player)) {
+			return;
+		}
+		if (backSlot >= 0 && backSlot < Inventory.getSelectionSize()) {
+			player.getInventory().setSelectedSlot(backSlot);
+		}
+		swapOffhand(client, player);
+		if (wantedSlot >= 0 && wantedSlot < Inventory.getSelectionSize()
+				&& player.getInventory().getSelectedSlot() != wantedSlot) {
+			player.getInventory().setSelectedSlot(wantedSlot);
+		}
+	}
+
+	/** Сброс незавершённой транзакции без действий со слотами старого мира. */
+	private void clearTransientState() {
+		phase = Phase.IDLE;
+		phaseTimer = 0;
+		totemHotbarSlot = -1;
+		restoreHotbar = -1;
+		offhandWasOurs = false;
+		quiet = 0;
+		hostileNearby = false;
+		lastThreat = "";
+		positionHistory.clear();
+	}
+
 	/**
 	 * Shift-клик переноса (рюкзак ↔ хотбар). Принимает индекс Inventory
 	 * (0..8 хотбар, 9..35 рюкзак) и переводит в id слота InventoryMenu:
@@ -493,6 +536,23 @@ public class AutoTotemModule extends Module {
 
 		lastThreat = worst > 0.0f ? threatName + " ≈ " + Math.round(worst) + " HP" : "";
 		return worst;
+	}
+
+	/** Лёгкий скан для Always Hold, когда тяжёлое предсказание отключено. */
+	private boolean hasHostileNearby(Minecraft client, LocalPlayer player) {
+		double range = threatRange.get();
+		var box = player.getBoundingBox().inflate(range);
+		for (Entity entity : client.level.getEntities(player, box, candidate -> candidate != player)) {
+			if (!(entity instanceof LivingEntity living) || !living.isAlive() || living.isSpectator()) {
+				continue;
+			}
+			boolean hostilePlayer = living instanceof Player && !player.isAlliedTo(living);
+			boolean hostileMob = living.getType().getCategory() == MobCategory.MONSTER;
+			if (hostilePlayer || hostileMob) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** Угроза от живого противника: замах, сближение, пикирующий смэш. */
@@ -647,14 +707,14 @@ public class AutoTotemModule extends Module {
 						&& living.getType().getCategory() == MobCategory.MONSTER);
 			if (interesting) {
 				Vec3 pos = entity.position();
-				positionHistory.put(entity.getId(), new double[]{pos.x, pos.y, pos.z, entity.tickCount});
+					positionHistory.put(entity.getUUID(), new double[]{pos.x, pos.y, pos.z, entity.tickCount});
 			}
 		}
 	}
 
 	/** Скорость в блоках/тик по последней дельте; null — пока наблюдение только началось. */
 	private double[] velocityOf(Entity entity) {
-		double[] previous = positionHistory.get(entity.getId());
+		double[] previous = positionHistory.get(entity.getUUID());
 		if (previous == null) {
 			return null;
 		}

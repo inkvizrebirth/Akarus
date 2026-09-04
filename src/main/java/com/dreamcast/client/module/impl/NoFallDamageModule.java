@@ -5,6 +5,7 @@ import com.dreamcast.client.module.ModuleCategory;
 import com.dreamcast.client.settings.BooleanSetting;
 import com.dreamcast.client.settings.ModeSetting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -75,6 +76,7 @@ public class NoFallDamageModule extends Module {
 	private boolean placedByUs;
 	/** Видели ли переход водяного ведра в пустое. */
 	private boolean sawBucketEmpty;
+	private ClientLevel activeLevel;
 
 	public NoFallDamageModule() {
 		super("no_fall_damage", "NoFallDamage", "Ватердроп: ставит воду под себя при опасном падении и убирает её после посадки",
@@ -83,7 +85,12 @@ public class NoFallDamageModule extends Module {
 
 	@Override
 	protected void onDisable() {
-		restoreSelection();
+		Minecraft client = Minecraft.getInstance();
+		if (client != null && client.level == activeLevel) {
+			restoreSelection();
+		} else {
+			previousSlot = -1;
+		}
 		resetState();
 	}
 
@@ -105,7 +112,14 @@ public class NoFallDamageModule extends Module {
 		LocalPlayer player = client == null ? null : client.player;
 		if (player == null || client.level == null || client.gameMode == null) {
 			resetState();
+			previousSlot = -1;
+			activeLevel = null;
 			return;
+		}
+		if (activeLevel != client.level) {
+			resetState();
+			previousSlot = -1;
+			activeLevel = client.level;
 		}
 
 		// GUI/чужой контейнер: новых действий нет; начатое — безопасный откат
@@ -310,7 +324,8 @@ public class NoFallDamageModule extends Module {
 			// Вода не дождалась посадки: если игрок уже стоит на земле и источник
 			// ещё там — приберём за собой (только нашу!), иначе просто выходим
 			if (player.onGround() && isOurWaterStillThere(client)
-					&& com.dreamcast.client.util.NoFallLogic.collectAllowed(this.placedByUs, true)) {
+					&& com.dreamcast.client.util.NoFallLogic.collectAllowed(
+							this.placedByUs, autoRemove.isEnabled())) {
 				startRetract();
 			} else {
 				restoreSelection();

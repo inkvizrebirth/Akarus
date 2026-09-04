@@ -5,6 +5,7 @@ import com.dreamcast.client.module.ModuleManager;
 import com.dreamcast.client.module.ModuleCategory;
 import com.dreamcast.client.settings.BooleanSetting;
 import com.dreamcast.client.settings.IntSetting;
+import com.dreamcast.client.util.KeyOwnership;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -68,6 +69,7 @@ public class FreeCamModule extends Module {
 	@Override
 	protected void onDisable() {
 		this.initialised = false;
+		KeyOwnership.releaseAll(Minecraft.getInstance(), this);
 	}
 
 	/**
@@ -82,6 +84,13 @@ public class FreeCamModule extends Module {
 		}
 
 		if (!module.isEnabled() || client.player == null || client.level == null) {
+			return;
+		}
+		// В меню мышь и клавиатура принадлежат экрану: иначе FreeCam гасил
+		// ЛКМ/ПКМ и делал инвентарь фактически некликабельным.
+		if (client.gui != null && client.gui.screen() != null) {
+			KeyOwnership.releaseSuppression(client, client.options.keyAttack, module);
+			KeyOwnership.releaseSuppression(client, client.options.keyUse, module);
 			return;
 		}
 
@@ -186,18 +195,20 @@ public class FreeCamModule extends Module {
 	 */
 	private void suppressActions(Minecraft client) {
 		if (!muteActions.isEnabled()) {
+			KeyOwnership.releaseSuppression(client, client.options.keyAttack, this);
+			KeyOwnership.releaseSuppression(client, client.options.keyUse, this);
 			return;
 		}
-		suppressKey(client.options.keyAttack);
-		suppressKey(client.options.keyUse);
+		suppressKey(client, client.options.keyAttack);
+		suppressKey(client, client.options.keyUse);
 	}
 
 	/** «Клавиша не нажата» плюс съедание накопленных кликов, чтобы игра их не увидела. */
-	private static void suppressKey(KeyMapping key) {
+	private void suppressKey(Minecraft client, KeyMapping key) {
 		if (key == null) {
 			return;
 		}
-		key.setDown(false);
+		KeyOwnership.suppress(client, key, this);
 		while (key.consumeClick()) {
 			// клик съеден
 		}

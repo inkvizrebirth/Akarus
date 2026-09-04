@@ -33,7 +33,6 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Scaffold — автоматическая подстройка блоков под ноги.
@@ -126,7 +125,7 @@ public class ScaffoldModule extends Module {
 
 	private Phase phase = Phase.IDLE;
 	/** Мир текущего цикла: сменился — полный сброс. */
-	private UUID worldId;
+	private ClientLevel activeLevel;
 	/** Y ног на момент включения — для Keep Y. */
 	private double startFeetY;
 	/** Прыжок на этот край уже сделан — второго не будет. */
@@ -178,7 +177,7 @@ public class ScaffoldModule extends Module {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client == null ? null : client.player;
 		startFeetY = player != null ? player.getY() : 0;
-		worldId = player != null && client.level != null ? uuidOf(client.level) : null;
+		activeLevel = player != null && client.level != null ? client.level : null;
 	}
 
 	@Override
@@ -200,10 +199,9 @@ public class ScaffoldModule extends Module {
 			return;
 		}
 		// смена мира — полный сброс цикла
-		UUID currentWorld = uuidOf(client.level);
-		if (!currentWorld.equals(worldId)) {
+		if (client.level != activeLevel) {
 			rollback(client);
-			worldId = currentWorld;
+			activeLevel = client.level;
 			return;
 		}
 		// чужой контейнер (сундук посреди операции) — стоп всегда
@@ -233,10 +231,6 @@ public class ScaffoldModule extends Module {
 		}
 	}
 
-	private static UUID uuidOf(ClientLevel level) {
-		return UUID.nameUUIDFromBytes(level.dimension().identifier().toString().getBytes());
-	}
-
 	private void tickCooldowns() {
 		if (placeCooldown > 0) {
 			placeCooldown--;
@@ -255,8 +249,15 @@ public class ScaffoldModule extends Module {
 
 	/** Слот с годным блоком: 0–8 хотбар, {@link #OFFHAND} — оффхенд, −1 — нет. */
 	private int findBlockSlot(LocalPlayer player) {
-		if (isPlaceable(player.getOffhandItem())) {
+		int selected = player.getInventory().getSelectedSlot();
+		if (!hand.is("offhand") && isPlaceable(player.getMainHandItem())) {
+			return selected;
+		}
+		if (!hand.is("main") && isPlaceable(player.getOffhandItem())) {
 			return OFFHAND;
+		}
+		if (hand.is("offhand")) {
+			return -1;
 		}
 		for (int slot = 0; slot < 9; slot++) {
 			if (isPlaceable(player.getInventory().getItem(slot))) {
@@ -458,7 +459,7 @@ public class ScaffoldModule extends Module {
 		handleSprint(player);
 		if (edgeAhead(client, player, Math.max(1, edgeDistance.get()))) {
 			phase = Phase.EDGE_DETECTED;
-			if (ScaffoldLogic.canJump(player.onGround(), true, jumpedThisEdge)) {
+			if (ScaffoldLogic.canJump(player.onGround(), autoJump.isEnabled(), jumpedThisEdge)) {
 				phase = Phase.JUMP;
 				jumpedThisEdge = true;
 				jumpStartMs = System.currentTimeMillis();
@@ -466,6 +467,7 @@ public class ScaffoldModule extends Module {
 				placedThisJump = 0;
 				wasAscending = false;
 				// ванильный прыжок: только клавиша, deltaMovement.y не трогаем
+				forwardOwnership(client, autoForward.isEnabled());
 				pressJump(client);
 			}
 			return;
@@ -563,9 +565,13 @@ public class ScaffoldModule extends Module {
 			if (!neighborState.isCollisionShapeFullBlock(level, neighbor)) {
 				continue;
 			}
+			// neighbor лежит в направлении direction ОТ target. Кликать нужно по
+			// обращённой К target грани соседа — то есть по opposite. Прежний код
+			// указывал внешнюю грань и сервер пытался ставить блок через одну клетку.
+			Direction clickFace = direction.getOpposite();
 			Vec3 hit = Vec3.atCenterOf(neighbor).add(
-					direction.getStepX() * 0.5, direction.getStepY() * 0.5, direction.getStepZ() * 0.5);
-			return new Face(neighbor, direction, hit);
+					clickFace.getStepX() * 0.5, clickFace.getStepY() * 0.5, clickFace.getStepZ() * 0.5);
+			return new Face(neighbor, clickFace, hit);
 		}
 		return null;
 	}
@@ -710,9 +716,6 @@ public class ScaffoldModule extends Module {
 		if (offPlaceable && hand.is("auto")) {
 			return InteractionHand.OFF_HAND;
 		}
-		if (offPlaceable && hand.is("main")) {
-			return InteractionHand.OFF_HAND;
-		}
 		return null;
 	}
 
@@ -797,12 +800,12 @@ public class ScaffoldModule extends Module {
 
 	private void pressJump(Minecraft client) {
 		own(client.options.keyJump);
-		client.options.keyJump.setDown(true);
+		KeyOwnership.hold(client, client.options.keyJump, this);
 	}
 
 	private void releaseJump(Minecraft client) {
 		if (ownedKeys.contains(client.options.keyJump)) {
-			KeyOwnership.release(client, client.options.keyJump);
+			KeyOwnership.releaseHold(client, client.options.keyJump, this);
 			ownedKeys.remove(client.options.keyJump);
 		}
 	}
@@ -811,9 +814,9 @@ public class ScaffoldModule extends Module {
 	private void forwardOwnership(Minecraft client, boolean press) {
 		if (press) {
 			own(client.options.keyUp);
-			client.options.keyUp.setDown(true);
+			KeyOwnership.hold(client, client.options.keyUp, this);
 		} else if (ownedKeys.contains(client.options.keyUp)) {
-			KeyOwnership.release(client, client.options.keyUp);
+			KeyOwnership.releaseHold(client, client.options.keyUp, this);
 			ownedKeys.remove(client.options.keyUp);
 		}
 	}
@@ -829,7 +832,8 @@ public class ScaffoldModule extends Module {
 	 * Физическую клавишу игрока не трогаем — только нашу симуляцию.
 	 */
 	private void applySafeWalk(Minecraft client, LocalPlayer player) {
-		if (!safeWalk.isEnabled() || !player.onGround()) {
+		if (!safeWalk.isEnabled() || !player.onGround()
+				|| mode.is("telly") && phase != Phase.IDLE && phase != Phase.RUNNING && phase != Phase.EDGE_DETECTED) {
 			return;
 		}
 		boolean edge = edgeAhead(client, player, 1);
@@ -908,7 +912,7 @@ public class ScaffoldModule extends Module {
 			return;
 		}
 		for (KeyMapping key : new ArrayList<>(ownedKeys)) {
-			KeyOwnership.release(client, key);
+			KeyOwnership.releaseHold(client, key, this);
 		}
 		ownedKeys.clear();
 	}

@@ -37,7 +37,7 @@ public class SprintModule extends Module {
 	protected void onDisable() {
 		Minecraft client = Minecraft.getInstance();
 		if (client != null && client.options != null) {
-			com.dreamcast.client.util.KeyOwnership.release(client, client.options.keySprint);
+			com.dreamcast.client.util.KeyOwnership.releaseHold(client, client.options.keySprint, this);
 		}
 	}
 
@@ -52,7 +52,7 @@ public class SprintModule extends Module {
 		// Киллаура на тик-два снимает спринт (сброс для нокбэка) — не мешаем ей
 		if (suppressedTicks > 0) {
 			suppressedTicks--;
-			com.dreamcast.client.util.KeyOwnership.release(client, client.options.keySprint);
+			com.dreamcast.client.util.KeyOwnership.releaseHold(client, client.options.keySprint, this);
 			return;
 		}
 
@@ -60,11 +60,11 @@ public class SprintModule extends Module {
 		// подозрительно и конфликтовало бы с самим использованием предмета.
 		// Клавишу обязательно отпускаем: иначе программный спринт «залипает»
 		if (player.isUsingItem() && !player.isBlocking()) {
-			com.dreamcast.client.util.KeyOwnership.release(client, client.options.keySprint);
+			com.dreamcast.client.util.KeyOwnership.releaseHold(client, client.options.keySprint, this);
 			return;
 		}
 
-		client.options.keySprint.setDown(true);
+		com.dreamcast.client.util.KeyOwnership.hold(client, client.options.keySprint, this);
 
 		// zza — вертикальная (вперёд/назад) составляющая того, куда игрок идёт
 		if (player.zza > 0.0F && !player.isSprinting()) {

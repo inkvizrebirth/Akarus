@@ -99,7 +99,14 @@ public class BlockListSetting extends Setting<String> {
 
 	/** Применяет строку из конфига; вернёт false, если ничего не совпало. */
 	public boolean applySaved(String joined) {
-		if (joined == null || joined.isBlank()) {
+		if (joined == null) {
+			return false;
+		}
+		if (joined.isBlank()) {
+			// Пустой список — валидный пользовательский выбор. Раньше при следующем
+			// запуске он превращался обратно в дефолтные блоки.
+			selected.clear();
+			setValue("");
 			return true;
 		}
 		Set<String> parsed = new LinkedHashSet<>();

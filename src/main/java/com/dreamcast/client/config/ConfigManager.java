@@ -93,16 +93,11 @@ public final class ConfigManager {
 			return;
 		}
 
-		// Состояние модуля применяем «мягко»: файл правится руками, и значение вроде
-		// "enabled": null или "enabled": {} раньше бросало исключение прямо из
-		// onInitializeClient — и игра падала на старте. JsonNull и вложенные объекты
-		// здесь не примитивы, поэтому просто пропускаются.
+		// Бинд и настройки применяем ДО включения. Некоторые onEnable() читают
+		// настройки и запускают внешние действия; раннее включение здесь означало,
+		// что модуль один раз стартовал с дефолтами, а ниже получал сохранённые
+		// значения уже слишком поздно.
 		try {
-			JsonElement enabled = data.get("enabled");
-			if (enabled != null && enabled.isJsonPrimitive()) {
-				module.setEnabledSilently(enabled.getAsBoolean());
-			}
-
 			// Бинд хранится именем клавиши, например key.keyboard.n или key.mouse.middle
 			JsonElement bind = data.get("bind");
 			if (bind != null && bind.isJsonPrimitive()) {

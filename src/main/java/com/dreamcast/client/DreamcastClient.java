@@ -56,6 +56,8 @@ public class DreamcastClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			// Обработка клавиш модулей (бинд ClickGUI открывает меню) и их тиков
 			ModuleManager.tick();
+			// После всех модулей сводим удержания/подавления общих клавиш.
+			com.dreamcast.client.util.KeyOwnership.refresh(client);
 			// Отложенные восстановления инвентаря (после закрытия контейнера)
 			com.dreamcast.client.util.PendingRestores.tick(client);
 			// Уведомления живут на своих таймерах
@@ -63,8 +65,10 @@ public class DreamcastClient implements ClientModInitializer {
 		});
 
 		// Выход из мира: отложенные восстановления теряют смысл — очередь чистим
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
-				com.dreamcast.client.util.PendingRestores.clear());
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			com.dreamcast.client.util.PendingRestores.clear();
+			com.dreamcast.client.util.KeyOwnership.clear(client);
+		});
 
 		// Сохраняем настройки при закрытии игры
 		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::save, "dreamcast-config-save"));
@@ -72,4 +76,3 @@ public class DreamcastClient implements ClientModInitializer {
 		LOGGER.info("{} {} готов к работе. Меню — правый Shift.", MOD_NAME, MOD_VERSION);
 	}
 }
-
