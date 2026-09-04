@@ -7,8 +7,8 @@
 [![Minecraft](https://img.shields.io/badge/Minecraft-26.2-71b722?logo=minecraft&logoColor=white)](https://www.minecraft.net/)
 [![FabricAPI](https://img.shields.io/badge/Fabric-loader%200.19%2B-ddd0c9)](https://fabricmc.net/)
 [![Java](https://img.shields.io/badge/Java-25-orange?logo=openjdk&logoColor=white)](https://adoptium.net/)
-[![Version](https://img.shields.io/badge/version-0.8.0-7C6CFF)](https://github.com/inkvizrebirth/Akarus/releases)
-[![Build](https://github.com/inkvizrebirth/Akarus/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/inkvizrebirth/Akarus/actions/workflows/build.yml)
+[![Version](https://img.shields.io/badge/version-0.8.0-7C6CFF)](https://github.com/inkvizrebirth/Dreamcast/releases)
+[![Build](https://github.com/inkvizrebirth/Dreamcast/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/inkvizrebirth/Dreamcast/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-CC0-yellow)](LICENSE)
 
 [![Telegram](https://img.shields.io/badge/Telegram-@inkviz01-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/inkviz01)
@@ -97,7 +97,7 @@ Dreamcast DLC — клиентский мод на **Fabric для Minecraft 26.
 ## Установка
 
 1. Поставь [Fabric Loader](https://fabricmc.net/use/installer/) для **Minecraft 26.2** и [Fabric API](https://modrinth.com/mod/fabric-api) (0.159+ для 26.2) — оба jar'а в `.minecraft/mods`.
-2. Скачай `dreamcast-0.8.0.jar` из [releases](https://github.com/inkvizrebirth/Akarus/releases) и положи туда же.
+2. Скачай `dreamcast-0.8.0.jar` из [releases](https://github.com/inkvizrebirth/Dreamcast/releases) и положи туда же.
 3. ViaFabricPlus **уже встроен** (nested jar) — отдельной установкой можно не заморачиваться.
 
 Сборка из исходников: `JAVA_HOME=jdk25 ./gradlew build` (CI дополнительно скачивает VFP
