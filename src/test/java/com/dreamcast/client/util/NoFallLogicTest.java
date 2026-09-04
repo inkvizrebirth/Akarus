@@ -26,22 +26,22 @@ class NoFallLogicTest {
 
 	@Test
 	void fallIsDangerousAtDamageThreshold() {
-		assertTrue(dangerousFall(3.0f, 3.0f, false, false, false, false, false));
-		assertTrue(dangerousFall(12.5f, 3.0f, false, false, false, false, false));
+		assertTrue(dangerousFall(3.0, 3.0, false, false, false, false, false));
+		assertTrue(dangerousFall(12.5, 3.0, false, false, false, false, false));
 	}
 
 	@Test
 	void shortFallIsSafe() {
-		assertFalse(dangerousFall(2.99f, 3.0f, false, false, false, false, false));
+		assertFalse(dangerousFall(2.99, 3.0, false, false, false, false, false));
 	}
 
 	@Test
 	void mitigationsCancelDanger() {
-		assertFalse(dangerousFall(10f, 3.0f, true, false, false, false, false), "земля");
-		assertFalse(dangerousFall(10f, 3.0f, false, true, false, false, false), "вода");
-		assertFalse(dangerousFall(10f, 3.0f, false, false, true, false, false), "лестница");
-		assertFalse(dangerousFall(10f, 3.0f, false, false, false, true, false), "элитры");
-		assertFalse(dangerousFall(10f, 3.0f, false, false, false, false, true), "пассажир");
+		assertFalse(dangerousFall(10.0, 3.0, true, false, false, false, false), "земля");
+		assertFalse(dangerousFall(10.0, 3.0, false, true, false, false, false), "вода");
+		assertFalse(dangerousFall(10.0, 3.0, false, false, true, false, false), "лестница");
+		assertFalse(dangerousFall(10.0, 3.0, false, false, false, true, false), "элитры");
+		assertFalse(dangerousFall(10.0, 3.0, false, false, false, false, true), "пассажир");
 	}
 
 	// ---- фаза PLACING: подтверждение постановки ----

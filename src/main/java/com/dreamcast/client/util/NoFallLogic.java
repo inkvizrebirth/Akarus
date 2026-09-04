@@ -17,7 +17,7 @@ public final class NoFallLogic {
 	 *
 	 * @param threshold порог fallDistance, с которого начинается урон (обычно 3.0)
 	 */
-	public static boolean dangerousFall(float fallDistance, float threshold, boolean onGround,
+	public static boolean dangerousFall(double fallDistance, double threshold, boolean onGround,
 	                                    boolean inWater, boolean onClimbable,
 	                                    boolean fallFlying, boolean passenger) {
 		return fallDistance >= threshold && !onGround && !inWater
