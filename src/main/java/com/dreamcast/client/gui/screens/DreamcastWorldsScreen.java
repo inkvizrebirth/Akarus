@@ -200,7 +200,7 @@ public class DreamcastWorldsScreen extends DreamcastScreen {
 		int panelWidth = Math.min(PANEL_WIDTH, width - 24);
 		int panelX = 18;
 		int panelY = LIST_TOP;
-		listHeight = Math.max(1, height - panelY - LIST_BOTTOM);
+		listHeight = compactListHeight(height - panelY - LIST_BOTTOM, rows.size());
 		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
 
 		int listWidth = panelWidth - 20;
@@ -405,6 +405,17 @@ public class DreamcastWorldsScreen extends DreamcastScreen {
 		int max = Math.max(0, rows.size() - visible);
 		scroll = Math.max(0, Math.min(max, scroll - (int) Math.signum(scrollY)));
 		return true;
+	}
+
+	/**
+	 * Список не должен выглядеть как пустая простыня при одном-двух мирах.
+	 * После восьмой строки рост прекращается, а остальное остаётся доступно
+	 * прокруткой.
+	 */
+	private static int compactListHeight(int available, int rowCount) {
+		int shownRows = Math.max(1, Math.min(rowCount, 8));
+		int content = 16 + shownRows * ROW_HEIGHT + Math.max(0, shownRows - 1) * ROW_GAP;
+		return Math.max(1, Math.min(available, Math.max(54, content)));
 	}
 
 	@Override

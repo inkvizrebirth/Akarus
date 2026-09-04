@@ -80,7 +80,7 @@ public class DreamcastAltsScreen extends DreamcastScreen {
 
 		int panelWidth = Math.min(PANEL_WIDTH, width - 24);
 		int panelY = 44;
-		listHeight = Math.max(1, height - panelY - 66);
+		listHeight = compactListHeight(height - panelY - 66, rows.size());
 		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
 		int listWidth = panelWidth - 20;
 		int listX = 28;
@@ -262,6 +262,13 @@ public class DreamcastAltsScreen extends DreamcastScreen {
 		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
 		scroll = Math.max(0, Math.min(Math.max(0, rows.size() - visible), scroll - (int) Math.signum(scrollY)));
 		return true;
+	}
+
+	/** Высота панели следует за списком, но не растёт после восьми строк. */
+	private static int compactListHeight(int available, int rowCount) {
+		int shownRows = Math.max(1, Math.min(rowCount, 8));
+		int content = 16 + shownRows * ROW_HEIGHT + Math.max(0, shownRows - 1) * ROW_GAP;
+		return Math.max(1, Math.min(available, Math.max(50, content)));
 	}
 
 	// ------------------------------------------------------------------
