@@ -69,11 +69,11 @@ public class HitSoundsModule extends Module {
 			case "orb" -> client.getSoundManager().play(
 					SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP, pitch, volume));
 			case "bass" -> client.getSoundManager().play(
-					SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BASS, pitch, volume));
+					SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BASS.value(), pitch, volume));
 			case "bell" -> client.getSoundManager().play(
-					SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BELL, pitch, volume));
+					SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BELL.value(), pitch, volume));
 			default -> client.getSoundManager().play(
-					SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_PLING, pitch, volume));
+					SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_PLING.value(), pitch, volume));
 		}
 	}
 

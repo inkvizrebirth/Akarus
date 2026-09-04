@@ -65,6 +65,11 @@ public class HitParticlesModule extends Module {
 		return waves;
 	}
 
+	/** true, если стиль — «искры» (иначе фирменная волна). */
+	public boolean sparks() {
+		return "sparks".equals(style.get());
+	}
+
 	public float radiusBlocks() {
 		return radius.get() * 0.1f;
 	}

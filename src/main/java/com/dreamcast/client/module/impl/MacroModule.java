@@ -47,8 +47,7 @@ public class MacroModule extends Module {
 				.resolve("dreamcast-macros.json");
 
 		load();
-	 addButton:
-		addSetting(new ButtonSetting("edit", "Редактировать макросы…", this::openEditor));
+		addSetting(new ButtonSetting("edit", "Макросы", "Редактировать…", this::openEditor));
 	}
 
 	@Override
@@ -165,7 +164,7 @@ public class MacroModule extends Module {
 		long now = Util.getMillis();
 		for (Macro macro : macros()) {
 			int key = macro.key();
-			if (key < 0 || !GLFW.glfwGetKey(window, key)) {
+			if (key < 0 || GLFW.glfwGetKey(window, key) != GLFW.GLFW_PRESS) {
 				continue;
 			}
 			// Повтор: не чаще раза в 500 мс на команду (анти-спам при зажатии)
