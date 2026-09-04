@@ -8,24 +8,24 @@
 
 === все jar в fabric-loom ===
 /home/runner/.gradle/caches/fabric-loom/26.2/minecraft-extracted_server.jar
-/home/runner/.gradle/caches/fabric-loom/26.2/minecraft-client.jar
 /home/runner/.gradle/caches/fabric-loom/26.2/minecraft-server.jar
 /home/runner/.gradle/caches/fabric-loom/26.2/minecraft-merged.jar
+/home/runner/.gradle/caches/fabric-loom/26.2/minecraft-client.jar
 /home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 === minecraft-*.jar по всему ~/.gradle ===
 /home/runner/.gradle/caches/fabric-loom/26.2/minecraft-extracted_server.jar
-/home/runner/.gradle/caches/fabric-loom/26.2/minecraft-client.jar
 /home/runner/.gradle/caches/fabric-loom/26.2/minecraft-server.jar
 /home/runner/.gradle/caches/fabric-loom/26.2/minecraft-merged.jar
+/home/runner/.gradle/caches/fabric-loom/26.2/minecraft-client.jar
 /home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 === классы мобов/врагов/манекенов ===
-        0  2026-09-04 10:55   assets/minecraft/textures/entity/armorstand/
+        0  2026-09-04 12:57   assets/minecraft/textures/entity/armorstand/
       809  1980-02-01 00:00   assets/minecraft/textures/entity/armorstand/armorstand.png
-        0  2026-09-04 10:55   net/minecraft/client/model/object/armorstand/
+        0  2026-09-04 12:57   net/minecraft/client/model/object/armorstand/
      6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
      5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
       320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
@@ -485,17 +485,17 @@ public class net.minecraft.world.item.BucketItem extends net.minecraft.world.ite
      2015  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$SoundPlayedAt.class
      5001  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$Subtitle.class
      7576  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay.class
-     2687  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay$LogoTexture.class
      8761  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay.class
       632  1980-02-01 00:00   net/minecraft/client/gui/screens/Overlay.class
+     2687  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay$LogoTexture.class
      1522  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayScreen$1.class
      4421  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayTabButton.class
     22448  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayScreen.class
-     3112  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayRecipeButton$Pos.class
      6490  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayCraftingRecipeButton.class
      3959  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlaySmeltingRecipeButton.class
      4694  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayRecipeButton.class
      7848  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent.class
+     3112  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayRecipeButton$Pos.class
      2000  1980-02-01 00:00   net/minecraft/client/particle/FireworkParticles$OverlayParticle.class
      2221  1980-02-01 00:00   net/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay.class
      2219  1980-02-01 00:00   net/minecraft/client/renderer/texture/OverlayTexture.class
@@ -588,7 +588,8 @@ public final class net.minecraft.world.inventory.ContainerInput extends java.lan
   public static final net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> DARKNESS;
 
 === fog environments ===
-        0  2026-09-04 10:55   net/minecraft/client/renderer/fog/environment/
+        0  2026-09-04 12:57   net/minecraft/client/renderer/fog/environment/
+     7163  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/AtmosphericFogEnvironment.class
      2722  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/BlindnessFogEnvironment.class
      1723  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/FogEnvironment.class
      2698  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/DarknessFogEnvironment.class
@@ -597,7 +598,6 @@ public final class net.minecraft.world.inventory.ContainerInput extends java.lan
      2290  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/PowderedSnowFogEnvironment.class
       321  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/package-info.class
      3052  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/WaterFogEnvironment.class
-     7163  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/AtmosphericFogEnvironment.class
 
 === gui layers/overlays ===
      2196  1980-02-01 00:00   net/minecraft/client/gui/Hud$1DisplayEntry.class
@@ -606,8 +606,8 @@ public final class net.minecraft.world.inventory.ContainerInput extends java.lan
     60255  1980-02-01 00:00   net/minecraft/client/gui/Hud.class
      5054  1980-02-01 00:00   assets/minecraft/textures/misc/credits_vignette.png
        41  1980-02-01 00:00   assets/minecraft/textures/misc/credits_vignette.png.mcmeta
-       41  1980-02-01 00:00   assets/minecraft/textures/misc/vignette.png.mcmeta
      5054  1980-02-01 00:00   assets/minecraft/textures/misc/vignette.png
+       41  1980-02-01 00:00   assets/minecraft/textures/misc/vignette.png.mcmeta
      2617  1980-02-01 00:00   net/minecraft/world/entity/ai/goal/ClimbOnTopOfPowderSnowGoal.class
     12056  1980-02-01 00:00   net/minecraft/world/level/block/PowderSnowBlock.class
 
