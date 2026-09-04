@@ -1,6 +1,7 @@
 package com.dreamcast.client.module.impl;
 
 import com.dreamcast.client.module.Module;
+import com.dreamcast.client.util.PendingRestores;
 import com.dreamcast.client.module.ModuleCategory;
 import com.dreamcast.client.settings.BooleanSetting;
 import com.dreamcast.client.settings.IntSetting;
@@ -120,6 +121,8 @@ public class AutoTotemModule extends Module {
 
 	/** Активная ячейка до манипуляций — вернуть один в один. */
 	private int restoreHotbar = -1;
+	/** Оффхенд заполнили мы (SWAP) — при выключении вернуть как было. */
+	private boolean offhandWasOurs;
 
 	/** Последняя threat-подпись для HUD: кто и сколько. */
 	private String lastThreat = "";
@@ -155,6 +158,7 @@ public class AutoTotemModule extends Module {
 		phase = Phase.IDLE;
 		totemHotbarSlot = -1;
 		restoreHotbar = -1;
+		offhandWasOurs = false;
 		lastThreat = "";
 		hostileNearby = false;
 		positionHistory.clear();
@@ -164,6 +168,40 @@ public class AutoTotemModule extends Module {
 	protected void onDisable() {
 		phase = Phase.IDLE;
 		positionHistory.clear();
+		// Транзакционный возврат: выключение посреди операции (например, из
+		// ClickGUI) не должно оставлять тотем в оффхенде навсегда. ClickGUI
+		// не мешает — containerMenu остаётся inventoryMenu; открытый сундук
+		// → отложенный возврат через PendingRestores.
+		if (offhandWasOurs) {
+			Minecraft client = Minecraft.getInstance();
+			LocalPlayer player = client == null ? null : client.player;
+			if (player != null && isHoldingTotem(player)) {
+				int backSlot = totemHotbarSlot >= 0 ? totemHotbarSlot
+						: player.getInventory().getSelectedSlot();
+				Runnable restore = () -> {
+					player.getInventory().setSelectedSlot(backSlot);
+					swapOffhand(client, player);
+					if (restoreHotbar >= 0
+							&& player.getInventory().getSelectedSlot() != restoreHotbar) {
+						player.getInventory().setSelectedSlot(restoreHotbar);
+					}
+				};
+				if (player.containerMenu == player.inventoryMenu) {
+					restore.run();
+				} else {
+					PendingRestores.add(c -> {
+						if (c.player == null || c.player.containerMenu != c.player.inventoryMenu) {
+							return false;
+						}
+						restore.run();
+						return true;
+					});
+				}
+			}
+			offhandWasOurs = false;
+			totemHotbarSlot = -1;
+			restoreHotbar = -1;
+		}
 	}
 
 	@Override
@@ -289,6 +327,7 @@ public class AutoTotemModule extends Module {
 			}
 			case SWAP -> {
 				swapOffhand(client, player);
+				offhandWasOurs = true;
 				if (alertSound.isEnabled()) {
 					client.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_PLING, 1.1F));
 				}
@@ -305,6 +344,7 @@ public class AutoTotemModule extends Module {
 			}
 			case UNSWAP -> {
 				swapOffhand(client, player);
+				offhandWasOurs = false; // сами вернули — восстанавливать при off не нужно
 				if (returnMode.is(RETURN_INVENTORY)) {
 					phase = Phase.STOW;
 					phaseTimer = 1 + Math.min(2, actionDelay());
@@ -330,6 +370,7 @@ public class AutoTotemModule extends Module {
 		}
 		restoreHotbar = -1;
 		totemHotbarSlot = -1;
+		offhandWasOurs = false;
 	}
 
 	// ------------------------------------------------------------------

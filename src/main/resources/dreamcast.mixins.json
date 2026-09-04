@@ -12,6 +12,7 @@
     "HudMixin",
     "ItemInHandRendererMixin",
     "KeyboardInputMixin",
+    "KeyMappingAccessor",
     "MinecraftMixin",
     "MouseHandlerMixin",
     "SubmitNodeCollectionMixin",

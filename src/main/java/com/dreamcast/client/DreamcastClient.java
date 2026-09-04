@@ -10,6 +10,7 @@ import com.dreamcast.client.module.impl.FreeCamModule;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
@@ -55,9 +56,15 @@ public class DreamcastClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			// Обработка клавиш модулей (бинд ClickGUI открывает меню) и их тиков
 			ModuleManager.tick();
+			// Отложенные восстановления инвентаря (после закрытия контейнера)
+			com.dreamcast.client.util.PendingRestores.tick(client);
 			// Уведомления живут на своих таймерах
 			Notifications.tick();
 		});
+
+		// Выход из мира: отложенные восстановления теряют смысл — очередь чистим
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
+				com.dreamcast.client.util.PendingRestores.clear());
 
 		// Сохраняем настройки при закрытии игры
 		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::save, "dreamcast-config-save"));

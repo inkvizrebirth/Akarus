@@ -206,7 +206,9 @@ public class TrailsModule extends Module {
 
 	/** Точки следа для рендера (свежие — в конце очереди). */
 	public Queue<float[]> trailPoints() {
-		return points;
+		// Снапшот: отложенный рендер не итерирует живую очередь, которую
+		// параллельно чистит tick()
+		return new java.util.ArrayDeque<>(points);
 	}
 
 	/** Точка «прямо сейчас» — интерполированная позиция головы следа. */

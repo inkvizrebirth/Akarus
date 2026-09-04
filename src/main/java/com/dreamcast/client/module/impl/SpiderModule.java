@@ -41,6 +41,10 @@ public class SpiderModule extends Module {
 	private static final int NO_BUCKET_NOTIFY = 60;
 
 	private int cooldown;
+	/** Выбранный слот до наших манипуляций — вернуть при отключении. */
+	private int previousSlot = -1;
+	/** Слот, где лежит наше ведро (для отката выбора). */
+	private int bucketSlotUsed = -1;
 	private int noBucketTimer;
 	/** Слот, в котором живёт ведро (запоминаем между циклами). */
 	private int bucketSlot = -1;
@@ -50,6 +54,27 @@ public class SpiderModule extends Module {
 	public SpiderModule() {
 		super("spider", "Spider", "Подъём по стенам: водой из ведра или прыжками",
 				ModuleCategory.MOVEMENT, GLFW.GLFW_KEY_UNKNOWN);
+	}
+
+	@Override
+	protected void onDisable() {
+		Minecraft client = Minecraft.getInstance();
+		LocalPlayer player = client == null ? null : client.player;
+		// Слот возвращаем всегда (клиентская операция); свою воду собираем,
+		// только если инвентарь наш и экран не контейнерный
+		if (player != null) {
+			if (previousSlot >= 0 && player.getInventory().getSelectedSlot() != previousSlot) {
+				player.getInventory().setSelectedSlot(previousSlot);
+			}
+			if (waterSource != null && player.containerMenu == player.inventoryMenu
+					&& client.gameMode != null
+					&& client.level.getFluidState(waterSource).isSource()) {
+				pickWater(client, player, waterSource);
+			}
+		}
+		previousSlot = -1;
+		bucketSlotUsed = -1;
+		waterSource = null;
 	}
 
 	@Override
@@ -224,8 +249,13 @@ public class SpiderModule extends Module {
 	}
 
 	private void selectSlot(LocalPlayer player, int slot) {
-		if (player.getInventory().getSelectedSlot() != slot) {
+		int current = player.getInventory().getSelectedSlot();
+		if (current != slot) {
+			if (previousSlot < 0) {
+				previousSlot = current;
+			}
 			player.getInventory().setSelectedSlot(slot);
+			bucketSlotUsed = slot;
 		}
 	}
 

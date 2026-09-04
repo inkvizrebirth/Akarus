@@ -62,7 +62,9 @@ public class HitParticlesModule extends Module {
 	}
 
 	public List<HitWave> waves() {
-		return waves;
+		// Снапшот: отложенный рендер не должен итерировать живой список,
+		// который параллельно чистит tick() (CME/пропуски кадров)
+		return java.util.List.copyOf(waves);
 	}
 
 	/** true, если стиль — «искры» (иначе фирменная волна). */

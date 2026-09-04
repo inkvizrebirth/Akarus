@@ -48,12 +48,18 @@ public class BlockEspModule extends Module {
 	private int scanTimer;
 
 	/** Инкрементальный скан: полный обход куба радиуса 48 — ~680 тыс. позиций,
-	 *  одним куском это фризит главный поток. Двигаем курсор бюджетно, по чуть-чуть
-	 *  каждый тик; результат публикуется по завершении полного круга. */
-	private static final int POSITIONS_PER_TICK = 20_000;
+	 *  одним куском это фризит главный поток. Бюджет — по ВРЕМЕНИ (~1.5 мс на
+	 *  тик), чтобы и на слабых машинах кадр не проседал. */
+	private static final long SCAN_BUDGET_NANOS = 1_500_000L;
 	private final List<BlockBox> scanBuffer = new ArrayList<>();
 	/** Линейный курсор по объёму скана; -1 — скан не идёт. */
 	private int scanCursor = -1;
+	/** Центр и мир текущего круга: сменились — круг перезапускается. */
+	private net.minecraft.client.multiplayer.ClientLevel scanLevel;
+	private int scanCenterX = Integer.MIN_VALUE;
+	private int scanCenterY;
+	private int scanCenterZ;
+	private int scanRadius;
 	private int scanSizeX;
 	private int scanSizeY;
 	private int scanSizeZ;
@@ -75,10 +81,16 @@ public class BlockEspModule extends Module {
 			scanBuffer.clear();
 			return;
 		}
-		// Скан уже идёт — двигаем его на бюджет позиций и выходим: полный круг
-		// занимает несколько тиков, зато ни один не фризит
+		// Скан уже идёт — двигаем его в рамках бюджета времени. Центр сместился
+		// сильнее половины радиуса / другой мир / другой радиус — круг заново
 		if (scanCursor >= 0) {
-			scanStep(client, POSITIONS_PER_TICK);
+			if (client.level != scanLevel || scanRadius != radius.get()
+					|| Math.abs(client.player.blockPosition().getX() - scanCenterX) > scanRadius / 2
+					|| Math.abs(client.player.blockPosition().getZ() - scanCenterZ) > scanRadius / 2) {
+				beginScan(client);
+				return;
+			}
+			scanStep(client, SCAN_BUDGET_NANOS);
 			return;
 		}
 		if (++scanTimer < Math.max(5, scanInterval.get())) {
@@ -92,6 +104,11 @@ public class BlockEspModule extends Module {
 	private void beginScan(Minecraft client) {
 		BlockPos center = client.player.blockPosition();
 		int r = radius.get();
+		scanLevel = client.level;
+		scanCenterX = center.getX();
+		scanCenterY = center.getY();
+		scanCenterZ = center.getZ();
+		scanRadius = r;
 		int yMin = Math.max(client.level.getMinY(), center.getY() - r / 2);
 		int yMax = Math.min(client.level.getMaxY(), center.getY() + r);
 		scanBaseX = center.getX() - r;
@@ -104,34 +121,37 @@ public class BlockEspModule extends Module {
 		scanBuffer.clear();
 	}
 
-	/** Продвигает скан не более чем на budget позиций; в конце публикует результат. */
-	private void scanStep(Minecraft client, int budget) {
+	/** Продвигает скан в рамках бюджета времени; в конце публикует результат. */
+	private void scanStep(Minecraft client, long budgetNanos) {
 		var selected = blocks.selectedIds();
 		int total = scanSizeX * scanSizeY * scanSizeZ;
-		int end = Math.min(total, scanCursor + budget);
+		long deadline = System.nanoTime() + budgetNanos;
 		int phase = scanBuffer.size();
 		var mutable = new BlockPos.MutableBlockPos();
-		for (int index = scanCursor; index < end; index++) {
+		int index = scanCursor;
+		while (index < total) {
+			if ((index & 0x3FF) == 0 && System.nanoTime() >= deadline) {
+				break; // бюджет исчерпан — продолжим в следующем тике
+			}
 			int y = index / (scanSizeX * scanSizeZ);
 			int rest = index % (scanSizeX * scanSizeZ);
 			int z = rest / scanSizeX;
 			int x = rest % scanSizeX;
 			mutable.set(scanBaseX + x, scanBaseY + y, scanBaseZ + z);
 			var state = client.level.getBlockState(mutable);
-			if (state.isAir()) {
-				continue;
+			if (!state.isAir()) {
+				String id = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+						.getKey(state.getBlock()).getPath();
+				if (selected.contains(id)) {
+					scanBuffer.add(new BlockBox(mutable.getX(), mutable.getY(), mutable.getZ(), phase++));
+					if (scanBuffer.size() >= MAX_BOXES) {
+						break;
+					}
+				}
 			}
-			String id = net.minecraft.core.registries.BuiltInRegistries.BLOCK
-					.getKey(state.getBlock()).getPath();
-			if (!selected.contains(id)) {
-				continue;
-			}
-			scanBuffer.add(new BlockBox(mutable.getX(), mutable.getY(), mutable.getZ(), phase++));
-			if (scanBuffer.size() >= MAX_BOXES) {
-				break;
-			}
+			index++;
 		}
-		scanCursor = end;
+		scanCursor = index;
 		if (scanCursor >= total || scanBuffer.size() >= MAX_BOXES) {
 			// Круг завершён — публикуем (до этого момента рисуем прошлый результат)
 			boxes.clear();

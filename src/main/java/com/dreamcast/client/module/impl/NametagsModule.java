@@ -62,7 +62,9 @@ public class NametagsModule extends Module {
 	}
 
 	public List<TagEntry> entries() {
-		return entries;
+		// Снапшот: отложенный рендер не должен итерировать живой список,
+		// который параллельно чистит tick() (CME/пропуски кадров)
+		return java.util.List.copyOf(entries);
 	}
 
 	@Override

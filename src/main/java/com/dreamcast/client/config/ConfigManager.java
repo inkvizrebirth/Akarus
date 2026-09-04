@@ -151,6 +151,18 @@ public final class ConfigManager {
 				DreamcastClient.LOGGER.warn("Не удалось применить настройку {}.{}", module.getId(), setting.getId(), exception);
 			}
 		}
+
+		// ВАЖНО: включение применяем ПОСЛЕДНИМ (bind → settings → enabled):
+		// иначе модуль стартовал с дефолтными настройками (например, AutoWalk
+		// успевал включить free_cam, хотя в конфиге сохранено false)
+		try {
+			JsonElement enabled = data.get("enabled");
+			if (enabled != null && enabled.isJsonPrimitive()) {
+				module.setEnabledSilently(enabled.getAsBoolean());
+			}
+		} catch (RuntimeException exception) {
+			DreamcastClient.LOGGER.warn("Не удалось применить включение {}", module.getId(), exception);
+		}
 	}
 
 	/** Сохраняет состояние всех модулей на диск. */

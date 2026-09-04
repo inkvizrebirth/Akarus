@@ -101,7 +101,9 @@ public class JumpEffectModule extends Module {
 	}
 
 	public List<JumpRing> rings() {
-		return rings;
+		// Снапшот: отложенный рендер не должен итерировать живой список,
+		// который параллельно чистит tick() (CME/пропуски кадров)
+		return java.util.List.copyOf(rings);
 	}
 
 	public float radiusBlocks() {

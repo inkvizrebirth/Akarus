@@ -2,6 +2,8 @@ package com.dreamcast.client.module.impl;
 
 import com.dreamcast.client.module.Module;
 import com.dreamcast.client.module.ModuleCategory;
+import com.dreamcast.client.util.KeyOwnership;
+import com.dreamcast.client.util.TargetLockLogic;
 import com.dreamcast.client.module.ModuleManager;
 import com.dreamcast.client.settings.BooleanSetting;
 import com.dreamcast.client.settings.IntSetting;
@@ -70,6 +72,12 @@ public class KillAuraModule extends Module {
 			ModeSetting.option(MODE_LEGIT, "Легитный"));
 
 	private final IntSetting range = intSetting("range", "Дальность, блоков", 4, 1, 6);
+
+	private final ModeSetting targetLock = mode("target_lock", "Удержание цели", "sticky",
+			ModeSetting.option("off", "Выкл"),
+			ModeSetting.option("sticky", "Sticky"),
+			ModeSetting.option("switch", "Switch"));
+	private final IntSetting switchDelay = intSetting("switch_delay", "Задержка смены цели, тиков", 10, 0, 40);
 
 	private final ModeSetting priority = mode("priority", "Приоритет цели", PRIORITY_NEAREST,
 			ModeSetting.option(PRIORITY_NEAREST, "Ближний"),
@@ -157,6 +165,8 @@ public class KillAuraModule extends Module {
 	private UUID targetId;
 	/** Текущая цель ауры — читает TargetESP. Обновляется каждый тик. */
 	private Entity currentTarget;
+	/** Sticky: сколько тиков ещё держимся за текущую цель. */
+	private int lockTicks;
 
 	/** Куда по вертикали целимся по текущей цели: преимущественно корпус, иногда голова. */
 	private float aimOffsetY;
@@ -339,9 +349,10 @@ public class KillAuraModule extends Module {
 		}
 		lastWrittenYaw = player.getYRot();
 
-		// Обязательный RayTrace: луч из глаз по взгляду должен пересекать хитбокс —
-		// иначе удар «мимо прицела» и античит получает классический детект ауры
-		boolean rayHits = rayIntersectsHitbox(player, target, range.get());
+		// Обязательный RayTrace: луч из глаз по взгляду должен пересекать хитбокс
+		// И не упираться раньше в блок (block clip): иначе бьём «сквозь стену»
+		boolean rayHits = rayIntersectsHitbox(player, target, range.get())
+				&& !blockBlocksRay(player, target);
 
 		// ---- Авто-Блок: держим щит, пока враг может ударить ----
 		InteractionHand shieldHand = shieldHand(player);
@@ -398,7 +409,7 @@ public class KillAuraModule extends Module {
 				client.options.keyJump.setDown(true);
 				holdingJump = true;
 			} else if (holdingJump) {
-				client.options.keyJump.setDown(false);
+				KeyOwnership.release(client, client.options.keyJump);
 				holdingJump = false;
 			}
 			if (player.fallDistance > 0.0F || --critTimeout <= 0) {
@@ -411,14 +422,14 @@ public class KillAuraModule extends Module {
 		if (sprintResetTicks > 0) {
 			sprintResetTicks--;
 			if (sprintReset.is(SPRINT_FAST)) {
-				client.options.keySprint.setDown(false);
+				KeyOwnership.release(client, client.options.keySprint);
 				player.setSprinting(false);
 			} else if (sprintReset.is(SPRINT_LEGIT)) {
 				// w-tap: на тик отпускаем спринт и — в легитной коррекции — W,
 				// который в этом режиме держит сам игрок
-				client.options.keySprint.setDown(false);
+				KeyOwnership.release(client, client.options.keySprint);
 				if (movement.is(MOVEMENT_LEGIT)) {
-					client.options.keyUp.setDown(false);
+					KeyOwnership.release(client, client.options.keyUp);
 				}
 			}
 		}
@@ -456,7 +467,9 @@ public class KillAuraModule extends Module {
 		if (limitWater.isEnabled() && player.isInWater()) {
 			return false;
 		}
-		if (limitFalling.isEnabled() && !player.onGround() && player.fallDistance > 0.5F) {
+		// onGround, а не fallDistance: при подъёме fallDistance == 0, и первая
+		// часть прыжка раньше пропускала удар
+		if (limitFalling.isEnabled() && !player.onGround()) {
 			return false;
 		}
 		if (limitLowHealth.isEnabled() && player.getHealth() <= lowHealthLine.get()) {
@@ -465,15 +478,16 @@ public class KillAuraModule extends Module {
 		return true;
 	}
 
-	/** Оружием считаем мечи, топоры, булаву-маце, трезубец и дальнобой (стрелять в упор тоже «бой»). */
+	/** Оружие МИЛИ: мечи, топоры, булава, трезубец. HEAVY_CORE — ингредиент,
+	 * лук/арбалет — дальнобой: мили-удар с ними не имеет смысла (для ranged
+	 * нужна отдельная аура со своей логикой зарядки). */
 	private static boolean isWeaponInHand(LocalPlayer player) {
 		var item = player.getItemInHand(InteractionHand.MAIN_HAND).getItem();
 		return item == Items.WOODEN_SWORD || item == Items.STONE_SWORD || item == Items.IRON_SWORD
 				|| item == Items.GOLDEN_SWORD || item == Items.DIAMOND_SWORD || item == Items.NETHERITE_SWORD
 				|| item == Items.WOODEN_AXE || item == Items.STONE_AXE || item == Items.IRON_AXE
 				|| item == Items.GOLDEN_AXE || item == Items.DIAMOND_AXE || item == Items.NETHERITE_AXE
-				|| item == Items.MACE || item == Items.HEAVY_CORE || item == Items.TRIDENT
-				|| item == Items.BOW || item == Items.CROSSBOW;
+				|| item == Items.MACE || item == Items.TRIDENT;
 	}
 
 	// ------------------------------------------------------------------
@@ -604,7 +618,11 @@ public class KillAuraModule extends Module {
 
 	private void holdForward(Minecraft client, boolean down) {
 		if (holdingForward != down) {
-			client.options.keyUp.setDown(down);
+			if (down) {
+				client.options.keyUp.setDown(true);
+			} else {
+				KeyOwnership.release(client, client.options.keyUp);
+			}
 			holdingForward = down;
 		}
 	}
@@ -614,9 +632,9 @@ public class KillAuraModule extends Module {
 			return;
 		}
 		if (holdingStrafe == -1) {
-			client.options.keyLeft.setDown(false);
+			KeyOwnership.release(client, client.options.keyLeft);
 		} else if (holdingStrafe == 1) {
-			client.options.keyRight.setDown(false);
+			KeyOwnership.release(client, client.options.keyRight);
 		}
 		if (direction == -1) {
 			client.options.keyLeft.setDown(true);
@@ -680,7 +698,7 @@ public class KillAuraModule extends Module {
 
 	private void releaseJump(Minecraft client) {
 		if (holdingJump) {
-			client.options.keyJump.setDown(false);
+			KeyOwnership.release(client, client.options.keyJump);
 			holdingJump = false;
 		}
 	}
@@ -719,7 +737,37 @@ public class KillAuraModule extends Module {
 			}
 		}
 
-		return best;
+		return applyTargetLock(player, currentTarget, best, bestScore);
+	}
+
+	/**
+	 * Sticky-цель: без этого аура прыгала между двумя равными целями каждый
+	 * тик, каждый раз сбрасывая захват и паузу — и не била вовсе. Держимся за
+	 * текущую цель, пока она валидна; меняем только если новая заметно лучше
+	 * (≥20 %) либо прошла задержка switchDelay.
+	 */
+	private Entity applyTargetLock(LocalPlayer player, Entity current, Entity best, double bestScore) {
+		if (best == null) {
+			return best;
+		}
+		boolean currentValid = current != null && current.isAlive() && isValidTarget(player, current);
+		// само решение — чистая логика, покрытая TargetLockLogicTest
+		TargetLockLogic.Decision decision = TargetLockLogic.decide(
+				!targetLock.is("off"), currentValid, current == best,
+				lockTicks, switchDelay.get(), targetLock.is("sticky"),
+				bestScore, current == null ? Double.MAX_VALUE : scoreOf(player, current));
+		lockTicks = decision.lockTicks();
+		return decision.keepCurrent() ? current : best;
+	}
+
+	private double scoreOf(LocalPlayer player, Entity entity) {
+		if (priority.is(PRIORITY_NEAREST)) {
+			return player.distanceToSqr(entity);
+		}
+		if (priority.is(PRIORITY_HEALTH)) {
+			return entity instanceof LivingEntity living ? living.getHealth() : Double.MAX_VALUE;
+		}
+		return angleTo(player, entity);
 	}
 
 	/** Подходит ли сущность под роль цели. */
@@ -753,6 +801,23 @@ public class KillAuraModule extends Module {
 	// ------------------------------------------------------------------
 	// Геометрия: RayTrace, взгляд врага, прицел
 	// ------------------------------------------------------------------
+
+	/** Стоит ли блок между глазами и хитбоксом цели (по реальному clip'у мира). */
+	private static boolean blockBlocksRay(LocalPlayer player, Entity target) {
+		net.minecraft.world.phys.Vec3 eyes = player.getEyePosition();
+		net.minecraft.world.phys.Vec3 center = positionCenter(target);
+		double distance = Math.min(eyes.distanceTo(center), player.blockInteractionRange() + 1.0);
+		net.minecraft.world.phys.Vec3 end = eyes.add(player.getViewVector(1.0F).scale(distance));
+		var hit = player.level().clip(new net.minecraft.world.level.ClipContext(eyes, end,
+				net.minecraft.world.level.ClipContext.Block.COLLIDER,
+				net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+		return hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK
+				&& eyes.distanceTo(hit.getLocation()) + 0.4 < eyes.distanceTo(center);
+	}
+
+	private static net.minecraft.world.phys.Vec3 positionCenter(Entity target) {
+		return target.position().add(0.0, target.getBbHeight() * 0.5, 0.0);
+	}
 
 	/**
 	 * Обязательный RayTrace: отрезок «глаза → взгляд × дальность» пересекает хитбокс

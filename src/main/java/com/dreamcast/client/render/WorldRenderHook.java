@@ -53,6 +53,11 @@ public final class WorldRenderHook {
 					? List.copyOf(blockEsp.blockBoxes())
 					: List.of();
 
+			// Scaffold: превью следующей установки (одна позиция)
+			com.dreamcast.client.module.impl.ScaffoldModule scaffold =
+					ModuleManager.find(com.dreamcast.client.module.impl.ScaffoldModule.class);
+			scaffoldPreview = scaffold != null ? scaffold.previewPos() : null;
+
 			EspModule esp = ModuleManager.find(EspModule.class);
 			if (esp == null || !esp.wantsBoxes()) {
 				espBoxes = List.of();
@@ -93,6 +98,9 @@ public final class WorldRenderHook {
 	/** Боксы BlockESP (целые координаты). */
 	private static List<com.dreamcast.client.module.impl.BlockEspModule.BlockBox> blockBoxes = List.of();
 
+	/** Превью установки Scaffold. */
+	private static volatile net.minecraft.core.BlockPos scaffoldPreview;
+
 	private static void render(LevelRenderContext context) {
 		try {
 			TrailsModule trails = ModuleManager.find(TrailsModule.class);
@@ -107,8 +115,9 @@ public final class WorldRenderHook {
 			boolean hasRings = jumpEffect != null && jumpEffect.wantsRings();
 			boolean hasHits = hitParticles != null && hitParticles.wantsWaves();
 			boolean hasTags = nametags != null && nametags.wantsTags();
+			net.minecraft.core.BlockPos preview = scaffoldPreview;
 			if (!hasTrail && boxes.isEmpty() && !hasRings && !hasHits && !hasTags
-					&& targetBar == null && blockBoxes.isEmpty()) {
+					&& targetBar == null && blockBoxes.isEmpty() && preview == null) {
 				return;
 			}
 
@@ -142,6 +151,9 @@ public final class WorldRenderHook {
 						}
 						if (!blockBoxes.isEmpty()) {
 							drawBlockBoxes(blockBoxes, pose, buffer, camX, camY, camZ, unitsPerPixel);
+						}
+						if (preview != null) {
+							drawScaffoldPreview(preview, pose, buffer, camX, camY, camZ, unitsPerPixel);
 						}
 						if (hasRings) {
 							drawJumpRings(jumpEffect, pose, buffer, camX, camY, camZ, unitsPerPixel, now);
@@ -350,6 +362,31 @@ public final class WorldRenderHook {
 					WorldGeometryRenderer.line(buffer, pose, x0, y0, z0, color, x1, y1, z1, color, width, unitsPerPixel);
 				}
 			}
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// Scaffold: превью следующей установки
+	// ------------------------------------------------------------------
+
+	private static void drawScaffoldPreview(net.minecraft.core.BlockPos pos, PoseStack.Pose pose,
+	                                        VertexConsumer buffer,
+	                                        double camX, double camY, double camZ, float unitsPerPixel) {
+		double minX = pos.getX() - camX;
+		double minY = pos.getY() - camY;
+		double minZ = pos.getZ() - camZ;
+		double maxX = minX + 1.0;
+		double maxY = minY + 1.0;
+		double maxZ = minZ + 1.0;
+		int color = withAlpha(0x55FF55, 0xB0);
+		for (int[] edge : BOX_EDGES) {
+			double x0 = edge[0] == 0 ? minX : maxX;
+			double y0 = edge[1] == 0 ? minY : maxY;
+			double z0 = edge[2] == 0 ? minZ : maxZ;
+			double x1 = edge[3] == 0 ? minX : maxX;
+			double y1 = edge[4] == 0 ? minY : maxY;
+			double z1 = edge[5] == 0 ? minZ : maxZ;
+			WorldGeometryRenderer.line(buffer, pose, x0, y0, z0, color, x1, y1, z1, color, 1.5F, unitsPerPixel);
 		}
 	}
 

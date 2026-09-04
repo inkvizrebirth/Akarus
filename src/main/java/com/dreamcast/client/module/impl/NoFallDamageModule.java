@@ -108,6 +108,18 @@ public class NoFallDamageModule extends Module {
 			return;
 		}
 
+		// GUI/чужой контейнер: новых действий нет; начатое — безопасный откат
+		// (слот восстанавливается всегда — это клиентская операция; клики не шлём)
+		boolean guiOrContainer = (client.gui != null && client.gui.screen() != null)
+				|| player.containerMenu != player.inventoryMenu;
+		if (guiOrContainer) {
+			if (this.phase != Phase.IDLE) {
+				restoreSelection();
+				resetState();
+			}
+			return;
+		}
+
 		switch (this.phase) {
 		case IDLE -> tickIdle(client, player);
 		case SWITCHING -> tickSwitching(client, player);
@@ -248,7 +260,9 @@ public class NoFallDamageModule extends Module {
 		switch (com.dreamcast.client.util.NoFallLogic.placingAction(
 				isOurWaterStillThere(client), stillFalling, heldBucketIsEmpty(player))) {
 			case CONFIRM -> {
-				this.placedByUs = this.sawBucketEmpty;
+				// placedByUs НЕ фиксируем: источник мог появиться раньше, чем
+				// обновился стак ведра — итоговое решение примет PLACED по
+				// фактическому переходу WATER_BUCKET → BUCKET
 				this.phase = Phase.PLACED;
 			}
 			case ABORT -> {
@@ -286,6 +300,12 @@ public class NoFallDamageModule extends Module {
 	}
 
 	private void tickPlaced(Minecraft client, LocalPlayer player) {
+		// Гонка подтверждения: вода пришла раньше обновления ведра — продолжаем
+		// ждать переход WATER_BUCKET → BUCKET, чтобы получить право на сбор
+		if (!this.placedByUs && heldBucketIsEmpty(player)) {
+			this.sawBucketEmpty = true;
+			this.placedByUs = true;
+		}
 		if (--this.timer <= 0) {
 			// Вода не дождалась посадки: если игрок уже стоит на земле и источник
 			// ещё там — приберём за собой (только нашу!), иначе просто выходим

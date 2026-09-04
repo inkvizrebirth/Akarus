@@ -20,6 +20,7 @@ import com.dreamcast.client.module.impl.MacroModule;
 import com.dreamcast.client.module.impl.AutoBuffModule;
 import com.dreamcast.client.module.impl.NoSlowModule;
 import com.dreamcast.client.module.impl.NametagsModule;
+import com.dreamcast.client.module.impl.ScaffoldModule;
 import com.dreamcast.client.module.impl.KillAuraModule;
 import com.dreamcast.client.module.impl.MediaPlayerModule;
 import com.dreamcast.client.module.impl.NoBlindModule;
@@ -43,20 +44,25 @@ public final class ModuleManager {
 
 	/** Регистрация модулей. Новые модули добавляются здесь одной строкой. */
 	public static void init() {
+		// Порядок регистрации = порядок тика = приоритет действий:
+		// тотем важнее воды, вода важнее баффов, баффы важнее строения,
+		// строение важнее удара — так модули не перетягивают инвентарь
+		register(new AutoTotemModule());
+		register(new NoFallDamageModule());
+		register(new AutoBuffModule());
+		register(new ScaffoldModule());
+		register(new KillAuraModule());
 		register(new HudInfoModule());
 		register(new ClickGuiModule());
 		register(new FreeCamModule());
 		register(new FreeLookModule());
 		register(new AutoMineModule());
 		register(new AutoWalkModule());
-		register(new KillAuraModule());
 		register(new SprintModule());
 		register(new NoFovModule());
 		register(new NoBlindModule());
-		register(new NoFallDamageModule());
 		register(new HandShaderModule());
 		register(new ViewModelModule());
-		register(new AutoTotemModule());
 		register(new MediaPlayerModule());
 		register(new TrailsModule());
 		register(new EspModule());
@@ -65,7 +71,6 @@ public final class ModuleManager {
 		register(new SpiderModule());
 		register(new NametagsModule());
 		register(new NoSlowModule());
-		register(new AutoBuffModule());
 		register(new MacroModule());
 		register(new HitSoundsModule());
 		register(new HitParticlesModule());

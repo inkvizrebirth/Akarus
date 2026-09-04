@@ -110,7 +110,8 @@ public class AutoBuffModule extends Module {
 	private final IntSetting splashCooldown = intSetting("splash_cooldown", "Задержка между бросками, тиков", 15, 10, 40);
 	private final BooleanSetting throwOnlyOnGround = bool("throw_on_ground", "Бросать только с земли", true);
 	private final BooleanSetting allowThrowMoving = bool("throw_moving", "Разрешить бросок в движении", true);
-	private final BooleanSetting noThrowInGui = bool("throw_gui", "Не бросать при открытом GUI", true);
+	/** Пауза всех новых действий при открытом экране (бросок и так не стартует в GUI). */
+	private final BooleanSetting pauseInGui = bool("pause_gui", "Пауза в меню", true);
 	private final BooleanSetting notify = bool("notify", "Уведомления", false);
 
 	// ------------------------------------------------------------------
@@ -147,6 +148,8 @@ public class AutoBuffModule extends Module {
 	/** Снимок стака до броска: предмет и количество. */
 	private net.minecraft.world.item.Item snapshotItem;
 	private int snapshotCount;
+	/** Снимок зелья из рюкзака: ждём именно его в резервном слоте после SWAP. */
+	private ItemStack expectedStack;
 
 	private RestorePlan restorePlan = new RestorePlan(false);
 	private int pauseSeed;
@@ -172,11 +175,29 @@ public class AutoBuffModule extends Module {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client == null ? null : client.player;
 		if (player != null) {
-			// Обратный SWAP — только со своим инвентарём и закрытым экраном;
-			// остальное восстанавливаем всегда
-			if (bagSource >= 0 && player.containerMenu == player.inventoryMenu
-					&& (client.gui == null || client.gui.screen() == null)) {
-				swapReserve(player);
+			// Обратный SWAP: достаточное условие — открыт именно инвентарь игрока
+			// (containerMenu == inventoryMenu). ClickGUI этому НЕ мешает — модуль
+			// чаще всего выключают именно через него, и запрет терял предмет.
+			// Открытый сундук/верстак → containerMenu чужой → SWAP откладывается.
+			if (bagSource >= 0) {
+				if (player.containerMenu == player.inventoryMenu) {
+					swapReserve(player);
+				} else {
+					final int bagSlot = bagSource;
+					final int wantedSlot = previousSlot;
+					PendingRestores.add(c -> {
+						if (c.player == null || c.player.containerMenu != c.player.inventoryMenu) {
+							return false;
+						}
+						c.gameMode.handleContainerInput(c.player.inventoryMenu.containerId,
+								SlotMath.inventoryToMenuSlot(bagSlot), RESERVE_SLOT,
+								net.minecraft.world.inventory.ContainerInput.SWAP, c.player);
+						if (wantedSlot >= 0) {
+							c.player.getInventory().setSelectedSlot(wantedSlot);
+						}
+						return true;
+					});
+				}
 			}
 			if (previousSlot >= 0 && player.getInventory().getSelectedSlot() != previousSlot) {
 				player.getInventory().setSelectedSlot(previousSlot);
@@ -199,6 +220,7 @@ public class AutoBuffModule extends Module {
 		sawUsing = false;
 		snapshotItem = null;
 		snapshotCount = -1;
+		expectedStack = null;
 		restorePlan = new RestorePlan(false);
 	}
 
@@ -218,9 +240,10 @@ public class AutoBuffModule extends Module {
 		boolean screenOpen = client.gui != null && client.gui.screen() != null;
 		boolean foreignContainer = player.containerMenu != player.inventoryMenu;
 
-		// Чужой контейнер — контейнерные операции запрещены; экран — стоп
-		// новым действиям. Текущее действие ведём аккуратно (без кликов).
-		if ((screenOpen || foreignContainer) && !survivesScreen(screenOpen, foreignContainer)) {
+		// Чужой контейнер — стоп всегда; экран — стоп новым действиям, если
+		// включена «Пауза в меню» (питьё/бросок в GUI всё равно не стартуют)
+		if ((foreignContainer || (screenOpen && pauseInGui.isEnabled()))
+				&& !survivesScreen(screenOpen, foreignContainer)) {
 			return;
 		}
 
@@ -358,8 +381,7 @@ public class AutoBuffModule extends Module {
 	private boolean throwGuardsPass() {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
-		boolean guiClear = !noThrowInGui.isEnabled()
-				|| client.gui == null || client.gui.screen() == null;
+		boolean guiClear = client.gui == null || client.gui.screen() == null;
 		boolean groundOk = !throwOnlyOnGround.isEnabled() || player.onGround();
 		boolean movingOk = allowThrowMoving.isEnabled()
 				|| player.getDeltaMovement().horizontalDistanceSqr() < 0.02;
@@ -390,18 +412,32 @@ public class AutoBuffModule extends Module {
 			phaseSince = now;
 			return;
 		}
-		// Рюкзак: временный SWAP с резервным слотом хотбара (обратный — в RESTORE)
+		// Рюкзак: временный SWAP с резервным слотом хотбара (обратный — в RESTORE).
+		// Снимок: дальше идём ТОЛЬКО когда в резервном слоте реально появился
+		// именно этот предмет (SWAP мог не дойти/быть отклонён — иначе рискуем
+		// использовать чужой предмет из слота 8)
 		bagSource = slot;
-		swapReserve(Minecraft.getInstance().player);
+		expectedStack = player.getInventory().getItem(slot).copy();
+		swapReserve(player);
 		itemSlot = RESERVE_SLOT;
 		phase = Phase.MOVE_TO_HOTBAR;
 		phaseSince = now;
 	}
 
 	private void tickMoveToHotbar() {
-		// SWAP применяется на сервере за пару пакетов — даём тик-два
-		if (net.minecraft.util.Util.getMillis() - phaseSince >= 100L) {
+		// Дальше — только когда в резервном слоте реально появился наш предмет
+		// (совпадение предмета и компонентов), либо таймаут с откатом
+		ItemStack reserve = Minecraft.getInstance().player.getInventory().getItem(RESERVE_SLOT);
+		if (ItemStack.matches(expectedStack, reserve)) {
 			phase = Phase.SELECT_SLOT;
+			return;
+		}
+		if (net.minecraft.util.Util.getMillis() - phaseSince >= 1500L) {
+			if (notify.isEnabled()) {
+				Notifications.warn("AutoBuff", "Зелье не переложилось в хотбар");
+			}
+			phase = Phase.RESTORE_SLOT;
+			restorePlan = new RestorePlan(true);
 		}
 	}
 
@@ -487,9 +523,7 @@ public class AutoBuffModule extends Module {
 					if (target == BuffPriority.Target.HEAL) {
 						healSettleUntil = now + HEAL_SETTLE_MS; // HP придёт с попаданием снаряда
 					}
-					if (notify.isEnabled()) {
-						Notifications.ok("AutoBuff", "Брошено: " + targetName());
-					}
+					// уведомление — единая точка в finishAction (без дублей)
 					beginRestore();
 				}
 				case TIMEOUT -> {
@@ -596,19 +630,23 @@ public class AutoBuffModule extends Module {
 		cooldownUntil = now + (kind == PotionLogic.Kind.SPLASH
 				? splashCooldown.get() * 50L
 				: 250L);
-		// Ожидаемый эффект сброшен вместе с остальным состоянием
+		// Сначала сохраняем итог (resetState() стирает target/kind), уведомление —
+		// ровно одно: у броска и питья разные тексты
 		BuffPriority.Target done = target;
+		PotionLogic.Kind doneKind = kind;
+		String doneName = targetName();
+		boolean succeeded = done != BuffPriority.Target.NONE;
 		resetState();
 		target = BuffPriority.Target.NONE;
-		if (notify.isEnabled() && done != BuffPriority.Target.NONE && kindWasDrink(done)) {
-			Notifications.ok("AutoBuff", "Бафф обновлён");
+		if (notify.isEnabled() && succeeded) {
+			if (doneKind == PotionLogic.Kind.SPLASH) {
+				Notifications.ok("AutoBuff", "Брошено: " + doneName);
+			} else {
+				Notifications.ok("AutoBuff", "Применено: " + doneName);
+			}
 		}
 		phase = Phase.COOLDOWN;
 		cooldownUntil = Math.max(cooldownUntil, now);
-	}
-
-	private boolean kindWasDrink(BuffPriority.Target done) {
-		return done != BuffPriority.Target.HEAL || kind == PotionLogic.Kind.DRINK;
 	}
 
 	// ------------------------------------------------------------------
