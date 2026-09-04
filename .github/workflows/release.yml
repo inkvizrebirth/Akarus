@@ -87,13 +87,6 @@ jobs:
           name: dreamcast-build-log
           path: build.log
           if-no-files-found: ignore
-      - name: Upload build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dreamcast-build-log
-          path: build.log
-          if-no-files-found: ignore
 
       - name: Report compile errors as issue
         if: failure()
