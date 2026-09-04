@@ -179,12 +179,14 @@ public class AutoTotemModule extends Module {
 			return; // в меню инвентарь не трогаем
 		}
 
-		trackVelocities(client);
-
 		boolean holding = isHoldingTotem(player);
 
 		// ── нужна ли защита прямо сейчас ──────────────────────────────
+		// ВАЖНО: прогноз читает историю ПОЗАПРОШЛОГО тика, поэтому трек
+		// позиций обновляем строго ПОСЛЕ predictIncomingDamage — иначе
+		// velocityOf вычитает текущую позицию из неё же и скорость всегда 0.
 		float incoming = prediction.isEnabled() ? predictIncomingDamage(client, player) : 0.0f;
+		trackVelocities(client);
 		float effectiveHealth = player.getHealth() + player.getAbsorptionAmount();
 		boolean critical = effectiveHealth <= healthLine.get();
 		boolean burst = incoming >= Math.max(4.0f, player.getHealth());
@@ -342,11 +344,17 @@ public class AutoTotemModule extends Module {
 		}
 	}
 
-	/** Shift-клик переноса (рюкзак ↔ хотбар). */
-	private static void quickMove(Minecraft client, LocalPlayer player, int slot) {
+	/**
+	 * Shift-клик переноса (рюкзак ↔ хотбар). Принимает индекс Inventory
+	 * (0..8 хотбар, 9..35 рюкзак) и переводит в id слота InventoryMenu:
+	 * хотбар в контейнере живёт на 36..44, без пересчёта клик уходил бы
+	 * в крафт-сетку/броню.
+	 */
+	private static void quickMove(Minecraft client, LocalPlayer player, int inventorySlot) {
 		MultiPlayerGameMode gameMode = client.gameMode;
 		if (gameMode != null) {
-			gameMode.handleContainerInput(player.inventoryMenu.containerId, slot, 0,
+			int menuSlot = com.dreamcast.client.util.SlotMath.inventoryToMenuSlot(inventorySlot);
+			gameMode.handleContainerInput(player.inventoryMenu.containerId, menuSlot, 0,
 					ContainerInput.QUICK_MOVE, player);
 		}
 	}
@@ -610,12 +618,8 @@ public class AutoTotemModule extends Module {
 			return null;
 		}
 		Vec3 current = entity.position();
-		int ageTicks = Math.max(1, entity.tickCount - (int) previous[3]);
-		return new double[]{
-				(current.x - previous[0]) / ageTicks,
-				(current.y - previous[1]) / ageTicks,
-				(current.z - previous[2]) / ageTicks
-		};
+		return com.dreamcast.client.util.MotionMath.velocityPerTick(
+				previous, current.x, current.y, current.z, entity.tickCount);
 	}
 
 	/** Косинус угла: смотрит ли «viewer» на «target». */

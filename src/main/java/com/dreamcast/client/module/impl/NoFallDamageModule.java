@@ -13,6 +13,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
@@ -53,8 +54,11 @@ public class NoFallDamageModule extends Module {
 	/** Общий таймаут операции: пока вода не поставлена/не собрана. */
 	private static final int TIMEOUT = 100;
 
+	/** Дальняя точка raycast вниз от ног: примерно длина руки + запас. */
+	private static final double PLACE_REACH = 5.0;
+
 	private enum Phase {
-		IDLE, SWITCHING, FALLING, PLACED, RETRACT
+		IDLE, SWITCHING, FALLING, PLACING, PLACED, RETRACT
 	}
 
 	private Phase phase = Phase.IDLE;
@@ -65,6 +69,8 @@ public class NoFallDamageModule extends Module {
 	private InteractionHand bucketHand;
 	private int previousSlot = -1;
 	private boolean landedInWater;
+	/** Тиков до повторной попытки постановки (анти-спам кликов). */
+	private int retryDelay;
 
 	public NoFallDamageModule() {
 		super("no_fall_damage", "NoFallDamage", "Ватердроп: ставит воду под себя при опасном падении и убирает её после посадки",
@@ -84,6 +90,7 @@ public class NoFallDamageModule extends Module {
 		this.waterPos = null;
 		this.bucketHand = null;
 		this.landedInWater = false;
+		this.retryDelay = 0;
 	}
 
 	@Override
@@ -99,6 +106,7 @@ public class NoFallDamageModule extends Module {
 		case IDLE -> tickIdle(client, player);
 		case SWITCHING -> tickSwitching(client, player);
 		case FALLING -> tickFalling(client, player);
+		case PLACING -> tickPlacing(client, player);
 		case PLACED -> tickPlaced(client, player);
 		case RETRACT -> tickRetract(client, player);
 		}
@@ -180,25 +188,94 @@ public class NoFallDamageModule extends Module {
 			return;
 		}
 
-		// Блок, в котором сейчас ноги — вода появится прямо под падением
-		BlockPos target = BlockPos.containing(player.getX(), player.getY(), player.getZ());
-		if (!client.level.getBlockState(target).isAir()) {
-			target = target.below();
-			if (!client.level.getBlockState(target).isAir()) {
-				return;
-			}
+		// Точка предполагаемого приземления: горизонталь сносится скоростью
+		// падения (с пределом, чтобы не «закидывать» воду далеко)
+		var motion = player.getDeltaMovement();
+		double[] landing = com.dreamcast.client.util.MotionMath.landingPoint(
+				player.getX(), player.getY(), player.getZ(),
+				motion.x, motion.y, motion.z,
+				player.getY() - PLACE_REACH, 3.0);
+
+		// Raycast вниз до поверхности: кликнуть надо по ВЕРХНЕЙ ГРАНИ твёрдого
+		// блока под точкой приземления, а не по воздуху у текущих ног
+		Vec3 from = new Vec3(landing[0], player.getY() + 0.5, landing[2]);
+		Vec3 to = new Vec3(landing[0], player.getY() - PLACE_REACH, landing[2]);
+		BlockHitResult hit = client.level.clip(new ClipContext(from, to,
+				ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+		if (hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS) {
+			return; // поверхности в пределах досягаемости нет — ждём следующий тик
 		}
 
-		Vec3 hitLocation = new Vec3(target.getX() + 0.5, target.getY() + 1.0, target.getZ() + 0.5);
-		BlockHitResult hit = new BlockHitResult(hitLocation, Direction.UP, target, false);
+		BlockPos solidPos = hit.getBlockPos();
+		BlockPos placePos = solidPos.above();
+		if (!client.level.getBlockState(placePos).isAir()
+				&& client.level.getFluidState(placePos).isEmpty()) {
+			return; // занято твёрдым блоком — лить некуда, ждём
+		}
+		// (если там уже чья-то вода — просто перейдём в PLACING, он подтвердит её)
+
 		client.gameMode.useItemOn(player, this.bucketHand, hit);
 		player.swing(this.bucketHand);
 
-		this.waterPos = target;
+		// В PLACED сразу нельзя: сервер мог отклонить клик — ждём реальную воду.
+		this.waterPos = placePos;
 		this.landedInWater = false;
 		this.retractCountdown = -1;
-		this.phase = Phase.PLACED;
+		this.retryDelay = 3;
+		this.phase = Phase.PLACING;
 		this.timer = TIMEOUT;
+	}
+
+	/** Ставили: подтверждаем, что вода реально появилась; иначе повторяем клик. */
+	private void tickPlacing(Minecraft client, LocalPlayer player) {
+		if (--this.timer <= 0) {
+			// Не вышло: безопасно выйти (падение ещё опасно — IDLE заново запустит)
+			restoreSelection();
+			resetState();
+			return;
+		}
+
+		// Вода появилась — поставлено
+		if (isOurWaterStillThere(client)) {
+			this.phase = Phase.PLACED;
+			return;
+		}
+
+		// Уже не падаем (успели поймать чужую воду/смягчили удар) — выходим
+		if (player.onGround() || player.isInWater() || player.fallDistance < 1.0F) {
+			restoreSelection();
+			resetState();
+			return;
+		}
+
+		// Ведро опустело — сервер клик принял; пустым ведром кликать нельзя
+		// (зачерпнём только что поставленную воду) — ждём появления воды до таймаута
+		if (heldBucketIsEmpty(player)) {
+			return;
+		}
+
+		// Повторная попытка: не чаще, чем раз в retryDelay тиков
+		if (--this.retryDelay > 0) {
+			return;
+		}
+		this.retryDelay = 3;
+
+		BlockPos solidPos = this.waterPos == null ? null : this.waterPos.below();
+		if (solidPos == null) {
+			restoreSelection();
+			resetState();
+			return;
+		}
+		Vec3 location = new Vec3(solidPos.getX() + 0.5, solidPos.getY() + 1.0, solidPos.getZ() + 0.5);
+		BlockHitResult hit = new BlockHitResult(location, Direction.UP, solidPos, false);
+		client.gameMode.useItemOn(player, this.bucketHand, hit);
+		player.swing(this.bucketHand);
+	}
+
+	/** true, если в руке, где было ведро, теперь пустое ведро (воду вылили). */
+	private boolean heldBucketIsEmpty(LocalPlayer player) {
+		return this.bucketHand != null
+				&& player.getItemInHand(this.bucketHand).getItem() == Items.BUCKET;
 	}
 
 	private void tickPlaced(Minecraft client, LocalPlayer player) {
@@ -247,9 +324,15 @@ public class NoFallDamageModule extends Module {
 			return;
 		}
 
-		// Рука после установки уже держит пустое ведро — собираем источник
-		Vec3 hitLocation = new Vec3(this.waterPos.getX() + 0.5, this.waterPos.getY() + 1.0, this.waterPos.getZ() + 0.5);
-		BlockHitResult hit = new BlockHitResult(hitLocation, Direction.UP, this.waterPos, false);
+		// Рука после установки уже держит пустое ведро — собираем источник.
+		// Кликаем по самому источнику: raycast с SOURCE_ONLY даёт честный хит
+		Vec3 from = new Vec3(this.waterPos.getX() + 0.5, this.waterPos.getY() + 1.4, this.waterPos.getZ() + 0.5);
+		Vec3 to = new Vec3(this.waterPos.getX() + 0.5, this.waterPos.getY() - 0.5, this.waterPos.getZ() + 0.5);
+		BlockHitResult hit = client.level.clip(new ClipContext(from, to,
+				ClipContext.Block.OUTLINE, ClipContext.Fluid.SOURCE_ONLY, player));
+		if (hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS) {
+			return; // источник «ушёл» между проверкой и кликом — снимемся на следующем тике
+		}
 		client.gameMode.useItemOn(player, this.bucketHand, hit);
 		player.swing(this.bucketHand);
 

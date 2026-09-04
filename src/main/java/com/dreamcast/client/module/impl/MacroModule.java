@@ -38,7 +38,8 @@ public class MacroModule extends Module {
 
 	private final List<Macro> macros = new ArrayList<>();
 	/** Анти-повтор: когда макрос последний раз срабатывал. */
-	private final List<String> cooldowns = new ArrayList<>();
+	/** Анти-повтор: команда → время последнего срабатывания (мс). */
+	private final java.util.HashMap<String, Long> cooldowns = new java.util.HashMap<>();
 	private final Path store;
 
 	public MacroModule() {
@@ -69,6 +70,7 @@ public class MacroModule extends Module {
 
 	public synchronized void load() {
 		macros.clear();
+		cooldowns.clear(); // иначе после перечитывания остаются записи удалённых команд
 		if (!Files.exists(store)) {
 			return;
 		}
@@ -83,7 +85,6 @@ public class MacroModule extends Module {
 				String command = entry.get("command").getAsString();
 				macros.add(new Macro(command,
 						entry.has("key") ? entry.get("key").getAsInt() : -1));
-				cooldowns.add(command + "=0");
 			}
 		} catch (Exception error) {
 			DreamcastClient.LOGGER.warn("Не удалось прочитать макросы: {}", error.toString());
@@ -99,7 +100,6 @@ public class MacroModule extends Module {
 			entry.addProperty("key", macro.key());
 			array.add(entry);
 		}
-		cooldowns.clear();
 		root.add("macros", array);
 		try {
 			Files.writeString(store, new GsonBuilder().setPrettyPrinting().create().toJson(root));
@@ -126,12 +126,12 @@ public class MacroModule extends Module {
 			return;
 		}
 		macros.add(new Macro(command, -1));
-		cooldowns.add(command + "=0");
 		save();
 	}
 
 	public synchronized void remove(int index) {
 		if (index >= 0 && index < macros.size()) {
+			cooldowns.remove(macros.get(index).command());
 			macros.remove(index);
 			save();
 		}
@@ -178,25 +178,11 @@ public class MacroModule extends Module {
 	}
 
 	private long lastFired(String command) {
-		for (String entry : cooldowns) {
-			int eq = entry.lastIndexOf('=');
-			if (entry.substring(0, eq).equals(command)) {
-				return Long.parseLong(entry.substring(eq + 1));
-			}
-		}
-		return 0L;
+		return cooldowns.getOrDefault(command, 0L);
 	}
 
 	private void touch(String command, long timestamp) {
-		for (int i = 0; i < cooldowns.size(); i++) {
-			String entry = cooldowns.get(i);
-			int eq = entry.lastIndexOf('=');
-			if (entry.substring(0, eq).equals(command)) {
-				cooldowns.set(i, command + "=" + timestamp);
-				return;
-			}
-		}
-		cooldowns.add(command + "=" + timestamp);
+		cooldowns.put(command, timestamp);
 	}
 
 	private void run(Minecraft client, String command) {

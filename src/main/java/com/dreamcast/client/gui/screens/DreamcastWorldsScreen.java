@@ -93,12 +93,19 @@ public class DreamcastWorldsScreen extends DreamcastScreen {
 		}
 	}
 
+	/** Поколение экрана: растёт в removed() — устаревшие фоновые задачи игнорируются. */
+	private final com.dreamcast.client.util.Generation generation = new com.dreamcast.client.util.Generation();
+
 	private void loadWorlds() {
 		loading = true;
+		final com.dreamcast.client.util.Generation.Ticket gen = this.generation.start();
 		CompletableFuture.supplyAsync(() -> {
 			var candidates = this.minecraft.getLevelSource().findLevelCandidates();
 			return this.minecraft.getLevelSource().loadLevelSummaries(candidates).join();
 		}).whenComplete((summaries, error) -> this.minecraft.execute(() -> {
+			if (!generation.valid(gen)) {
+				return; // экран закрыли и открыли заново — эти строки уже не наши
+			}
 			closeIcons();
 			rows.clear();
 			selected = -1;
@@ -130,6 +137,7 @@ public class DreamcastWorldsScreen extends DreamcastScreen {
 	 * Читает иконки миров в фоне, а заливает их в GPU на потоке игры — как ваниль.
 	 */
 	private void uploadIcons() {
+		final com.dreamcast.client.util.Generation.Ticket gen = this.generation.start();
 		List<WorldRow> snapshot = new ArrayList<>(rows);
 		List<WorldRow> ready = new ArrayList<>();
 		List<NativeImage> images = new ArrayList<>();
@@ -152,6 +160,14 @@ public class DreamcastWorldsScreen extends DreamcastScreen {
 				}
 			}
 		}).whenComplete((unused, error) -> this.minecraft.execute(() -> {
+			if (!generation.valid(gen)) {
+				// Экран закрылся, пока читались файлы: текстуры уже закрыты —
+				// заливать нельзя, просто освобождаем память
+				for (NativeImage image : images) {
+					image.close();
+				}
+				return;
+			}
 			for (int i = 0; i < ready.size(); i++) {
 				try {
 					ready.get(i).icon.upload(images.get(i));
@@ -164,6 +180,7 @@ public class DreamcastWorldsScreen extends DreamcastScreen {
 
 	@Override
 	public void removed() {
+		this.generation.invalidate(); // незавершённые фоновые задачи становятся устаревшими
 		closeIcons();
 		super.removed();
 	}

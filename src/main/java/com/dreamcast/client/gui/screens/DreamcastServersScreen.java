@@ -116,6 +116,9 @@ public class DreamcastServersScreen extends DreamcastScreen {
 		pingAll();
 	}
 
+	/** false после removed(): фоновые пинги не должны трогать данные и текстуры. */
+	private volatile boolean alive = true;
+
 	private void pingAll() {
 		for (ServerRow row : rows) {
 			pingRow(row);
@@ -130,23 +133,37 @@ public class DreamcastServersScreen extends DreamcastScreen {
 		CompletableFuture.runAsync(() -> {
 			try {
 				this.pinger.pingServer(data,
-						() -> this.minecraft.execute(this::uploadChangedIcons),
-						() -> {
+						() -> this.minecraft.execute(() -> {
+							if (alive) {
+								uploadChangedIcons();
+							}
+						}),
+						() -> this.minecraft.execute(() -> {
+							if (!alive) {
+								return;
+							}
 							data.setState(data.protocol == net.minecraft.SharedConstants.getCurrentVersion().protocolVersion()
 									? ServerData.State.SUCCESSFUL
 									: ServerData.State.INCOMPATIBLE);
-							this.minecraft.execute(this::uploadChangedIcons);
-						},
+							uploadChangedIcons();
+						}),
 						EventLoopGroupHolder.remote(this.minecraft.options.useNativeTransport()));
 			} catch (UnknownHostException error) {
-				data.setState(ServerData.State.UNREACHABLE);
-				data.motd = Component.literal("не удалось найти адрес");
+				this.minecraft.execute(() -> applyPingFailure(row, "не удалось найти адрес"));
 			} catch (Exception error) {
-				data.setState(ServerData.State.UNREACHABLE);
-				data.motd = Component.literal("не удалось подключиться");
+				this.minecraft.execute(() -> applyPingFailure(row, "не удалось подключиться"));
 				DreamcastClient.LOGGER.warn("Пинг {} не удался", data.ip, error);
 			}
 		});
+	}
+
+	/** Ошибка пинга: применяемся строго на потоке игры и только у живого экрана. */
+	private void applyPingFailure(ServerRow row, String message) {
+		if (!alive) {
+			return;
+		}
+		row.data.setState(ServerData.State.UNREACHABLE);
+		row.data.motd = Component.literal(message);
 	}
 
 	/** Загружает иконки, чьи байты поменялись (после пинга они появляются). */
@@ -180,6 +197,7 @@ public class DreamcastServersScreen extends DreamcastScreen {
 
 	@Override
 	public void removed() {
+		alive = false; // фоновые пинги больше не применяют результаты
 		this.pinger.removeAll();
 		closeIcons();
 		super.removed();

@@ -205,7 +205,19 @@ public final class ConfigManager {
 
 		try {
 			Files.createDirectories(PATH.getParent());
-			Files.writeString(PATH, GSON.toJson(root), StandardCharsets.UTF_8);
+			// Атомарная запись: сначала во временный файл, затем move с заменой.
+			// Прямая запись при краше посреди сериализации оставляла бы пустой конфиг.
+			Path temp = PATH.resolveSibling(PATH.getFileName() + ".tmp");
+			Files.writeString(temp, GSON.toJson(root), StandardCharsets.UTF_8);
+			try {
+				Files.move(temp, PATH,
+						java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+						java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+			} catch (java.nio.file.AtomicMoveNotSupportedException atomicUnsupported) {
+				// Файловая система без атомарного move (некоторые сетевые/FUSE):
+				// обычный move с заменой всё равно лучше прямой записи
+				Files.move(temp, PATH, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+			}
 		} catch (IOException exception) {
 			DreamcastClient.LOGGER.error("Не удалось сохранить конфиг {}", PATH, exception);
 		}	}

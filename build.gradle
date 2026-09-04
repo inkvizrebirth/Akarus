@@ -40,6 +40,19 @@ dependencies {
 
 	// Fabric API (нужны модули key-mapping и rendering — HUD)
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// Юнит-тесты чистой логики модулей (SlotMath/MotionMath/DrinkLogic) —
+	// без Minecraft-классов, поэтому гоняются на любом CI-раннере как есть
+	testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher:1.10.2"
+}
+
+test {
+	useJUnitPlatform()
+	testLogging {
+		events "failed", "skipped"
+		exceptionFormat "short"
+	}
 }
 
 processResources {
