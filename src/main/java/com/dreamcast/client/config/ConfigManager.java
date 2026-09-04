@@ -107,6 +107,7 @@ public final class ConfigManager {
 			DreamcastClient.LOGGER.warn("Не удалось применить сохранённое состояние модуля {}", module.getId(), exception);
 		}
 		JsonObject settings = getObject(data, "settings");
+		migrateLegacyKillAuraTargets(module, settings);
 		for (Setting<?> setting : module.getSettings()) {
 			// Кнопки значения не хранят — в конфиге им делать нечего
 			if (settings == null || setting instanceof ButtonSetting) {
@@ -154,6 +155,43 @@ public final class ConfigManager {
 		} catch (RuntimeException exception) {
 			DreamcastClient.LOGGER.warn("Не удалось применить включение {}", module.getId(), exception);
 		}
+	}
+
+	/**
+	 * До 1.1 цели KillAura хранились тремя тумблерами players/mobs/invisible.
+	 * Новый выпадающий список хранит их одной строкой, поэтому переносим старый
+	 * выбор до чтения настроек и не сбрасываем, например, «Невидимые = да».
+	 */
+	private static void migrateLegacyKillAuraTargets(Module module, JsonObject settings) {
+		if (settings == null || !"kill_aura".equals(module.getId()) || settings.has("targets")) {
+			return;
+		}
+		if (!settings.has("players") && !settings.has("mobs") && !settings.has("invisible")) {
+			return;
+		}
+		StringBuilder selected = new StringBuilder();
+		if (legacyBoolean(settings, "players", true)) {
+			selected.append("players");
+		}
+		if (legacyBoolean(settings, "mobs", true)) {
+			if (selected.length() > 0) selected.append(',');
+			selected.append("mobs");
+		}
+		if (legacyBoolean(settings, "invisible", false)) {
+			if (selected.length() > 0) selected.append(',');
+			selected.append("invisible");
+		}
+		for (Setting<?> setting : module.getSettings()) {
+			if (setting instanceof ElementListSetting list && "targets".equals(setting.getId())) {
+				list.applySaved(selected.toString());
+				return;
+			}
+		}
+	}
+
+	private static boolean legacyBoolean(JsonObject settings, String key, boolean fallback) {
+		JsonElement value = settings.get(key);
+		return value != null && value.isJsonPrimitive() ? value.getAsBoolean() : fallback;
 	}
 
 	/** Сохраняет состояние всех модулей на диск. */

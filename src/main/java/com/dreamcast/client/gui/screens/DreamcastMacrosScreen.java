@@ -46,6 +46,8 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 	private final List<Row> rows = new ArrayList<>();
 	private final TextField commandField = new TextField();
 	private int selected = -1;
+	private int scroll;
+	private int listHeight = 1;
 	/** Индекс строки, ждущей клавишу; -1 — не ждём. */
 	private int awaitingKey = -1;
 
@@ -66,6 +68,7 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 	private void reload() {
 		rows.clear();
 		selected = -1;
+		scroll = 0;
 		for (MacroModule.Macro macro : module.macros()) {
 			rows.add(new Row(macro.command(), macro.key()));
 		}
@@ -83,7 +86,7 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 		int panelWidth = Math.min(PANEL_WIDTH, width - 24);
 		int panelX = width / 2 - panelWidth / 2;
 		int panelY = 46;
-		int listHeight = Math.max(60, height - panelY - 76);
+		listHeight = Math.max(60, height - panelY - 76);
 		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
 
 		drawGlassPanel(graphics, panelX, panelY, panelWidth, listHeight, 12, 1.0f, ACCENT);
@@ -96,14 +99,16 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 			int y = panelY + 8;
 			int index = 0;
 			for (Row row : rows) {
-				row.y = y;
-				if (index < visible) {
+				if (index >= scroll && index < scroll + visible) {
+					row.y = y;
 					drawMacroRow(graphics, row, index, panelX + 8, y, panelWidth - 16, mouseX, mouseY);
 					y += ROW_HEIGHT + ROW_GAP;
 				}
 				index++;
 			}
 			graphics.disableScissor();
+			drawScrollbar(graphics, panelX + panelWidth + 3, panelY + 8, listHeight - 16,
+					scroll, visible, rows.size(), ACCENT);
 		}
 
 		// Поле ввода новой команды
@@ -225,16 +230,32 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 			return true;
 		}
 
-		for (int i = 0; i < rows.size(); i++) {
-			Row row = rows.get(i);
-			if (mx >= row.x && my >= row.y && my < row.y + ROW_HEIGHT) {
-				selected = i;
-				awaitingKey = i; // клик по строке — сразу ждём клавишу
+		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
+		int panelWidth = Math.min(PANEL_WIDTH, width - 24);
+		int panelX = width / 2 - panelWidth / 2;
+		int firstRowY = 46 + 8;
+		if (mx >= panelX + 8 && mx < panelX + panelWidth - 8 && my >= firstRowY && my < 46 + listHeight - 4) {
+			int relativeY = (int) my - firstRowY;
+			int index = scroll + relativeY / (ROW_HEIGHT + ROW_GAP);
+			// Промежуток между строками — не часть ни одной из них: иначе клик
+			// по зазору случайно назначал бинд соседнему макросу.
+			if (relativeY % (ROW_HEIGHT + ROW_GAP) < ROW_HEIGHT
+					&& index >= scroll && index < Math.min(rows.size(), scroll + visible)) {
+				selected = index;
+				awaitingKey = index; // клик по строке — сразу ждём клавишу
 				playClick();
 				return true;
 			}
 		}
 		return super.mouseClicked(event, doubleClick);
+	}
+
+	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
+		int max = Math.max(0, rows.size() - visible);
+		scroll = Math.max(0, Math.min(max, scroll - (int) Math.signum(scrollY)));
+		return true;
 	}
 
 	@Override

@@ -673,11 +673,21 @@ public class ClickGuiScreen extends Screen {
 	private void drawElementListRow(GuiGraphicsExtractor graphics, ElementListSetting setting, String key,
 			Hitbox box, int accent, int mouseX, int mouseY) {
 		Font font = this.font;
+		boolean open = key.equals(focusedElementList);
 		float hover = hoverProgress(key, box.contains(mouseX, mouseY));
 
 		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 5,
 				RenderUtils.mix(0x10FFFFFF, accent, hover * 0.25f),
 				RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.5f));
+		String summary = setting.count() == 0 ? "ничего не выбрано"
+				: setting.count() == 1 ? "1 выбран" : setting.count() + " выбрано";
+		RenderUtils.textFlat(graphics, font, setting.getName() + " · " + summary, box.x() + 9, box.y() + 5,
+				setting.count() == 0 ? TEXT_DIM : TEXT_SECONDARY);
+		drawIcon(graphics, open ? "arrow_up" : "arrow_down", box.x() + box.width() - 14, box.y() + 5, 9,
+				RenderUtils.mix(TEXT_DIM, TEXT_SECONDARY, hover));
+		if (!open) {
+			return;
+		}
 
 		List<Hitbox> rows = elementRowBoxes(setting, box);
 		for (int i = 0; i < rows.size(); i++) {
@@ -714,7 +724,7 @@ public class ClickGuiScreen extends Screen {
 	private static List<Hitbox> elementRowBoxes(ElementListSetting setting, Hitbox box) {
 		List<Hitbox> rows = new ArrayList<>(setting.getElements().size());
 		int rowHeight = 12;
-		int y = box.y() + 3;
+		int y = box.y() + TEXT_ROW_HEIGHT;
 		for (int i = 0; i < setting.getElements().size(); i++) {
 			rows.add(new Hitbox(box.x() + 3, y, box.width() - 6, rowHeight));
 			y += rowHeight;
@@ -732,6 +742,7 @@ public class ClickGuiScreen extends Screen {
 	private final Map<String, Integer> blockScrolls = new HashMap<>();
 	private final Map<String, Long> blockOpenedAt = new HashMap<>();
 	private String focusedBlockList;
+	private String focusedElementList;
 
 	private void drawBlockListRow(GuiGraphicsExtractor graphics, BlockListSetting setting, String key,
 			Hitbox box, int accent, int mouseX, int mouseY) {
@@ -1161,7 +1172,10 @@ public class ClickGuiScreen extends Screen {
 			closingExpanded = null;
 		}
 		panelHeightAnim = approach(panelHeightAnim, targetPanelHeight());
-		scroll = approach(scroll, scrollTarget);
+		int listHeight = panelHeight() - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
+		int maxScroll = Math.max(0, contentHeight() - listHeight);
+		scrollTarget = clamp(scrollTarget, -maxScroll, 0);
+		scroll = approach(clamp(scroll, -maxScroll, 0), scrollTarget);
 		pressAnimations.values().removeIf(pressedAt -> now - pressedAt >= 160L);
 
 		// Закрытие доиграло — уходим по-настоящему (один раз)
@@ -1272,6 +1286,7 @@ public class ClickGuiScreen extends Screen {
 					collapseSettings();
 					bindingModule = null;
 					focusedBlockList = null;
+					focusedElementList = null;
 					scrollTarget = 0;
 					scroll = 0;
 					contentSwitchAt = Util.getMillis();
@@ -1280,6 +1295,7 @@ public class ClickGuiScreen extends Screen {
 				}
 				case MODULE -> {
 					focusedBlockList = null;
+					focusedElementList = null;
 					boolean hasSettings = !entry.module().getSettings().isEmpty();
 					boolean onExpandMark = hasSettings && expandMark(box).contains(mouseX, mouseY);
 					pressAnimations.put("module:" + entry.module().getId(), Util.getMillis());
@@ -1320,6 +1336,9 @@ public class ClickGuiScreen extends Screen {
 		Setting<?> setting = entry.setting();
 		if (!(setting instanceof BlockListSetting)) {
 			focusedBlockList = null;
+		}
+		if (!(setting instanceof ElementListSetting)) {
+			focusedElementList = null;
 		}
 
 		if (setting instanceof IntSetting intSetting && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
@@ -1368,6 +1387,7 @@ public class ClickGuiScreen extends Screen {
 		}
 
 		if (setting instanceof BlockListSetting blockList && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+			focusedElementList = null;
 			// Тот же ключ, что в drawBlockListRow: id модуля + id настройки
 			String key = (entry.module() == null ? "" : entry.module().getId() + ":") + setting.getId();
 			boolean open = key.equals(focusedBlockList);
@@ -1414,10 +1434,17 @@ public class ClickGuiScreen extends Screen {
 		}
 
 		if (setting instanceof ElementListSetting elementList && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-			// Клик по строке варианта — переключить выбор этого элемента
+			focusedBlockList = null;
+			String key = (entry.module() == null ? "" : entry.module().getId() + ":") + setting.getId();
+			if (!key.equals(focusedElementList)) {
+				focusedElementList = key;
+				playClick();
+				return;
+			}
 			List<Hitbox> rows = elementRowBoxes(elementList, box);
 			for (int i = 0; i < rows.size(); i++) {
-				if (rows.get(i).contains(mouseX, mouseYOfSettingClick)) {
+				Hitbox row = rows.get(i);
+				if (row.contains(mouseX, mouseYOfSettingClick)) {
 					elementList.toggle(elementList.getElements().get(i).id());
 					if (entry.module() != null) {
 						entry.module().onSettingsChanged();
@@ -1427,6 +1454,9 @@ public class ClickGuiScreen extends Screen {
 					return;
 				}
 			}
+			// Нажатие на заголовок открытого списка закрывает его.
+			focusedElementList = null;
+			playClick();
 			return;
 		}
 
@@ -1767,7 +1797,7 @@ public class ClickGuiScreen extends Screen {
 
 	private int settingHeight(Setting<?> setting) {
 		if (setting instanceof ElementListSetting elementList) {
-			return elementList.getElements().size() * 12 + 8;
+			return TEXT_ROW_HEIGHT + (isElementListOpen(setting) ? elementList.getElements().size() * 12 : 0);
 		}
 		if (setting instanceof BlockListSetting) {
 			// Раскрытый список занимает и высоту под поиск, и строки
@@ -1792,13 +1822,18 @@ public class ClickGuiScreen extends Screen {
 		return focusedBlockList.endsWith(suffix);
 	}
 
+	private boolean isElementListOpen(Setting<?> setting) {
+		return focusedElementList != null && focusedElementList.endsWith(":" + setting.getId());
+	}
+
 	private int contentHeight() {
 		int height = 0;
 		for (Module module : modulesShown()) {
 			height += MODULE_ROW_HEIGHT;
 			if (module == expanded || module == closingExpanded) {
+				float reveal = expandProgress(module);
 				for (Setting<?> setting : module.getSettings()) {
-					height += settingHeight(setting);
+					height += Math.round(settingHeight(setting) * reveal);
 				}
 			}
 		}

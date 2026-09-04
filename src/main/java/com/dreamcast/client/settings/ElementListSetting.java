@@ -40,6 +40,11 @@ public class ElementListSetting extends Setting<String> {
 		return selected.contains(elementId);
 	}
 
+	/** Сколько пунктов выбрано — для компактного заголовка выпадающего списка. */
+	public int count() {
+		return selected.size();
+	}
+
 	/** Переключает элемент и возвращает его новое состояние. */
 	public boolean toggle(String elementId) {
 		if (elementOf(elementId) == null) {

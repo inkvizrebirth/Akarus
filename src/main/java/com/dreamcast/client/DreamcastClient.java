@@ -24,7 +24,7 @@ public class DreamcastClient implements ClientModInitializer {
 	public static final String MOD_ID = "dreamcast";
 	/** Пользовательское имя клиента: на экранах — короткое «Dreamcast», без «DLC». */
 	public static final String MOD_NAME = "Dreamcast";
-	public static final String MOD_VERSION = "1.1.0";
+	public static final String MOD_VERSION = "1.1.1";
 	/** Короткое имя для логотипа в меню и HUD. */
 	public static final String LOGO_TEXT = "DREAMCAST";
 
