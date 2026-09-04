@@ -8,6 +8,7 @@ import com.dreamcast.client.settings.ModeSetting;
 import com.dreamcast.client.util.BuffPriority;
 import com.dreamcast.client.util.DrinkLogic;
 import com.dreamcast.client.util.Notifications;
+import com.dreamcast.client.util.PendingRestores;
 import com.dreamcast.client.util.PotionLogic;
 import com.dreamcast.client.util.RestorePlan;
 import com.dreamcast.client.util.SlotMath;
@@ -416,6 +417,10 @@ public class AutoBuffModule extends Module {
 		// Снимок: дальше идём ТОЛЬКО когда в резервном слоте реально появился
 		// именно этот предмет (SWAP мог не дойти/быть отклонён — иначе рискуем
 		// использовать чужой предмет из слота 8)
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player == null) {
+			return;
+		}
 		bagSource = slot;
 		expectedStack = player.getInventory().getItem(slot).copy();
 		swapReserve(player);

@@ -212,7 +212,7 @@ public class ScaffoldModule extends Module {
 			return;
 		}
 		// экран — стоп только по настройке
-		if (client.screen != null && pauseInGui.isEnabled()) {
+		if (client.gui != null && client.gui.screen() != null && pauseInGui.isEnabled()) {
 			pauseWithRollback(client, player);
 			return;
 		}
@@ -234,7 +234,7 @@ public class ScaffoldModule extends Module {
 	}
 
 	private static UUID uuidOf(ClientLevel level) {
-		return UUID.nameUUIDFromBytes(level.dimension().location().toString().getBytes());
+		return UUID.nameUUIDFromBytes(level.dimension().identifier().toString().getBytes());
 	}
 
 	private void tickCooldowns() {
