@@ -122,13 +122,9 @@ public class NoFallDamageModule extends Module {
 		}
 
 		// Падение уже опасно: вода, лестница, элитры и полёт пассажиром — не наш случай
-		boolean dangerousFall = player.fallDistance >= DAMAGE_FALL_DISTANCE
-				&& !player.onGround()
-				&& !player.isInWater()
-				&& !player.onClimbable()
-				&& !player.isFallFlying()
-				&& !player.isPassenger();
-		if (!dangerousFall) {
+		if (!com.dreamcast.client.util.NoFallLogic.dangerousFall(player.fallDistance,
+				DAMAGE_FALL_DISTANCE, player.onGround(), player.isInWater(),
+				player.onClimbable(), player.isFallFlying(), player.isPassenger())) {
 			return;
 		}
 
@@ -235,41 +231,36 @@ public class NoFallDamageModule extends Module {
 			return;
 		}
 
-		// Вода появилась — поставлено
-		if (isOurWaterStillThere(client)) {
-			this.phase = Phase.PLACED;
-			return;
-		}
+		boolean stillFalling = !(player.onGround() || player.isInWater() || player.fallDistance < 1.0F);
+		switch (com.dreamcast.client.util.NoFallLogic.placingAction(
+				isOurWaterStillThere(client), stillFalling, heldBucketIsEmpty(player))) {
+			case CONFIRM -> this.phase = Phase.PLACED;
+			case ABORT -> {
+				restoreSelection();
+				resetState();
+			}
+			case WAIT -> {
+				// сервер клик принял (ведро пусто) — даём жидкости синхронизироваться
+			}
+			case RETRY -> {
+				// Повторная попытка: не чаще, чем раз в retryDelay тиков
+				if (--this.retryDelay > 0) {
+					return;
+				}
+				this.retryDelay = 3;
 
-		// Уже не падаем (успели поймать чужую воду/смягчили удар) — выходим
-		if (player.onGround() || player.isInWater() || player.fallDistance < 1.0F) {
-			restoreSelection();
-			resetState();
-			return;
+				BlockPos solidPos = this.waterPos == null ? null : this.waterPos.below();
+				if (solidPos == null) {
+					restoreSelection();
+					resetState();
+					return;
+				}
+				Vec3 location = new Vec3(solidPos.getX() + 0.5, solidPos.getY() + 1.0, solidPos.getZ() + 0.5);
+				BlockHitResult hit = new BlockHitResult(location, Direction.UP, solidPos, false);
+				client.gameMode.useItemOn(player, this.bucketHand, hit);
+				player.swing(this.bucketHand);
+			}
 		}
-
-		// Ведро опустело — сервер клик принял; пустым ведром кликать нельзя
-		// (зачерпнём только что поставленную воду) — ждём появления воды до таймаута
-		if (heldBucketIsEmpty(player)) {
-			return;
-		}
-
-		// Повторная попытка: не чаще, чем раз в retryDelay тиков
-		if (--this.retryDelay > 0) {
-			return;
-		}
-		this.retryDelay = 3;
-
-		BlockPos solidPos = this.waterPos == null ? null : this.waterPos.below();
-		if (solidPos == null) {
-			restoreSelection();
-			resetState();
-			return;
-		}
-		Vec3 location = new Vec3(solidPos.getX() + 0.5, solidPos.getY() + 1.0, solidPos.getZ() + 0.5);
-		BlockHitResult hit = new BlockHitResult(location, Direction.UP, solidPos, false);
-		client.gameMode.useItemOn(player, this.bucketHand, hit);
-		player.swing(this.bucketHand);
 	}
 
 	/** true, если в руке, где было ведро, теперь пустое ведро (воду вылили). */
@@ -318,7 +309,9 @@ public class NoFallDamageModule extends Module {
 	}
 
 	private void tickRetract(Minecraft client, LocalPlayer player) {
-		if (!isOurWaterStillThere(client) || --this.timer <= 0) {
+		if (com.dreamcast.client.util.NoFallLogic.retractAction(
+				isOurWaterStillThere(client), --this.timer <= 0)
+				== com.dreamcast.client.util.NoFallLogic.RetractAction.ABORT) {
 			restoreSelection();
 			resetState();
 			return;
