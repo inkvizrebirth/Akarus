@@ -52,7 +52,7 @@ jobs:
           curl -fL --retry 3 --max-time 180 -o libs/Sodium.jar "$sodium_url"
           fetch CaffeineMC/lithium mc26.2-0.25.3 'lithium.*fabric.*26\.2' Lithium.jar
           fetch Prospector/modmenu v20.0.1 'modmenu-20\.0\.1' ModMenu.jar
-          fetch RaphiMC/ImmediatelyFast v1.16.4 'ImmediatelyFast-Fabric-1\.16\.4\+26\.2' ImmediatelyFast.jar
+          fetch RaphiMC/ImmediatelyFast v1.16.4 'ImmediatelyFast-Fabric-1\.16\.4.*26\.2' ImmediatelyFast.jar
           ls -la libs/
       - name: Build
         run: |
