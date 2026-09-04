@@ -38,6 +38,32 @@ class MotionMathTest {
 	}
 
 	@Test
+	void closingSpeedIsProjectionOnDirectionToUs() {
+		// идёт прямо на нас со скоростью 0.3 блока/тик
+		assertEquals(0.3, MotionMath.closingSpeed(10, 0, 0, 0.3, 0, 0), 1.0e-9);
+	}
+
+	@Test
+	void closingSpeedPerpendicularOrRecedingIsNotClosing() {
+		assertEquals(0.0, MotionMath.closingSpeed(10, 0, 0, 0, 0.3, 0), 1.0e-9, "мимо");
+		assertEquals(-0.3, MotionMath.closingSpeed(10, 0, 0, -0.3, 0, 0), 1.0e-9, "от нас");
+	}
+
+	@Test
+	void closingSpeedDoesNotGrowWithDistance() {
+		// регресс старой формулы (u·v)/|v|²: дальний МЕДЛЕННЫЙ враг давал
+		// «скорость» размером с дистанцию и считался мгновенной угрозой
+		assertEquals(0.05, MotionMath.closingSpeed(3, 0, 0, 0.05, 0, 0), 1.0e-9);
+		assertEquals(0.05, MotionMath.closingSpeed(30, 0, 0, 0.05, 0, 0), 1.0e-9,
+				"скорость сближения не зависит от дистанции");
+	}
+
+	@Test
+	void closingSpeedZeroVectorTargetIsSafe() {
+		assertEquals(0.0, MotionMath.closingSpeed(0, 0, 0, 1, 1, 1), 0.0);
+	}
+
+	@Test
 	void fallingPlayerLandsUnderItselfWithoutDrift() {
 		double[] landing = MotionMath.landingPoint(100, 80, 100, 0, -1.0, 0, 60, 3.0);
 		assertArrayEquals(new double[]{100, 60, 100}, landing, 1.0e-9);

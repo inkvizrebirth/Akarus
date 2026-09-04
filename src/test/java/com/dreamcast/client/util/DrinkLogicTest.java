@@ -15,34 +15,33 @@ class DrinkLogicTest {
 
 	@Test
 	void keepsHoldingWhileDrinking() {
-		// начали, пьём, осталось много тиков — держим
-		assertFalse(DrinkLogic.finished(true, true, 20, 1000, 8000));
+		// начали, пьём — держим, сколько бы тиков ни оставалось
+		assertFalse(DrinkLogic.finished(true, true, 1000, 8000));
 	}
 
 	@Test
-	void releasesOneTickBeforeCompletion() {
-		// осталось ≤1 тика: отпускем ЗАРАНЕЕ, чтобы после завершения ваниль
-		// не посчитала клавишу зажатой и не использовала следующий предмет
-		assertTrue(DrinkLogic.finished(true, true, 1, 2000, 8000));
-		assertTrue(DrinkLogic.finished(true, true, 0, 2000, 8000));
+	void holdsThroughTheLastTick() {
+		// ДОСРОЧНЫЙ отпуск отменял последний тик использования — предмет
+		// тратился без эффекта. Держим до перехода isUsingItem(): true → false
+		assertFalse(DrinkLogic.finished(true, true, 1400, 8000));
 	}
 
 	@Test
 	void finishesWhenUseEnds() {
 		// использование само погасло — предмет допит/сорван
-		assertTrue(DrinkLogic.finished(true, false, Integer.MAX_VALUE, 2000, 8000));
+		assertTrue(DrinkLogic.finished(true, false, 2000, 8000));
 	}
 
 	@Test
 	void waitsWhenUseHasNotStartedYet() {
 		// только нажали — пакет ещё в полёте, isUsingItem ещё false
-		assertFalse(DrinkLogic.finished(false, false, Integer.MAX_VALUE, 200, 8000));
+		assertFalse(DrinkLogic.finished(false, false, 200, 8000));
 	}
 
 	@Test
 	void timeoutBreaksStuckDrink() {
 		// сервер не даёт завершить (залипло использование) — таймаут решает
-		assertTrue(DrinkLogic.finished(true, true, 20, 9000, 8000));
+		assertTrue(DrinkLogic.finished(true, true, 9000, 8000));
 	}
 
 	@Test

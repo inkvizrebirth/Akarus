@@ -92,6 +92,9 @@ public class DreamcastServersScreen extends DreamcastScreen {
 	@Override
 	protected void init() {
 		super.init();
+		// Экран могли закрыть (removed() → alive=false) и открыть тем же
+		// экземпляром снова (возврат с экрана выбора версии) — оживляем пинги
+		alive = true;
 		reloadServers();
 	}
 

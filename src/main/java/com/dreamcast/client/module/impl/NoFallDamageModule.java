@@ -71,6 +71,10 @@ public class NoFallDamageModule extends Module {
 	private boolean landedInWater;
 	/** Тиков до повторной попытки постановки (анти-спам кликов). */
 	private int retryDelay;
+	/** Наше ли это ведро вылилось (сервер принял клик) — только такую воду собираем. */
+	private boolean placedByUs;
+	/** Видели ли переход водяного ведра в пустое. */
+	private boolean sawBucketEmpty;
 
 	public NoFallDamageModule() {
 		super("no_fall_damage", "NoFallDamage", "Ватердроп: ставит воду под себя при опасном падении и убирает её после посадки",
@@ -91,6 +95,8 @@ public class NoFallDamageModule extends Module {
 		this.bucketHand = null;
 		this.landedInWater = false;
 		this.retryDelay = 0;
+		this.placedByUs = false;
+		this.sawBucketEmpty = false;
 	}
 
 	@Override
@@ -214,9 +220,13 @@ public class NoFallDamageModule extends Module {
 		player.swing(this.bucketHand);
 
 		// В PLACED сразу нельзя: сервер мог отклонить клик — ждём реальную воду.
+		// Если в placePos уже стоял ЧУЖОЙ источник, сервер наш клик отклонит
+		// (ведро останется полным) — воду тогда не собираем, это не наша
 		this.waterPos = placePos;
 		this.landedInWater = false;
 		this.retractCountdown = -1;
+		this.placedByUs = false;
+		this.sawBucketEmpty = false;
 		this.retryDelay = 3;
 		this.phase = Phase.PLACING;
 		this.timer = TIMEOUT;
@@ -232,9 +242,15 @@ public class NoFallDamageModule extends Module {
 		}
 
 		boolean stillFalling = !(player.onGround() || player.isInWater() || player.fallDistance < 1.0F);
+		if (heldBucketIsEmpty(player)) {
+			this.sawBucketEmpty = true; // сервер принял выливание — вода наша
+		}
 		switch (com.dreamcast.client.util.NoFallLogic.placingAction(
 				isOurWaterStillThere(client), stillFalling, heldBucketIsEmpty(player))) {
-			case CONFIRM -> this.phase = Phase.PLACED;
+			case CONFIRM -> {
+				this.placedByUs = this.sawBucketEmpty;
+				this.phase = Phase.PLACED;
+			}
 			case ABORT -> {
 				restoreSelection();
 				resetState();
@@ -272,8 +288,9 @@ public class NoFallDamageModule extends Module {
 	private void tickPlaced(Minecraft client, LocalPlayer player) {
 		if (--this.timer <= 0) {
 			// Вода не дождалась посадки: если игрок уже стоит на земле и источник
-			// ещё там — приберём за собой, иначе просто выходим
-			if (player.onGround() && isOurWaterStillThere(client)) {
+			// ещё там — приберём за собой (только нашу!), иначе просто выходим
+			if (player.onGround() && isOurWaterStillThere(client)
+					&& com.dreamcast.client.util.NoFallLogic.collectAllowed(this.placedByUs, true)) {
 				startRetract();
 			} else {
 				restoreSelection();
@@ -291,9 +308,10 @@ public class NoFallDamageModule extends Module {
 
 		if (this.landedInWater) {
 			if (--this.retractCountdown <= 0) {
-				if (autoRemove.isEnabled()) {
+				if (com.dreamcast.client.util.NoFallLogic.collectAllowed(this.placedByUs, autoRemove.isEnabled())) {
 					startRetract();
 				} else {
+					// Чужую воду не трогаем — просто выходим
 					restoreSelection();
 					resetState();
 				}

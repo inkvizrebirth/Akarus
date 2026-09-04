@@ -47,6 +47,20 @@ public class BlockEspModule extends Module {
 	private final List<BlockBox> boxes = new ArrayList<>();
 	private int scanTimer;
 
+	/** Инкрементальный скан: полный обход куба радиуса 48 — ~680 тыс. позиций,
+	 *  одним куском это фризит главный поток. Двигаем курсор бюджетно, по чуть-чуть
+	 *  каждый тик; результат публикуется по завершении полного круга. */
+	private static final int POSITIONS_PER_TICK = 20_000;
+	private final List<BlockBox> scanBuffer = new ArrayList<>();
+	/** Линейный курсор по объёму скана; -1 — скан не идёт. */
+	private int scanCursor = -1;
+	private int scanSizeX;
+	private int scanSizeY;
+	private int scanSizeZ;
+	private int scanBaseX;
+	private int scanBaseY;
+	private int scanBaseZ;
+
 	public BlockEspModule() {
 		super("block_esp", "BlockESP", "Подсветка выбранных блоков: руда, сундуки и что угодно ещё",
 				ModuleCategory.RENDER, GLFW.GLFW_KEY_UNKNOWN);
@@ -57,46 +71,73 @@ public class BlockEspModule extends Module {
 		Minecraft client = Minecraft.getInstance();
 		if (client == null || client.player == null || client.level == null || blocks.count() == 0) {
 			boxes.clear();
+			scanCursor = -1;
+			scanBuffer.clear();
+			return;
+		}
+		// Скан уже идёт — двигаем его на бюджет позиций и выходим: полный круг
+		// занимает несколько тиков, зато ни один не фризит
+		if (scanCursor >= 0) {
+			scanStep(client, POSITIONS_PER_TICK);
 			return;
 		}
 		if (++scanTimer < Math.max(5, scanInterval.get())) {
 			return;
 		}
 		scanTimer = 0;
-		scan(client);
+		beginScan(client);
 	}
 
-	/** Собирает боксы подходящих блоков вокруг игрока. */
-	private void scan(Minecraft client) {
-		boxes.clear();
-		var selected = blocks.selectedIds();
-		if (selected.isEmpty()) {
-			return;
-		}
-
+	/** Начинает новый круг скана: фиксируем центр и объём, курсор на ноль. */
+	private void beginScan(Minecraft client) {
 		BlockPos center = client.player.blockPosition();
 		int r = radius.get();
 		int yMin = Math.max(client.level.getMinY(), center.getY() - r / 2);
 		int yMax = Math.min(client.level.getMaxY(), center.getY() + r);
+		scanBaseX = center.getX() - r;
+		scanBaseY = yMin;
+		scanBaseZ = center.getZ() - r;
+		scanSizeX = 2 * r + 1;
+		scanSizeY = yMax - yMin + 1;
+		scanSizeZ = 2 * r + 1;
+		scanCursor = 0;
+		scanBuffer.clear();
+	}
 
-		int phase = 0;
-		for (BlockPos pos : BlockPos.betweenClosed(
-				center.getX() - r, yMin, center.getZ() - r,
-				center.getX() + r, yMax, center.getZ() + r)) {
-			BlockState state = client.level.getBlockState(pos);
+	/** Продвигает скан не более чем на budget позиций; в конце публикует результат. */
+	private void scanStep(Minecraft client, int budget) {
+		var selected = blocks.selectedIds();
+		int total = scanSizeX * scanSizeY * scanSizeZ;
+		int end = Math.min(total, scanCursor + budget);
+		int phase = scanBuffer.size();
+		var mutable = new BlockPos.MutableBlockPos();
+		for (int index = scanCursor; index < end; index++) {
+			int y = index / (scanSizeX * scanSizeZ);
+			int rest = index % (scanSizeX * scanSizeZ);
+			int z = rest / scanSizeX;
+			int x = rest % scanSizeX;
+			mutable.set(scanBaseX + x, scanBaseY + y, scanBaseZ + z);
+			var state = client.level.getBlockState(mutable);
 			if (state.isAir()) {
 				continue;
 			}
-			// Сверяем ключ реестра (один lookup на непустой блок)
 			String id = net.minecraft.core.registries.BuiltInRegistries.BLOCK
 					.getKey(state.getBlock()).getPath();
 			if (!selected.contains(id)) {
 				continue;
 			}
-			boxes.add(new BlockBox(pos.getX(), pos.getY(), pos.getZ(), phase++));
-			if (boxes.size() >= MAX_BOXES) {
-				return;
+			scanBuffer.add(new BlockBox(mutable.getX(), mutable.getY(), mutable.getZ(), phase++));
+			if (scanBuffer.size() >= MAX_BOXES) {
+				break;
 			}
+		}
+		scanCursor = end;
+		if (scanCursor >= total || scanBuffer.size() >= MAX_BOXES) {
+			// Круг завершён — публикуем (до этого момента рисуем прошлый результат)
+			boxes.clear();
+			boxes.addAll(scanBuffer);
+			scanBuffer.clear();
+			scanCursor = -1;
 		}
 	}
 

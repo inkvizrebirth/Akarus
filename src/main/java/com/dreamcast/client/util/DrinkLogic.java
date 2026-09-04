@@ -14,23 +14,24 @@ public final class DrinkLogic {
 	}
 
 	/**
-	 * Закончено ли питьё.
+	 * Закончено ли питьё. Нормальное завершение — ТОЛЬКО переход
+	 * {@code isUsingItem(): true → false}: досрочный отпуск по remainingTicks
+	 * отменял последний тик использования, и предмет тратился без эффекта.
 	 *
-	 * @param sawUsing        мы видели, что использование началось (isUsingItem был true)
-	 * @param usingNow        использование идёт прямо сейчас
-	 * @param remainingTicks  тиков до конца (≤1 — отпускаем клавишу заранее, за тик)
-	 * @param elapsedMs       сколько уже держим
-	 * @param timeoutMs       общий таймаут (сервер не дал начать/закончить)
+	 * @param sawUsing   мы видели, что использование началось (isUsingItem был true)
+	 * @param usingNow   использование идёт прямо сейчас
+	 * @param elapsedMs  сколько уже держим
+	 * @param timeoutMs  общий таймаут (сервер не дал начать/закончить)
 	 */
 	public static boolean finished(boolean sawUsing, boolean usingNow,
-	                               int remainingTicks, long elapsedMs, long timeoutMs) {
+	                               long elapsedMs, long timeoutMs) {
 		if (elapsedMs >= timeoutMs) {
 			return true; // отказ сервера/залипание — отпускаем и откатываем
 		}
 		if (!sawUsing) {
 			return false; // ещё не начинали — держим дальше (или ждём старта)
 		}
-		return !usingNow || remainingTicks <= 1;
+		return !usingNow;
 	}
 
 	/**

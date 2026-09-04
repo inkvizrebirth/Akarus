@@ -64,4 +64,13 @@ public final class NoFallLogic {
 	public static RetractAction retractAction(boolean waterPresent, boolean timedOut) {
 		return waterPresent && !timedOut ? RetractAction.SIPHON : RetractAction.ABORT;
 	}
+
+	/**
+	 * Можно ли собрать воду: только ту, что поставили МЫ (ведро перешло в
+	 * пустое), и только при включённом autoRemove. Чужой источник,
+	 * оказавшийся в точке приземления, зачерпывать нельзя.
+	 */
+	public static boolean collectAllowed(boolean placedByUs, boolean autoRemove) {
+		return placedByUs && autoRemove;
+	}
 }

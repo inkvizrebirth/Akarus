@@ -85,6 +85,8 @@ public class AutoBuffModule extends Module {
 	private boolean wasLookingDown;
 	/** Питьё: видели ли начало, когда начали держать. */
 	private boolean sawUsing;
+	/** Легит-режим опускал камеру — при сбросе вернуть pitch. */
+	private boolean cameraTouched;
 	private int pauseSeed;
 
 	public AutoBuffModule() {
@@ -96,7 +98,25 @@ public class AutoBuffModule extends Module {
 	@Override
 	protected void onDisable() {
 		releaseUseKey();
+		// До reset() (он стирает previousSlot/returnPitch): без этого выключение
+		// посреди питья оставляло игрока со слотом зелья и камерой, опущенной вниз
+		restorePlayerState();
 		reset();
+	}
+
+	/** Возвращает слот и (в легите) наклон камеры, если модуль их менял. */
+	private void restorePlayerState() {
+		Minecraft client = Minecraft.getInstance();
+		LocalPlayer player = client == null ? null : client.player;
+		if (player == null) {
+			return;
+		}
+		if (previousSlot >= 0 && player.getInventory().getSelectedSlot() != previousSlot) {
+			player.getInventory().setSelectedSlot(previousSlot);
+		}
+		if (cameraTouched) {
+			player.setXRot(returnPitch);
+		}
 	}
 
 	@Override
@@ -106,6 +126,19 @@ public class AutoBuffModule extends Module {
 		if (player == null || client.level == null || client.gameMode == null) {
 			releaseUseKey();
 			reset();
+			return;
+		}
+
+		// Открытый экран или чужой контейнер (сундук, верстак…) — стоп: наши
+		// слотовые клики рассчитаны на inventoryMenu, в чужом меню тот же id
+		// указывал бы на совершенно другой слот
+		if (client.gui != null && client.gui.screen() != null
+				|| player.containerMenu != player.inventoryMenu) {
+			if (phase != Phase.IDLE) {
+				releaseUseKey();
+				restorePlayerState();
+				reset();
+			}
 			return;
 		}
 
@@ -138,12 +171,8 @@ public class AutoBuffModule extends Module {
 			}
 			case DRINKING -> tickDrinking(client, player, now, 0);
 			case RETURNING -> {
-				// последний тик питья ещё идёт — сменой слота можно сорвать использование
 				if (player.isUsingItem()) {
-					return;
-				}
-				if (previousSlot >= 0) {
-					selectSlot(player, previousSlot);
+					return; // ещё допиваем последний тик (таймаут-ветка)
 				}
 				if (notify.isEnabled()) {
 					Notifications.ok("AutoBuff", "Готово: " + lastName());
@@ -171,6 +200,7 @@ public class AutoBuffModule extends Module {
 				previousSlot = player.getInventory().getSelectedSlot();
 				returnYaw = player.getYRot();
 				returnPitch = player.getXRot();
+				cameraTouched = true;
 				wasLookingDown = returnPitch > 55.0f;
 				beginSwap(player, target);
 				phase = Phase.TURNING;
@@ -191,13 +221,10 @@ public class AutoBuffModule extends Module {
 			}
 			case DRINKING -> tickDrinking(client, player, now, humanPause);
 			case RETURNING -> {
-				// последний тик питья ещё идёт — сменой слота можно сорвать использование
 				if (player.isUsingItem()) {
-					return;
+					return; // ещё допиваем последний тик (таймаут-ветка)
 				}
-				if (previousSlot >= 0) {
-					selectSlot(player, previousSlot);
-				}
+				// Слот уже возвращён в tickDrinking — осталась камера
 				// Возвращаем взгляд тем же плавным темпом
 				float pitch = player.getXRot();
 				float delta = Math.signum(returnPitch - pitch) * Math.min(8.0f, Math.abs(returnPitch - pitch));
@@ -222,14 +249,18 @@ public class AutoBuffModule extends Module {
 		if (usingNow) {
 			sawUsing = true;
 		}
-		int remaining = usingNow ? player.getUseItemRemainingTicks() : Integer.MAX_VALUE;
 		long elapsed = now - phaseSince;
 
 		if (DrinkLogic.neverStarted(sawUsing, elapsed, START_TIMEOUT_MS)
-				|| DrinkLogic.finished(sawUsing, usingNow, remaining, elapsed, DRINK_TIMEOUT_MS)) {
-			// finished() срабатывает и на «≤1 тик до конца» — клавишу отпускаем
-			// заранее, за тик, чтобы ваниль не начала использовать следующий предмет
+				|| DrinkLogic.finished(sawUsing, usingNow, elapsed, DRINK_TIMEOUT_MS)) {
+			// Завершение — только по факту isUsingItem(): true → false (досрочный
+			// отпуск по remaining отменял последний тик). Клавишу отпускаем и слот
+			// возвращаем В ЭТОТ ЖЕ тик — до следующего handleKeybinds, иначе
+			// зажатая клавиша использовала бы следующий предмет
 			releaseUseKey();
+			if (previousSlot >= 0) {
+				selectSlot(player, previousSlot);
+			}
 			phase = Phase.RETURNING;
 			phaseSince = now;
 			return;
@@ -348,7 +379,9 @@ public class AutoBuffModule extends Module {
 	                           Holder<MobEffect> wanted,
 	                           boolean searchInventory) {
 		var inventory = player.getInventory();
-		int last = searchInventory ? inventory.getContainerSize() : 9;
+		// Только 0..35: getContainerSize() включает броню (36..39) и оффхенд (40),
+		// их индексы бессмысленны для свапа; зелье во второй руке не трогаем
+		int last = searchInventory ? com.dreamcast.client.util.SlotMath.INVENTORY_SIZE : 9;
 		for (int i = 0; i < last; i++) {
 			ItemStack stack = inventory.getItem(i);
 			if (!isBuffPotion(stack, wanted)) {
@@ -367,7 +400,7 @@ public class AutoBuffModule extends Module {
 	private int findGappleSlot(LocalPlayer player) {
 		var inventory = player.getInventory();
 		for (int pass = 0; pass < 2; pass++) {
-			int last = pass == 0 ? 9 : inventory.getContainerSize();
+			int last = pass == 0 ? 9 : com.dreamcast.client.util.SlotMath.INVENTORY_SIZE;
 			for (int i = 0; i < last; i++) {
 				ItemStack stack = inventory.getItem(i);
 				if (stack.is(Items.GOLDEN_APPLE) || stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
@@ -388,8 +421,10 @@ public class AutoBuffModule extends Module {
 		if (client.player == null || client.gameMode == null) {
 			return -1;
 		}
-		// fromSlot 9..35 в InventoryMenu совпадает с индексом Inventory — пересчёт не нужен
-		client.gameMode.handleContainerInput(player.containerMenu.containerId,
+		// Клики рассчитаны на меню инвентаря игрока — inventoryMenu, не containerMenu:
+		// при открытом сундуке containerId принадлежал бы сундуку, и слот указывал
+		// бы в совершенно другое место (дополнительно гвардимся в tick())
+		client.gameMode.handleContainerInput(player.inventoryMenu.containerId,
 				com.dreamcast.client.util.SlotMath.inventoryToMenuSlot(fromSlot), hotbarTarget,
 				net.minecraft.world.inventory.ContainerInput.SWAP, player);
 		return hotbarTarget;
@@ -462,6 +497,7 @@ public class AutoBuffModule extends Module {
 		pendingEffect = null;
 		pendingGapple = false;
 		wasLookingDown = false;
+		cameraTouched = false;
 		sawUsing = false;
 	}
 }

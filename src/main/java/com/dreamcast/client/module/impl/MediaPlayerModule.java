@@ -64,6 +64,8 @@ public class MediaPlayerModule extends Module {
 	private long watchedModified = -1L;
 	private int scanCooldown;
 	private boolean wasUsingMenu;
+	/** Трек поставлен на паузу самим модулем (из-за меню) — его и возобновляем. */
+	private boolean pausedByMenu;
 
 	public MediaPlayerModule() {
 		super("media_player", "MediaPlayer", "Фоновая музыка (wav/aiff/au) из папки dreamcast/media — играет мимо звука игры",
@@ -117,6 +119,12 @@ public class MediaPlayerModule extends Module {
 		if (pauseInMenu.isEnabled()) {
 			if (inMenu && !wasUsingMenu && player.isPlaying()) {
 				player.pause();
+				pausedByMenu = true;
+			} else if (!inMenu && wasUsingMenu && pausedByMenu) {
+				// Возобновляем только то, что остановили сами: если игрок ставил
+				// паузу руками или трек закончился — не навязываем play()
+				player.play();
+				pausedByMenu = false;
 			}
 			wasUsingMenu = inMenu;
 		}

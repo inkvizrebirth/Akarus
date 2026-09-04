@@ -464,17 +464,17 @@ public class AutoTotemModule extends Module {
 			return estimatedMeleeDamage(enemy, true);
 		}
 
-		// 2) сближается под прицелом: входит в радиус мили раньше конца окна
+		// 2) сближается под прицелом: входит в радиус мили раньше конца окна.
+			// closingSpeed — проекция скорости на направление «на нас» (блоков/тик):
+			// делим на длину вектора к нам; прежняя формула с |v|² давала ВРЕМЯ,
+			// умноженное затем на |v| — далёкий медленный враг считался мгновенной угрозой
 		if (antiMelee.isEnabled() && distance < 9.0 && velocity != null) {
 			Vec3 toUs = player.getEyePosition().subtract(enemy.getEyePosition());
-			double speedSq = velocity[0] * velocity[0] + velocity[1] * velocity[1] + velocity[2] * velocity[2];
-			double towards = speedSq > 1.0e-8
-					? (toUs.x * velocity[0] + toUs.y * velocity[1] + toUs.z * velocity[2]) / speedSq
-					: 0.0; // доля «на нас» за тик: >0.15 = быстро летит
-			boolean closing = towards > 0.12;
+			double closeSpeed = com.dreamcast.client.util.MotionMath.closingSpeed(
+					toUs.x, toUs.y, toUs.z, velocity[0], velocity[1], velocity[2]);
+			boolean closing = closeSpeed > 0.02;
 			// время до входа в радиус удара при текущей скорости сближения
-			double closeSpeed = Math.sqrt(speedSq) * Math.max(0.0, towards);
-			double eta = closeSpeed > 0.02 ? (distance - 3.4) / closeSpeed : Double.MAX_VALUE;
+			double eta = closing ? (distance - 3.4) / closeSpeed : Double.MAX_VALUE;
 			boolean facingUs = dotTo(enemy, player) > 0.55;
 			if (closing && facingUs && eta <= window.get()) {
 				return estimatedMeleeDamage(enemy, eta <= 2.5);

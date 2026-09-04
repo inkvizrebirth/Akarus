@@ -73,6 +73,17 @@ class NoFallLogicTest {
 
 	// ---- фаза RETRACT: сбор воды ----
 
+	// ---- чужая вода: собираем только поставленную нами ----
+
+	@Test
+	void collectOnlyWaterPlacedByUs() {
+		assertTrue(NoFallLogic.collectAllowed(true, true), "наша вода и autoRemove");
+		assertFalse(NoFallLogic.collectAllowed(false, true),
+				"чужой источник, оказавшийся в точке приземления, не трогаем");
+		assertFalse(NoFallLogic.collectAllowed(true, false), "autoRemove выключен");
+		assertFalse(NoFallLogic.collectAllowed(false, false));
+	}
+
 	@Test
 	void siphonOnlyWhileSourceExists() {
 		assertEquals(RetractAction.SIPHON, retractAction(true, false));
