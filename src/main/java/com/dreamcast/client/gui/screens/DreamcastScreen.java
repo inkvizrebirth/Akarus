@@ -172,9 +172,24 @@ public abstract class DreamcastScreen extends Screen {
 		item.width = w;
 		item.height = h;
 		boolean inside = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
-		item.hover = ease(item.hover, inside ? 1.0f : 0.0f, 0.22);
+		// Подсветка начинается немного до границы кнопки и плавно затухает: так
+		// соты не «мигают» при уходе курсора. В каждый момент активны максимум
+		// одна-две кнопки, поэтому меню остаётся лёгким.
+		float dx = Math.max(x - mouseX, Math.max(0, mouseX - (x + w)));
+		float dy = Math.max(y - mouseY, Math.max(0, mouseY - (y + h)));
+		float near = Math.max(0.0f, 1.0f - (float) Math.sqrt(dx * dx + dy * dy) / 38.0f);
+		item.hover = ease(item.hover, inside ? 1.0f : near, 0.18);
 
-		drawGlassPanel(graphics, x, y, w, h, 8, item.hover, accent);
+		// Полная четырёхслойная тень на каждой кнопке была главным расходом
+		// главного меню. Здесь остаётся одна короткая тень только у подсветки.
+		if (item.hover > 0.01f) {
+			RenderUtils.drawSoftShadow(graphics, x, y, w, h, 8, 1);
+		}
+		int top = RenderUtils.mix(0xF4121215, 0xF61C1C22, item.hover);
+		int bottom = RenderUtils.mix(0xF60A0A0C, 0xF8121217, item.hover);
+		int border = RenderUtils.mix(0x26FFFFFF, 0x66FFFFFF, item.hover);
+		RenderUtils.fillRoundedBorder(graphics, x, y, w, h, 8, border, top, bottom, 1);
+		graphics.fill(x + 8, y, x + w - 8, y + 1, RenderUtils.withAlpha(accent, 0.30f + 0.60f * item.hover));
 		// Сотовая текстура: шестиугольники расступаются у курсора и подсвечиваются
 		RenderUtils.drawHexPattern(graphics, x + 2, y + 2, w - 4, h - 4, accent,
 				mouseX, mouseY, item.hover);
@@ -193,7 +208,7 @@ public abstract class DreamcastScreen extends Screen {
 			}
 		}
 
-		if (item.hover > 0.02f) {
+		if (item.hover > 0.01f) {
 			graphics.fill(x, y + 3, x + 2, y + h - 3, RenderUtils.withAlpha(accent, item.hover));
 		}
 	}

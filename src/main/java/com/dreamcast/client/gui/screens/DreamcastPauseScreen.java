@@ -32,7 +32,7 @@ public class DreamcastPauseScreen extends DreamcastScreen {
 			}
 		}));
 		items.add(item("Настройки", "", () -> openNext(new DreamcastSettingsScreen(this))));
-		items.add(item("ClickGUI", "модули", () -> openNext(new ClickGuiScreen())));
+		items.add(item("ClickGUI", "модули", () -> openNext(new ClickGuiScreen(this))));
 
 		Minecraft client = this.minecraft;
 		boolean singleplayer = client != null && client.isLocalServer();

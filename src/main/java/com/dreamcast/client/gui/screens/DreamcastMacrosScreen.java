@@ -16,7 +16,7 @@ import java.util.List;
 /**
  * Редактор макросов: команда + свой бинд на каждую.
  *
- * Лимит — {@link MacroModule#MAX_MACROS} команд. Добавление: вписать команду
+ * Число команд не ограничено. Добавление: вписать команду
  * (с «/» или без) и нажать «Добавить». Бинд меняется кликом по строке —
  * следующий нажатый ключ становится биндом (Esc — сбросить).
  */
@@ -76,8 +76,8 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 		drawDarkBackdrop(graphics);
 
 		RenderUtils.textCentered(graphics, font, "Макросы", width / 2, 16, 0xFFF4F4FA, false);
-		RenderUtils.textFlat(graphics, font, "команда на клавишу · лимит " + MacroModule.MAX_MACROS,
-				width / 2 - RenderUtils.width(font, "команда на клавишу · лимит " + MacroModule.MAX_MACROS) / 2,
+		RenderUtils.textFlat(graphics, font, "команда на клавишу · без лимита",
+				width / 2 - RenderUtils.width(font, "команда на клавишу · без лимита") / 2,
 				16 + font.lineHeight + 3, 0xFF80808C);
 
 		int panelWidth = Math.min(PANEL_WIDTH, width - 24);
@@ -281,7 +281,7 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 			return;
 		}
 		if (!module.canAdd()) {
-			Notifications.warn("Макросы", "Уже " + MacroModule.MAX_MACROS + " макросов — лимит");
+			Notifications.warn("Макросы", "Не удалось добавить макрос");
 			return;
 		}
 		module.add(command);

@@ -65,7 +65,7 @@ processResources {
 
 	// Встроенные моды вшиваем как nested jar (jar-in-jar): список объявлен
 	// в fabric.mod.json (секция "jars"), файлы кладёт CI из GitHub releases
-	// (Sodium, Lithium, Mod Menu, ImmediatelyFast). Компилируемся
+	// (ViaFabricPlus, Sodium, Lithium, Mod Menu, ImmediatelyFast). Компилируемся
 	// мы против них через рефлексию (EmbeddedMods/ViaIntegration), поэтому
 	// отсутствие jar не ломает компиляцию — но CI требует полный набор.
 	def declared = new groovy.json.JsonSlurper().parse(file("src/main/resources/fabric.mod.json")).jars

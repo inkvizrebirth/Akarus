@@ -6,6 +6,7 @@ import com.dreamcast.client.util.KeyOwnership;
 import com.dreamcast.client.util.TargetLockLogic;
 import com.dreamcast.client.module.ModuleManager;
 import com.dreamcast.client.settings.BooleanSetting;
+import com.dreamcast.client.settings.ElementListSetting;
 import com.dreamcast.client.settings.IntSetting;
 import com.dreamcast.client.settings.ModeSetting;
 import com.dreamcast.client.util.RotationHumanizer;
@@ -24,6 +25,7 @@ import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Random;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -84,9 +86,13 @@ public class KillAuraModule extends Module {
 			ModeSetting.option(PRIORITY_HEALTH, "Слабый (мало HP)"),
 			ModeSetting.option(PRIORITY_ANGLE, "Под прицелом"));
 
-	private final BooleanSetting attackPlayers = bool("players", "Игроки", true);
-	private final BooleanSetting attackMobs = bool("mobs", "Враждебные мобы", true);
-	private final BooleanSetting attackInvisible = bool("invisible", "Невидимые", false);
+	/** Один раскрываемый список целей вместо трёх разрозненных тумблеров. */
+	private final ElementListSetting targets = addSetting(new ElementListSetting("targets", "Цели",
+			List.of(
+					new ElementListSetting.Element("players", "Игроки"),
+					new ElementListSetting.Element("mobs", "Враждебные мобы"),
+					new ElementListSetting.Element("invisible", "Невидимые")
+			), "players", "mobs"));
 	private final BooleanSetting throughWalls = bool("walls", "Через стены", false);
 	private final BooleanSetting ignoreTeams = bool("ignore_teams", "Не бить союзников/команду", true);
 	private final BooleanSetting ignoreCreative = bool("ignore_creative", "Не бить Creative/Spectator", true);
@@ -815,14 +821,14 @@ public class KillAuraModule extends Module {
 		}
 
 		if (entity instanceof Player) {
-			if (!attackPlayers.isEnabled()) {
+			if (!targets.isSelected("players")) {
 				return false;
 			}
 			if (ignoreCreative.isEnabled() && ((Player) entity).isCreative()) {
 				return false;
 			}
 		} else if (entity.getType().getCategory() == MobCategory.MONSTER) {
-			if (!attackMobs.isEnabled()) {
+			if (!targets.isSelected("mobs")) {
 				return false;
 			}
 		} else {
@@ -830,7 +836,7 @@ public class KillAuraModule extends Module {
 			return false;
 		}
 
-		if (entity.isInvisible() && !attackInvisible.isEnabled()) {
+		if (entity.isInvisible() && !targets.isSelected("invisible")) {
 			return false;
 		}
 		if (ignoreTeams.isEnabled() && player.isAlliedTo(entity)) {

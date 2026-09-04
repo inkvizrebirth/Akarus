@@ -6,7 +6,6 @@ import com.dreamcast.client.settings.BooleanSetting;
 import com.dreamcast.client.settings.ButtonSetting;
 import com.dreamcast.client.settings.IntSetting;
 import com.dreamcast.client.settings.ModeSetting;
-import com.dreamcast.client.settings.StringSetting;
 import com.dreamcast.client.util.FileOpener;
 import com.dreamcast.client.util.MusicPlayer;
 import net.fabricmc.loader.api.FabricLoader;
@@ -49,15 +48,13 @@ public class MediaPlayerModule extends Module {
 
 	private final BooleanSetting pauseInMenu = bool("pause_in_menu", "Пауза при открытом меню", false);
 
-	private final StringSetting folder = textSetting("folder", "Папка музыки (от корня игры)", "dreamcast/media");
-
 	private final ButtonSetting toggleButton = buttonSetting("toggle", "Управление", "\u25B6 Играть / пауза",
 			this::togglePlayback);
 
 	private final ButtonSetting nextButton = buttonSetting("next", "", "\u23ED Следующий трек",
 			() -> player.next());
 
-	private final ButtonSetting openButton = buttonSetting("open_folder", "", "\uD83D\uDCC2 Открыть папку с музыкой",
+	private final ButtonSetting openButton = buttonSetting("open_folder", "Музыка", "\uD83D\uDCC2 Открыть папку",
 			this::openMusicFolder);
 
 	/** Для авто-рескана: меняем список только когда папка реально тронута. */
@@ -185,17 +182,8 @@ public class MediaPlayerModule extends Module {
 	}
 
 	private Path musicPath() {
-		String raw = folder.get();
-		if (raw == null || raw.isBlank()) {
-			return null;
-		}
 		Path gameDir = FabricLoader.getInstance().getGameDir().toAbsolutePath().normalize();
-		Path resolved = gameDir.resolve(raw.trim()).normalize();
-		// Намеренно не даём «выйти» из папки игры относительным путём
-		if (!resolved.startsWith(gameDir)) {
-			return gameDir.resolve("dreamcast/media").normalize();
-		}
-		return resolved;
+		return gameDir.resolve("dreamcast/media").normalize();
 	}
 
 	private File musicDirectory() {

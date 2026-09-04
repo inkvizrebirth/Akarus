@@ -23,7 +23,7 @@ import java.util.List;
 /**
  * Macros — свои команды на горячих клавишах.
  *
- * <p>Лимит — {@value #MAX_MACROS} команд. У каждой своя клавиша (GLFW-код);
+ * <p>Число команд не ограничено. У каждой своя клавиша (GLFW-код);
  * нажатие мгновенно отправляет команду в чат сервера (или в клиент, если
  * начинается с {@code /}). Работает и в GUI (кроме чата и наших экранов
  * ввода), и в игре.</p>
@@ -33,7 +33,8 @@ import java.util.List;
  */
 public class MacroModule extends Module {
 
-	public static final int MAX_MACROS = 10;
+	/** Технический предохранитель от переполнения списка, а не пользовательский лимит. */
+	public static final int MAX_MACROS = Integer.MAX_VALUE;
 
 	/** Один макрос: команда + клавиша (GLFW-код или -1 = не задана). */
 	public record Macro(String command, int key) {
@@ -46,7 +47,7 @@ public class MacroModule extends Module {
 	private final Path store;
 
 	public MacroModule() {
-		super("macros", "Macros", "Команды на горячих клавишах (лимит " + MAX_MACROS + ")",
+		super("macros", "Macros", "Команды на горячих клавишах без лимита",
 				ModuleCategory.MISC, GLFW.GLFW_KEY_UNKNOWN);
 		this.store = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir()
 				.resolve("dreamcast-macros.json");
@@ -63,7 +64,7 @@ public class MacroModule extends Module {
 	private void openEditor() {
 		Minecraft client = Minecraft.getInstance();
 		if (client != null) {
-			client.gui.setScreen(new com.dreamcast.client.gui.screens.DreamcastMacrosScreen(null, this));
+			client.gui.setScreen(new com.dreamcast.client.gui.screens.DreamcastMacrosScreen(client.gui.screen(), this));
 		}
 	}
 

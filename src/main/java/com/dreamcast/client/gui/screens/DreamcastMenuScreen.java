@@ -46,7 +46,7 @@ public class DreamcastMenuScreen extends DreamcastScreen {
 		items.add(item("Аккаунты", "",
 				() -> this.minecraft.gui.setScreen(new DreamcastAltsScreen(this))));
 		items.add(item("ClickGUI", "",
-				() -> this.minecraft.gui.setScreen(new ClickGuiScreen())));
+				() -> this.minecraft.gui.setScreen(new ClickGuiScreen(this))));
 		items.add(item("Telegram", "",
 				() -> FileOpener.openUrl("https://t.me/inkviz01")));
 		items.add(item("Выход", "",

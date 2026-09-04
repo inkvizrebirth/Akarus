@@ -1,6 +1,7 @@
 package com.dreamcast.client.gui;
 
 import com.dreamcast.client.DreamcastClient;
+import com.dreamcast.client.gui.screens.DreamcastMenuScreen;
 import com.dreamcast.client.gui.theme.ClientTheme;
 import com.dreamcast.client.module.impl.ClickGuiModule;
 import com.dreamcast.client.settings.BlockListSetting;
@@ -59,7 +60,7 @@ public class ClickGuiScreen extends Screen {
 	private static final int CATEGORY_GAP = 4;
 	private static final int MODULE_ROW_HEIGHT = 36;
 	private static final int TOGGLE_ROW_HEIGHT = 16;
-	private static final int SLIDER_ROW_HEIGHT = 26;
+	private static final int SLIDER_ROW_HEIGHT = 30;
 	private static final int TEXT_ROW_HEIGHT = 20;
 	private static final int PADDING = 8;
 	private static final int FOOTER_HEIGHT = 15;
@@ -83,6 +84,11 @@ public class ClickGuiScreen extends Screen {
 	private static final int TEXT_PRIMARY = 0xFFF6F6F8;
 	private static final int TEXT_SECONDARY = 0xFFA6A6B2;
 	private static final int TEXT_DIM = 0xFF6B6B78;
+	/** Имена старых ресурсов не всегда совпадают с id модулей. */
+	private static final Map<String, String> MODULE_ICONS = Map.of(
+			"scaffold", "auto_mine",
+			"free_look", "freelook"
+	);
 
 	/** Размытие можно вызывать только один раз за кадр — если игра не даёт, отключаем его. */
 	private static boolean blurSupported = true;
@@ -90,6 +96,10 @@ public class ClickGuiScreen extends Screen {
 	// --- Состояние ---
 	private ModuleCategory selected = ModuleCategory.HUD;
 	private Module expanded = null;
+	private Module closingExpanded = null;
+	private final Screen parent;
+	private static final Identifier MENU_BACKGROUND =
+			Identifier.fromNamespaceAndPath(DreamcastClient.MOD_ID, "textures/gui/main_menu_background.png");
 
 	/** Поиск по модулям выбранной категории; пустая строка — без фильтра. */
 	private String searchQuery = "";
@@ -136,7 +146,12 @@ public class ClickGuiScreen extends Screen {
 	private float step;
 
 	public ClickGuiScreen() {
+		this(null);
+	}
+
+	public ClickGuiScreen(Screen parent) {
 		super(Component.literal(DreamcastClient.MOD_NAME + " " + DreamcastClient.MOD_VERSION));
+		this.parent = parent;
 	}
 
 	/** Открывает меню (бинд модуля ClickGUI, по умолчанию правый Shift). */
@@ -220,6 +235,16 @@ public class ClickGuiScreen extends Screen {
 	 */
 	@Override
 	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+		// Screen не рисует предыдущий TitleScreen автоматически. Без этого при
+		// открытии ClickGUI из меню сзади оставался чёрный кадр.
+		if (parent instanceof DreamcastMenuScreen) {
+			float scale = Math.max(width / 1920.0f, height / 1080.0f);
+			int srcW = Math.round(width / scale);
+			int srcH = Math.round(height / scale);
+			graphics.blit(RenderPipelines.GUI_TEXTURED, MENU_BACKGROUND, 0, 0,
+					(1920 - srcW) / 2.0f, (1080 - srcH) / 2.0f,
+					width, height, srcW, srcH, 1920, 1080);
+		}
 		ClickGuiModule clickGui = ModuleManager.find(ClickGuiModule.class);
 		boolean glass = clickGui == null || clickGui.glassEnabled();
 		// «Стекло» — мир за окном чуть размывается и слегка притемняется;
@@ -313,9 +338,8 @@ public class ClickGuiScreen extends Screen {
 		// В режиме «стекла» фон полупрозрачный — сквозь него видно размытый мир.
 		int height = panelHeight();
 		RenderUtils.fillRounded(graphics, x, y, GUI_WIDTH, height, PANEL_RADIUS, PANEL_OUTLINE);
-		RenderUtils.fillRounded(graphics, x + 1, y + 1, GUI_WIDTH - 2, height - 2, PANEL_RADIUS - 1, panelTop());
-		RenderUtils.fillRoundedBottom(graphics, x + 1, y + (height - 2) / 2, GUI_WIDTH - 2, (height - 2) / 2,
-				PANEL_RADIUS - 1, panelBottom());
+		RenderUtils.fillRounded(graphics, x + 1, y + 1, GUI_WIDTH - 2, height - 2,
+				PANEL_RADIUS - 1, panelTop(), panelBottom());
 
 		// Тонкий блик по верхней кромке — эффект стекла
 		graphics.fill(x + PANEL_RADIUS, y + 1, x + GUI_WIDTH - PANEL_RADIUS, y + 2, SHEEN);
@@ -490,7 +514,7 @@ public class ClickGuiScreen extends Screen {
 		int color = module.isAlwaysEnabled()
 				? RenderUtils.mix(TEXT_SECONDARY, accent, 0.45f)
 				: module.isEnabled() ? accent : RenderUtils.mix(TEXT_DIM, 0xFFFFFFFF, 0.18f);
-		drawIcon(graphics, module.getId(), x, y, 13, color);
+		drawIcon(graphics, MODULE_ICONS.getOrDefault(module.getId(), module.getId()), x, y, 13, color);
 	}
 
 	private void drawModuleRow(GuiGraphicsExtractor graphics, Module module, Hitbox box, int accent,
@@ -550,7 +574,8 @@ public class ClickGuiScreen extends Screen {
 		RenderUtils.textFlat(graphics, font, bind, nameX + RenderUtils.width(font, name) + 6,
 				box.y() + 7 + contentDy, mulAlpha(binding ? accent : TEXT_DIM, appear));
 		RenderUtils.textFlat(graphics, font, RenderUtils.clamp(font, module.getDescription(), box.width() - 90),
-				textX + 17, box.y() + 21 + contentDy, mulAlpha(TEXT_DIM, appear));
+				textX + 17, box.y() + 21 + contentDy,
+				mulAlpha(RenderUtils.mix(TEXT_DIM, TEXT_SECONDARY, toggle * 0.75f), appear));
 
 		// Тумблер справа; у модулей-«настроек» (ClickGUI, HUD) — мягкий индикатор:
 		// они всегда активны, выключателя у них нет
@@ -601,11 +626,7 @@ public class ClickGuiScreen extends Screen {
 
 	/** Прогресс поворота стрелки раскрытия (0 — свёрнуто, 1 — раскрыто). */
 	private float expandProgress(Module module) {
-		float current = expandAnimations.getOrDefault(module.getId(), module == expanded ? 1.0f : 0.0f);
-		float target = module == expanded ? 1.0f : 0.0f;
-		float next = current + (target - current) * step;
-		expandAnimations.put(module.getId(), next);
-		return next;
+		return expandAnimations.getOrDefault(module.getId(), module == expanded ? 1.0f : 0.0f);
 	}
 
 	// ------------------------------------------------------------------
@@ -1032,7 +1053,7 @@ public class ClickGuiScreen extends Screen {
 		// с частичным покрытием пикселей, поэтому бегунок круглый, а не «восьмиугольник»
 		int trackX = box.x() + 9;
 		int trackWidth = box.width() - 18;
-		RenderUtils.drawSlider(graphics, trackX, box.y() + 14, trackWidth, 5,
+		RenderUtils.drawSlider(graphics, trackX, box.y() + 19, trackWidth, 5,
 				setting.getNormalized(), accent);
 
 	}
@@ -1132,6 +1153,13 @@ public class ClickGuiScreen extends Screen {
 		step = 1.0f - (float) Math.exp(-deltaSeconds * 22.0f);
 
 		openAnimation = approach(openAnimation, closing ? 0.0f : 1.0f);
+		for (Module module : ModuleManager.getAll()) {
+			float current = expandAnimations.getOrDefault(module.getId(), 0.0f);
+			expandAnimations.put(module.getId(), approach(current, module == expanded ? 1.0f : 0.0f));
+		}
+		if (closingExpanded != null && expandProgress(closingExpanded) < 0.01f) {
+			closingExpanded = null;
+		}
 		panelHeightAnim = approach(panelHeightAnim, targetPanelHeight());
 		scroll = approach(scroll, scrollTarget);
 		pressAnimations.values().removeIf(pressedAt -> now - pressedAt >= 160L);
@@ -1139,7 +1167,7 @@ public class ClickGuiScreen extends Screen {
 		// Закрытие доиграло — уходим по-настоящему (один раз)
 		if (closing && !closeDispatched && openAnimation < 0.04f) {
 			closeDispatched = true;
-			super.onClose();
+			closeNow();
 		}
 	}
 
@@ -1241,7 +1269,7 @@ public class ClickGuiScreen extends Screen {
 			switch (entry.kind()) {
 				case CATEGORY -> {
 					selected = entry.category();
-					expanded = null;
+					collapseSettings();
 					bindingModule = null;
 					focusedBlockList = null;
 					scrollTarget = 0;
@@ -1258,7 +1286,7 @@ public class ClickGuiScreen extends Screen {
 
 					if (onExpandMark) {
 						// Стрелка — раскрыть/свернуть настройки, не трогая состояние модуля
-						expanded = expanded == entry.module() ? null : entry.module();
+						toggleSettings(entry.module());
 					} else if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT
 							&& !entry.module().isAlwaysEnabled()) {
 						entry.module().toggle();
@@ -1268,7 +1296,7 @@ public class ClickGuiScreen extends Screen {
 						clearSettingFocus();
 					} else {
 						// ПКМ или ЛКМ по модулю-«настройке»: раскрыть настройки
-						expanded = expanded == entry.module() ? null : entry.module();
+						toggleSettings(entry.module());
 					}
 					playClick();
 				}
@@ -1530,24 +1558,8 @@ public class ClickGuiScreen extends Screen {
 			}
 		}
 
-		if (direction != 0) {
-			for (LayoutEntry entry : buildLayout()) {
-				if (entry.kind() != Kind.SETTING || !entry.box().contains(mouseX, mouseY)) {
-					continue;
-				}
-				if (entry.setting() instanceof IntSetting intSetting) {
-					intSetting.set(intSetting.get() + direction);
-					applySettingChange(entry.module());
-					return true;
-				}
-				if (entry.setting() instanceof ModeSetting modeSetting) {
-					modeSetting.shift(direction);
-					applySettingChange(entry.module());
-					return true;
-				}
-			}
-		}
-
+		// Колесо всегда прокручивает список. Значения меняются только кликом и
+		// перетаскиванием слайдера — прокрутка больше не портит настройку под мышью.
 		int listHeight = panelHeight() - HEADER_HEIGHT - PADDING * 2 - FOOTER_HEIGHT;
 		int maxScroll = Math.max(0, contentHeight() - listHeight);
 		scrollTarget = clamp(scrollTarget - (float) scrollY * 16.0f, -maxScroll, 0);
@@ -1689,7 +1701,7 @@ public class ClickGuiScreen extends Screen {
 			// Повторный вызов (после доигранной анимации) — закрываемся по-настоящему
 			if (!closeDispatched) {
 				closeDispatched = true;
-				super.onClose();
+				closeNow();
 			}
 			return;
 		}
@@ -1698,6 +1710,14 @@ public class ClickGuiScreen extends Screen {
 		ConfigManager.save();
 		// Доигрываем анимацию закрытия, реальный выход — в updateAnimations
 		closing = true;
+	}
+
+	private void closeNow() {
+		if (parent != null && this.minecraft != null) {
+			this.minecraft.gui.setScreen(parent);
+		} else {
+			super.onClose();
+		}
 	}
 
 	private void playClick() {
@@ -1732,7 +1752,7 @@ public class ClickGuiScreen extends Screen {
 			layout.add(new LayoutEntry(new Hitbox(listX, rowY, listWidth, MODULE_ROW_HEIGHT), Kind.MODULE, null, module, null));
 			rowY += MODULE_ROW_HEIGHT;
 
-			if (module == expanded) {
+			if (module == expanded || module == closingExpanded) {
 				for (Setting<?> setting : module.getSettings()) {
 					int height = settingHeight(setting);
 					layout.add(new LayoutEntry(new Hitbox(listX + 10, rowY, listWidth - 20, height),
@@ -1776,13 +1796,32 @@ public class ClickGuiScreen extends Screen {
 		int height = 0;
 		for (Module module : modulesShown()) {
 			height += MODULE_ROW_HEIGHT;
-			if (module == expanded) {
+			if (module == expanded || module == closingExpanded) {
 				for (Setting<?> setting : module.getSettings()) {
 					height += settingHeight(setting);
 				}
 			}
 		}
 		return height;
+	}
+
+	private void toggleSettings(Module module) {
+		if (expanded == module) {
+			closingExpanded = module;
+			expanded = null;
+		} else {
+			if (expanded != null) {
+				closingExpanded = expanded;
+			}
+			expanded = module;
+		}
+	}
+
+	private void collapseSettings() {
+		if (expanded != null) {
+			closingExpanded = expanded;
+			expanded = null;
+		}
 	}
 
 	/**
