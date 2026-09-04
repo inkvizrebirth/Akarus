@@ -5,13 +5,22 @@ import com.dreamcast.client.module.ModuleCategory;
 import com.dreamcast.client.settings.BooleanSetting;
 import com.dreamcast.client.settings.IntSetting;
 import com.dreamcast.client.settings.ModeSetting;
+import com.dreamcast.client.util.BuffPriority;
 import com.dreamcast.client.util.DrinkLogic;
 import com.dreamcast.client.util.Notifications;
+import com.dreamcast.client.util.PotionLogic;
+import com.dreamcast.client.util.RestorePlan;
+import com.dreamcast.client.util.SlotMath;
+import com.dreamcast.client.util.SplashResult;
+import com.dreamcast.client.util.ThrowGuard;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
@@ -20,29 +29,29 @@ import net.minecraft.world.item.alchemy.PotionContents;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * AutoBuff — сам пьёт зелья-баффы (и лечится), когда они кончаются.
+ * AutoBuff — сам применяет зелья-баффы: <b>пьёт обычные и бросает взрывные</b>
+ * (строго под ноги), лечится при низком HP.
  *
- * <p>Следит за эффектами из чек-листа (скорость, сила, огнестойкость,
- * регенерация, ночное зрение). Если эффекта нет или он вот-вот кончится —
- * находит зелье в хотбаре (или инвентаре) и <b>выпивает до конца</b>:
- * клавиша «использовать» держится программно, пока питьё реально не
- * завершится ({@code isUsingItem()} гаснет / остаются ≤1 тика), и только
- * затем возвращаются слот и взгляд. На случай отказа сервера есть общий
- * таймаут.</p>
- *
- * <p>Лечение: при HP ниже порога пьётся мгновенное зелье лечения, а если
- * его нет — съедается золотое яблоко (пока нет поглощения). У мгновенных
- * зелий нет длительности, поэтому они выбираются только по порогу HP.</p>
- *
- * <p>Режимы:</p>
+ * <p>Единая стейт-машина: {@code IDLE → FIND_ITEM → [MOVE_TO_HOTBAR →]
+ * SELECT_SLOT → [AIM_DOWN → WAIT_ROTATION →] USE_ITEM → WAIT_RESULT →
+ * RESTORE_SLOT → RESTORE_ROTATION → COOLDOWN}. Завершение раздельное:</p>
  * <ul>
- *   <li><b>fast</b> — без пауз и поворотов камеры: слот → питьё до конца → слот назад;</li>
- *   <li><b>legit</b> — по-человечески: пауза перед действием, плавный «взгляд вниз»
- *       на время питья, смена слота через инвентарь с задержкой.</li>
+ *   <li><b>питьевое</b> — удержание клавиши использования до естественного
+ *       гашения {@code isUsingItem()} (досрочный отпуск по остатку тиков
+ *       отменял последний тик — предмет тратился без эффекта);</li>
+ *   <li><b>взрывное</b> — один {@code useItem} с взглядом вниз (сервер получает
+ *       поворот до пакета использования — WAIT_ROTATION), без удержания
+ *       клавиши; подтверждение по изменению стака. Эффект может опоздать,
+ *       пока снаряд летит, — это не ошибка.</li>
  * </ul>
  *
- * <p>Зелья выбираются только «чистые»: нужный эффект без вредных
- * (слабость/медлительность/яд/мгновенный урон).</p>
+ * <p>Приоритет: лечение → огнестойкость (горит/кончается) → сила → скорость →
+ * регенерация → ночное зрение → золотое яблоко. Следующее действие не
+ * начинается, пока не завершено предыдущее.</p>
+ *
+ * <p>Безопасность: никаких действий при открытом GUI/чужом контейнере; слоты
+ * только 0..35; обратный SWAP возвращает предмет резервного слота; анти-спам
+ * — общий кулдаун и пауза после лечащего броска (HP успевает обновиться).</p>
  */
 public class AutoBuffModule extends Module {
 
@@ -50,275 +59,244 @@ public class AutoBuffModule extends Module {
 	private static final long DRINK_TIMEOUT_MS = 8000L;
 	/** Если за это время использование так и не началось — откат. */
 	private static final long START_TIMEOUT_MS = 600L;
+	/** Таймаут подтверждения броска, тиков (снаряд летит — эффект не проверяем). */
+	private static final long SPLASH_TIMEOUT_TICKS = 30L;
+	/** Пауза после лечащего броска: HP обновляется после попадания снаряда. */
+	private static final long HEAL_SETTLE_MS = 1000L;
+	/** Резервный слот хотбара для обмена с рюкзаком. */
+	private static final int RESERVE_SLOT = 8;
+	/** Целевой pitch броска: почти вертикально вниз, но не 90 в точности. */
+	private static final float SPLASH_PITCH = 89.0f;
+	/** Целевой pitch питья в легит-режиме (как раньше). */
+	private static final float DRINK_PITCH = 72.0f;
+	/** Глубина проверки поверхности под ногами для броска. */
+	private static final int GROUND_CHECK_DEPTH = 4;
 
-	private final ModeSetting mode = mode("mode", "Режим", "legit",
+	// ------------------------------------------------------------------
+	// Настройки
+	// ------------------------------------------------------------------
+
+	/** Стиль питья (существующие режимы — не ломаем). */
+	private final ModeSetting mode = mode("mode", "Режим питья", "legit",
 			ModeSetting.option("fast", "Быстрый"),
 			ModeSetting.option("legit", "Легит"));
+
+	/** Что использовать: питьевые и/или взрывные зелья. */
+	private final ModeSetting usage = mode("usage", "Использование", "auto",
+			ModeSetting.option("auto", "Авто"),
+			ModeSetting.option("drink_only", "Только пить"),
+			ModeSetting.option("splash_only", "Только бросать"),
+			ModeSetting.option("prefer_drink", "Предпочитать питьевое"));
+
+	/** Приоритет взрывных внутри режима «Авто». */
+	private final BooleanSetting preferSplash = bool("splash_priority", "Приоритет взрывных", true);
+
+	/** Стиль броска: легитный (плавно, с паузой на синхронизацию) или быстрый. */
+	private final ModeSetting throwStyle = mode("throw_style", "Стиль броска", "legit",
+			ModeSetting.option("legit", "Легитный"),
+			ModeSetting.option("fast", "Быстрый"));
 
 	private final BooleanSetting wantSpeed = bool("speed", "Скорость", true);
 	private final BooleanSetting wantStrength = bool("strength", "Сила", true);
 	private final BooleanSetting wantFireRes = bool("fire_res", "Огнестойкость", true);
 	private final BooleanSetting wantRegen = bool("regen", "Регенерация", false);
 	private final BooleanSetting wantNightVision = bool("night_vision", "Ночное зрение", false);
+	private final BooleanSetting wantHeal = bool("heal", "Мгновенное лечение", true);
+	private final BooleanSetting wantGapple = bool("gapple", "Золотое яблоко", true);
 
-	private final BooleanSetting wantHeal = bool("heal", "Лечение при низком HP", true);
-	private final BooleanSetting wantGapple = bool("gapple", "Золотое яблоко при низком HP", true);
-	private final IntSetting healBelow = intSetting("heal_below", "Считать HP низким при ≤", 12, 1, 20);
-
+	private final IntSetting healBelow = intSetting("heal_below", "Лечиться при HP ≤", 12, 1, 20);
 	private final IntSetting refreshSeconds = intSetting("refresh", "Пить за N сек до конца", 8, 1, 30);
+	/** Минимальная задержка между бросками, тиков. */
+	private final IntSetting splashCooldown = intSetting("splash_cooldown", "Задержка между бросками, тиков", 15, 10, 40);
+	private final BooleanSetting throwOnlyOnGround = bool("throw_on_ground", "Бросать только с земли", true);
+	private final BooleanSetting allowThrowMoving = bool("throw_moving", "Разрешить бросок в движении", true);
+	private final BooleanSetting noThrowInGui = bool("throw_gui", "Не бросать при открытом GUI", true);
 	private final BooleanSetting notify = bool("notify", "Уведомления", false);
 
-	/** Состояние конечного автомата (общий для обоих режимов). */
+	// ------------------------------------------------------------------
+	// Стейт-машина
+	// ------------------------------------------------------------------
+
 	private enum Phase {
-		IDLE, TURNING, SWAPPING, DRINKING, RETURNING
+		IDLE, FIND_ITEM, MOVE_TO_HOTBAR, SELECT_SLOT, AIM_DOWN, WAIT_ROTATION,
+		USE_ITEM, WAIT_RESULT, RESTORE_SLOT, RESTORE_ROTATION, COOLDOWN
 	}
 
 	private Phase phase = Phase.IDLE;
 	private long phaseSince;
+	/** Общий кулдаун: не раньше этого времени — новое действие. */
+	private long cooldownUntil;
+	/** Пауза после лечащего броска: HP обновляется с задержкой попадания. */
+	private long healSettleUntil;
+
+	private BuffPriority.Target target = BuffPriority.Target.NONE;
+	private Holder<MobEffect> targetEffect;
+	private PotionLogic.Kind kind = PotionLogic.Kind.DRINK;
+	/** Слот хотбара с предметом (после возможного обмена). */
+	private int itemSlot = -1;
+	/** Слот рюкзака, откуда обменяли (−1 — предмет был в хотбаре). */
+	private int bagSource = -1;
+	/** Выбранный слот до наших действий. */
 	private int previousSlot = -1;
-	private int pendingSlot = -1;
-	/** Что держим: зелье с эффектом или золотое яблоко. */
-	private Holder<MobEffect> pendingEffect;
-	private boolean pendingGapple;
-	/** Куда вернуть взгляд после питья. */
-	private float returnYaw, returnPitch;
-	private boolean wasLookingDown;
-	/** Питьё: видели ли начало, когда начали держать. */
-	private boolean sawUsing;
-	/** Легит-режим опускал камеру — при сбросе вернуть pitch. */
+
+	private float returnYaw;
+	private float returnPitch;
 	private boolean cameraTouched;
+
+	private boolean sawUsing;
+	/** Снимок стака до броска: предмет и количество. */
+	private net.minecraft.world.item.Item snapshotItem;
+	private int snapshotCount;
+
+	private RestorePlan restorePlan = new RestorePlan(false);
 	private int pauseSeed;
 
 	public AutoBuffModule() {
-		super("auto_buff", "AutoBuff", "Автоматически пьёт бафф-зелья и лечится при низком HP",
+		super("auto_buff", "AutoBuff", "Автоматически пьёт и бросает бафф-зелья, лечится при низком HP",
 				ModuleCategory.MISC, GLFW.GLFW_KEY_UNKNOWN);
 		pauseSeed = System.identityHashCode(this);
 	}
 
+	// ------------------------------------------------------------------
+	// Прерывания
+	// ------------------------------------------------------------------
+
 	@Override
 	protected void onDisable() {
-		releaseUseKey();
-		// До reset() (он стирает previousSlot/returnPitch): без этого выключение
-		// посреди питья оставляло игрока со слотом зелья и камерой, опущенной вниз
-		restorePlayerState();
-		reset();
+		hardInterrupt();
 	}
 
-	/** Возвращает слот и (в легите) наклон камеры, если модуль их менял. */
-	private void restorePlayerState() {
+	/** Полный откат: клавиша, предмет резервного слота, слот, взгляд, состояние. */
+	private void hardInterrupt() {
+		releaseUseKey();
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client == null ? null : client.player;
-		if (player == null) {
-			return;
+		if (player != null) {
+			// Обратный SWAP — только со своим инвентарём и закрытым экраном;
+			// остальное восстанавливаем всегда
+			if (bagSource >= 0 && player.containerMenu == player.inventoryMenu
+					&& (client.gui == null || client.gui.screen() == null)) {
+				swapReserve(player);
+			}
+			if (previousSlot >= 0 && player.getInventory().getSelectedSlot() != previousSlot) {
+				player.getInventory().setSelectedSlot(previousSlot);
+			}
+			if (cameraTouched) {
+				player.setXRot(returnPitch);
+			}
 		}
-		if (previousSlot >= 0 && player.getInventory().getSelectedSlot() != previousSlot) {
-			player.getInventory().setSelectedSlot(previousSlot);
-		}
-		if (cameraTouched) {
-			player.setXRot(returnPitch);
-		}
+		resetState();
 	}
+
+	private void resetState() {
+		phase = Phase.IDLE;
+		target = BuffPriority.Target.NONE;
+		targetEffect = null;
+		itemSlot = -1;
+		bagSource = -1;
+		previousSlot = -1;
+		cameraTouched = false;
+		sawUsing = false;
+		snapshotItem = null;
+		snapshotCount = -1;
+		restorePlan = new RestorePlan(false);
+	}
+
+	// ------------------------------------------------------------------
+	// Тик
+	// ------------------------------------------------------------------
 
 	@Override
 	public void tick() {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client == null ? null : client.player;
 		if (player == null || client.level == null || client.gameMode == null) {
-			releaseUseKey();
-			reset();
+			hardInterrupt();
 			return;
 		}
 
-		// Открытый экран или чужой контейнер (сундук, верстак…) — стоп: наши
-		// слотовые клики рассчитаны на inventoryMenu, в чужом меню тот же id
-		// указывал бы на совершенно другой слот
-		if (client.gui != null && client.gui.screen() != null
-				|| player.containerMenu != player.inventoryMenu) {
-			if (phase != Phase.IDLE) {
-				releaseUseKey();
-				restorePlayerState();
-				reset();
-			}
+		boolean screenOpen = client.gui != null && client.gui.screen() != null;
+		boolean foreignContainer = player.containerMenu != player.inventoryMenu;
+
+		// Чужой контейнер — контейнерные операции запрещены; экран — стоп
+		// новым действиям. Текущее действие ведём аккуратно (без кликов).
+		if ((screenOpen || foreignContainer) && !survivesScreen(screenOpen, foreignContainer)) {
 			return;
 		}
-
-		if (mode.is("fast")) {
-			tickFast(client, player);
-		} else {
-			tickLegit(client, player);
-		}
-	}
-
-	// ------------------------------------------------------------------
-	// Быстрый режим: те же фазы, но без камеры и пауз
-	// ------------------------------------------------------------------
-
-	private void tickFast(Minecraft client, LocalPlayer player) {
-		long now = net.minecraft.util.Util.getMillis();
 
 		switch (phase) {
-			case IDLE -> {
-				Target target = findTarget(player);
-				if (target == null) {
-					return;
-				}
-				previousSlot = player.getInventory().getSelectedSlot();
-				beginSwap(player, target);
-				phase = Phase.DRINKING; // fast: TURNING/SWAPPING без пауз
-				phaseSince = now;
-				sawUsing = false;
-				startDrinking(client, player);
-			}
-			case DRINKING -> tickDrinking(client, player, now, 0);
-			case RETURNING -> {
-				if (player.isUsingItem()) {
-					return; // ещё допиваем последний тик (таймаут-ветка)
-				}
-				if (notify.isEnabled()) {
-					Notifications.ok("AutoBuff", "Готово: " + lastName());
-				}
-				reset();
-			}
-			default -> phase = Phase.IDLE; // TURNING/SWAPPING — легит-фазы
+			case IDLE, COOLDOWN -> tickIdleOrCooldown(player);
+			case FIND_ITEM -> tickFindItem(player);
+			case MOVE_TO_HOTBAR -> tickMoveToHotbar();
+			case SELECT_SLOT -> tickSelectSlot(player);
+			case AIM_DOWN -> tickAimDown(player);
+			case WAIT_ROTATION -> tickWaitRotation(player);
+			case USE_ITEM -> tickUseItem(client, player);
+			case WAIT_RESULT -> tickWaitResult(client, player);
+			case RESTORE_SLOT -> tickRestoreSlot(player);
+			case RESTORE_ROTATION -> tickRestoreRotation(player);
 		}
 	}
 
-	// ------------------------------------------------------------------
-	// Легит-режим: человечные задержки и повороты
-	// ------------------------------------------------------------------
-
-	private void tickLegit(Minecraft client, LocalPlayer player) {
-		long now = net.minecraft.util.Util.getMillis();
-		int humanPause = DrinkLogic.humanPause(pauseSeed, 200, 480);
-
+	/** Что делать при открытом экране/чужом контейнере в середине действия. */
+	private boolean survivesScreen(boolean screenOpen, boolean foreignContainer) {
+		// До использования — откат (ничего существенного не сделано)
 		switch (phase) {
-			case IDLE -> {
-				Target target = findTarget(player);
-				if (target == null) {
-					return;
+			case IDLE, COOLDOWN, FIND_ITEM:
+				return false;
+			case MOVE_TO_HOTBAR, SELECT_SLOT, AIM_DOWN, WAIT_ROTATION, USE_ITEM:
+				if (screenOpen || foreignContainer) {
+					// использовать предмет ещё не поздно — тихо откатываемся
+					phase = Phase.RESTORE_SLOT;
+					restorePlan = new RestorePlan(bagSource >= 0);
 				}
-				previousSlot = player.getInventory().getSelectedSlot();
-				returnYaw = player.getYRot();
-				returnPitch = player.getXRot();
-				cameraTouched = true;
-				wasLookingDown = returnPitch > 55.0f;
-				beginSwap(player, target);
-				phase = Phase.TURNING;
-				phaseSince = now;
-			}
-			case TURNING -> {
-				// Плавно опускаем взгляд, как делает игрок перед питьём
-				float target = wasLookingDown ? returnPitch : 72.0f;
-				float pitch = player.getXRot();
-				float delta = Math.signum(target - pitch) * Math.min(6.0f, Math.abs(target - pitch));
-				player.setXRot(pitch + delta);
-				if (Math.abs(player.getXRot() - target) < 7.0f && now - phaseSince > humanPause) {
-					phase = Phase.DRINKING;
-					phaseSince = now;
-					sawUsing = false;
-					startDrinking(client, player);
-				}
-			}
-			case DRINKING -> tickDrinking(client, player, now, humanPause);
-			case RETURNING -> {
-				if (player.isUsingItem()) {
-					return; // ещё допиваем последний тик (таймаут-ветка)
-				}
-				// Слот уже возвращён в tickDrinking — осталась камера
-				// Возвращаем взгляд тем же плавным темпом
-				float pitch = player.getXRot();
-				float delta = Math.signum(returnPitch - pitch) * Math.min(8.0f, Math.abs(returnPitch - pitch));
-				player.setXRot(pitch + delta);
-				if (Math.abs(player.getXRot() - returnPitch) < 8.0f) {
-					if (notify.isEnabled()) {
-						Notifications.ok("AutoBuff", "Бафф обновлён: " + lastName());
-					}
-					reset();
-				}
-			}
-			default -> phase = Phase.IDLE;
-		}
-	}
-
-	/** Общий для режимов HOLD: держим «использовать», пока питьё не завершится. */
-	private void tickDrinking(Minecraft client, LocalPlayer player, long now, int humanPause) {
-		if (now - phaseSince < humanPause && sawUsing) {
-			return;
-		}
-		boolean usingNow = player.isUsingItem();
-		if (usingNow) {
-			sawUsing = true;
-		}
-		long elapsed = now - phaseSince;
-
-		if (DrinkLogic.neverStarted(sawUsing, elapsed, START_TIMEOUT_MS)
-				|| DrinkLogic.finished(sawUsing, usingNow, elapsed, DRINK_TIMEOUT_MS)) {
-			// Завершение — только по факту isUsingItem(): true → false (досрочный
-			// отпуск по remaining отменял последний тик). Клавишу отпускаем и слот
-			// возвращаем В ЭТОТ ЖЕ тик — до следующего handleKeybinds, иначе
-			// зажатая клавиша использовала бы следующий предмет
-			releaseUseKey();
-			if (previousSlot >= 0) {
-				selectSlot(player, previousSlot);
-			}
-			phase = Phase.RETURNING;
-			phaseSince = now;
-			return;
-		}
-
-		if (!usingNow) {
-			// Использование сорвалось (смена слота, экран, урон) — перезапускаем
-			startDrinking(client, player);
+				return false;
+			default:
+				// WAIT_RESULT/RESTORE_* — продолжаем: питьё само корректно
+				// завершится (или по таймауту), SWAP подождёт свой гвард
+				return true;
 		}
 	}
 
 	// ------------------------------------------------------------------
-	// Выбор цели: лечение → баффы по списку
+	// IDLE/COOLDOWN: выбор цели
 	// ------------------------------------------------------------------
 
-	/** Что пить прямо сейчас: {эффект, слот, яблоко?} или null. */
-	private Target findTarget(LocalPlayer player) {
+	private void tickIdleOrCooldown(LocalPlayer player) {
+		long now = net.minecraft.util.Util.getMillis();
+		if (phase == Phase.COOLDOWN) {
+			if (now < cooldownUntil || now < healSettleUntil) {
+				return;
+			}
+			phase = Phase.IDLE;
+		} else if (now < cooldownUntil || now < healSettleUntil) {
+			return;
+		}
+
+		BuffPriority.Target picked = chooseTarget(player);
+		if (picked == BuffPriority.Target.NONE) {
+			return;
+		}
+		target = picked;
+		phase = Phase.FIND_ITEM;
+		phaseSince = now;
+	}
+
+	/** Приоритет: лечение → огнестойкость (горит/кончается) → сила → скорость → регенерация → зрение → яблоко. */
+	private BuffPriority.Target chooseTarget(LocalPlayer player) {
 		boolean lowHp = player.getHealth() <= healBelow.get();
-		if (lowHp && wantHeal.isEnabled()) {
-			int slot = findPotionSlot(player, MobEffects.INSTANT_HEALTH);
-			if (slot >= 0) {
-				return new Target(MobEffects.INSTANT_HEALTH, slot, false);
-			}
-		}
-		if (lowHp && wantGapple.isEnabled() && !player.hasEffect(MobEffects.ABSORPTION)) {
-			int slot = findGappleSlot(player);
-			if (slot >= 0) {
-				return new Target(null, slot, true);
-			}
-		}
-		Holder<MobEffect> missing = missingBuff(player);
-		if (missing == null) {
-			return null;
-		}
-		int slot = findPotionSlot(player, missing);
-		return slot < 0 ? null : new Target(missing, slot, false);
-	}
-
-	private record Target(Holder<MobEffect> effect, int slot, boolean gapple) {
-	}
-
-	private Holder<MobEffect> missingBuff(LocalPlayer player) {
-		if (wantSpeed.isEnabled() && needs(player, MobEffects.SPEED)) {
-			return MobEffects.SPEED;
-		}
-		if (wantStrength.isEnabled() && needs(player, MobEffects.STRENGTH)) {
-			return MobEffects.STRENGTH;
-		}
-		if (wantFireRes.isEnabled() && needs(player, MobEffects.FIRE_RESISTANCE)) {
-			return MobEffects.FIRE_RESISTANCE;
-		}
-		if (wantRegen.isEnabled() && needs(player, MobEffects.REGENERATION)) {
-			return MobEffects.REGENERATION;
-		}
-		if (wantNightVision.isEnabled() && needs(player, MobEffects.NIGHT_VISION)) {
-			return MobEffects.NIGHT_VISION;
-		}
-		return null;
+		boolean healPresent = potionKindFor(MobEffects.INSTANT_HEALTH) != null;
+		boolean fireResUrgent = player.isOnFire() || needs(player, MobEffects.FIRE_RESISTANCE);
+		boolean gappleAllowed = wantGapple.isEnabled()
+				&& !player.hasEffect(MobEffects.ABSORPTION)
+				&& findGapple() >= 0;
+		return BuffPriority.pick(lowHp, wantHeal.isEnabled(), healPresent,
+				fireResUrgent, wantFireRes.isEnabled() && needs(player, MobEffects.FIRE_RESISTANCE),
+				wantStrength.isEnabled() && needs(player, MobEffects.STRENGTH),
+				wantSpeed.isEnabled() && needs(player, MobEffects.SPEED),
+				wantRegen.isEnabled() && needs(player, MobEffects.REGENERATION),
+				wantNightVision.isEnabled() && needs(player, MobEffects.NIGHT_VISION),
+				gappleAllowed);
 	}
 
 	private boolean needs(LocalPlayer player, Holder<MobEffect> effect) {
@@ -331,108 +309,395 @@ public class AutoBuffModule extends Module {
 	}
 
 	// ------------------------------------------------------------------
-	// Действия
+	// Поиск предмета
 	// ------------------------------------------------------------------
 
-	/** Выбирает слот цели (переложив из рюкзака в хотбар, если нужно). */
-	private void beginSwap(LocalPlayer player, Target target) {
-		pendingSlot = target.slot();
-		pendingEffect = target.effect();
-		pendingGapple = target.gapple();
-		selectSlot(player, pendingSlot);
+	private void tickFindItem(LocalPlayer player) {
+		if (target == BuffPriority.Target.GOLDEN_APPLE) {
+			int slot = findGapple();
+			if (slot < 0) {
+				restartIdle();
+				return;
+			}
+			kind = PotionLogic.Kind.DRINK; // едим, не бросаем
+			targetEffect = null;
+			takeItem(slot);
+			return;
+		}
+
+		Holder<MobEffect> effect = effectFor(target);
+		PotionLogic.Kind picked = potionKindFor(effect);
+		if (picked == null) {
+			restartIdle();
+			return;
+		}
+		kind = picked;
+		targetEffect = effect;
+
+		// Взрывное — гварды безопасного броска (только для SPLASH)
+		if (kind == PotionLogic.Kind.SPLASH && !throwGuardsPass()) {
+			// Бросать нельзя — пробуем питьевое, если режим позволяет
+			if (hasPotion(effect, PotionLogic.Kind.DRINK)
+					&& PotionLogic.pick(usage.current().id(), false, false, true) != null) {
+				kind = PotionLogic.Kind.DRINK;
+			} else {
+				restartIdle();
+				return;
+			}
+		}
+
+		int slot = findPotion(effect, kind);
+		if (slot < 0) {
+			restartIdle();
+			return;
+		}
+		takeItem(slot);
 	}
 
-	/** Начинает использование: пакет «use» + программно зажимаем клавишу использования. */
-	private void startDrinking(Minecraft client, LocalPlayer player) {
-		useHeld(client, player);
-		client.options.keyUse.setDown(true);
-	}
-
-	/** Отпускаем программно зажатую клавишу — безопасно и для физического нажатия. */
-	private void releaseUseKey() {
+	/** Все ли условия безопасного броска выполнены. */
+	private boolean throwGuardsPass() {
 		Minecraft client = Minecraft.getInstance();
-		if (client != null && client.options != null) {
-			client.options.keyUse.setDown(false);
+		LocalPlayer player = client.player;
+		boolean guiClear = !noThrowInGui.isEnabled()
+				|| client.gui == null || client.gui.screen() == null;
+		boolean groundOk = !throwOnlyOnGround.isEnabled() || player.onGround();
+		boolean movingOk = allowThrowMoving.isEnabled()
+				|| player.getDeltaMovement().horizontalDistanceSqr() < 0.02;
+		return ThrowGuard.canStartThrow(true, true, true, guiClear,
+				player.containerMenu == player.inventoryMenu,
+				!player.isUsingItem(), player.isAlive(), groundOk, movingOk,
+				ThrowGuard.groundBelow(solidBelow(player)));
+	}
+
+	/** Не пустота ли под ногами: в пределах нескольких блоков есть поверхность. */
+	private boolean solidBelow(LocalPlayer player) {
+		BlockPos feet = player.blockPosition();
+		for (int depth = 1; depth <= GROUND_CHECK_DEPTH; depth++) {
+			if (!player.level().getBlockState(feet.below(depth)).isAir()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Захватить предмет: слот хотбара напрямую или обмен с резервным слотом. */
+	private void takeItem(int slot) {
+		long now = net.minecraft.util.Util.getMillis();
+		if (slot < 9) {
+			itemSlot = slot;
+			bagSource = -1;
+			phase = Phase.SELECT_SLOT;
+			phaseSince = now;
+			return;
+		}
+		// Рюкзак: временный SWAP с резервным слотом хотбара (обратный — в RESTORE)
+		bagSource = slot;
+		swapReserve(Minecraft.getInstance().player);
+		itemSlot = RESERVE_SLOT;
+		phase = Phase.MOVE_TO_HOTBAR;
+		phaseSince = now;
+	}
+
+	private void tickMoveToHotbar() {
+		// SWAP применяется на сервере за пару пакетов — даём тик-два
+		if (net.minecraft.util.Util.getMillis() - phaseSince >= 100L) {
+			phase = Phase.SELECT_SLOT;
 		}
 	}
 
-	private String lastName() {
-		if (pendingGapple) {
-			return "золотое яблоко";
+	// ------------------------------------------------------------------
+	// Слот и прицел
+	// ------------------------------------------------------------------
+
+	private void tickSelectSlot(LocalPlayer player) {
+		previousSlot = player.getInventory().getSelectedSlot();
+		if (player.getInventory().getSelectedSlot() != itemSlot) {
+			player.getInventory().setSelectedSlot(itemSlot);
 		}
-		return pendingEffect == null ? "эффект" : buffName(pendingEffect);
+		returnYaw = player.getYRot();
+		returnPitch = player.getXRot();
+		long now = net.minecraft.util.Util.getMillis();
+
+		boolean needAim = kind == PotionLogic.Kind.SPLASH
+				|| (kind == PotionLogic.Kind.DRINK && mode.is("legit"));
+		if (needAim) {
+			cameraTouched = true;
+			phase = Phase.AIM_DOWN;
+		} else {
+			phase = Phase.USE_ITEM; // быстрое питьё — без камеры, как раньше
+		}
+		phaseSince = now;
+	}
+
+	private void tickAimDown(LocalPlayer player) {
+		float aimTarget = kind == PotionLogic.Kind.SPLASH ? SPLASH_PITCH : DRINK_PITCH;
+		boolean fastThrow = kind == PotionLogic.Kind.SPLASH && throwStyle.is("fast");
+		float rate = fastThrow ? 30.0f : 6.0f;
+		float pitch = player.getXRot();
+		float delta = Math.signum(aimTarget - pitch) * Math.min(rate, Math.abs(aimTarget - pitch));
+		player.setXRot(pitch + delta);
+
+		if (Math.abs(player.getXRot() - aimTarget) < 1.0f) {
+			phase = kind == PotionLogic.Kind.SPLASH ? Phase.WAIT_ROTATION : Phase.USE_ITEM;
+			phaseSince = net.minecraft.util.Util.getMillis();
+		}
+	}
+
+	private void tickWaitRotation(LocalPlayer player) {
+		// Сервер должен получить направленный вниз взгляд ДО пакета
+		// использования: ждём минимум тик (быстрый) или человеческую паузу (легит)
+		long waitMs = throwStyle.is("legit")
+				? DrinkLogic.humanPause(pauseSeed, 200, 480)
+				: 60L;
+		if (net.minecraft.util.Util.getMillis() - phaseSince >= waitMs) {
+			phase = Phase.USE_ITEM;
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// Использование
+	// ------------------------------------------------------------------
+
+	private void tickUseItem(Minecraft client, LocalPlayer player) {
+		phaseSince = net.minecraft.util.Util.getMillis();
+		if (kind == PotionLogic.Kind.SPLASH) {
+			// Один вызов, без удержания: снимок стака для подтверждения
+			ItemStack held = player.getInventory().getItem(itemSlot);
+			snapshotItem = held.getItem();
+			snapshotCount = held.getCount();
+			client.gameMode.useItem(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+			player.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+		} else {
+			sawUsing = false;
+			client.gameMode.useItem(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+			client.options.keyUse.setDown(true);
+		}
+		phase = Phase.WAIT_RESULT;
+	}
+
+	private void tickWaitResult(Minecraft client, LocalPlayer player) {
+		long now = net.minecraft.util.Util.getMillis();
+
+		if (kind == PotionLogic.Kind.SPLASH) {
+			ItemStack held = player.getInventory().getItem(itemSlot);
+			boolean changed = held.getItem() != snapshotItem || held.getCount() != snapshotCount;
+			long ticks = (now - phaseSince) / 50L;
+			switch (SplashResult.evaluate(changed, ticks, SPLASH_TIMEOUT_TICKS)) {
+				case CONFIRMED -> {
+					if (target == BuffPriority.Target.HEAL) {
+						healSettleUntil = now + HEAL_SETTLE_MS; // HP придёт с попаданием снаряда
+					}
+					if (notify.isEnabled()) {
+						Notifications.ok("AutoBuff", "Брошено: " + targetName());
+					}
+					beginRestore();
+				}
+				case TIMEOUT -> {
+					if (notify.isEnabled()) {
+						Notifications.warn("AutoBuff", "Бросок не подтверждён");
+					}
+					beginRestore();
+				}
+				case PENDING -> {
+					// летит — ждём
+				}
+			}
+			return;
+		}
+
+		// Питьевое/яблоко: завершение ТОЛЬКО по переходу isUsingItem(): true → false
+		int humanPause = DrinkLogic.humanPause(pauseSeed, 200, 480);
+		if (now - phaseSince < humanPause && sawUsing) {
+			return;
+		}
+		boolean usingNow = player.isUsingItem();
+		if (usingNow) {
+			sawUsing = true;
+		}
+		long elapsed = now - phaseSince;
+		if (DrinkLogic.neverStarted(sawUsing, elapsed, START_TIMEOUT_MS)
+				|| DrinkLogic.finished(sawUsing, usingNow, elapsed, DRINK_TIMEOUT_MS)) {
+			releaseUseKey();
+			beginRestore();
+		} else if (!usingNow) {
+			// сорвалось (урон, движение) — перезапускаем использование
+			client.gameMode.useItem(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+			client.options.keyUse.setDown(true);
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// Восстановление
+	// ------------------------------------------------------------------
+
+	private void beginRestore() {
+		restorePlan = new RestorePlan(bagSource >= 0);
+		phase = Phase.RESTORE_SLOT;
+		phaseSince = net.minecraft.util.Util.getMillis();
+	}
+
+	private void tickRestoreSlot(LocalPlayer player) {
+		Minecraft client = Minecraft.getInstance();
+		boolean immediate = restorePlan.isInterrupted();
+
+		if (restorePlan.peek() == RestorePlan.Step.SWAP_BACK) {
+			// Обратный SWAP — только со своим инвентарём и закрытым экраном
+			boolean free = player.containerMenu == player.inventoryMenu
+					&& (client.gui == null || client.gui.screen() == null);
+			if (!free) {
+				if (net.minecraft.util.Util.getMillis() - phaseSince > 3000L) {
+					if (notify.isEnabled()) {
+						Notifications.warn("AutoBuff", "Предмет слота " + (RESERVE_SLOT + 1) + " не возвращён — контейнер занят");
+					}
+					restorePlan.advance(); // не блокируем модуль навсегда
+				}
+				return;
+			}
+			swapReserve(player);
+			restorePlan.advance();
+			if (!immediate) {
+				return; // по одному действию за тик
+			}
+		}
+
+		if (restorePlan.peek() == RestorePlan.Step.RESTORE_SLOT) {
+			if (previousSlot >= 0 && player.getInventory().getSelectedSlot() != previousSlot) {
+				player.getInventory().setSelectedSlot(previousSlot);
+			}
+			restorePlan.advance();
+			if (!immediate) {
+				return;
+			}
+		}
+
+		phase = Phase.RESTORE_ROTATION;
+		phaseSince = net.minecraft.util.Util.getMillis();
+	}
+
+	private void tickRestoreRotation(LocalPlayer player) {
+		boolean instant = restorePlan.isInterrupted() || mode.is("fast")
+				|| (kind == PotionLogic.Kind.SPLASH && throwStyle.is("fast"));
+		if (instant) {
+			player.setXRot(returnPitch);
+			finishAction();
+			return;
+		}
+		float pitch = player.getXRot();
+		float delta = Math.signum(returnPitch - pitch) * Math.min(8.0f, Math.abs(returnPitch - pitch));
+		player.setXRot(pitch + delta);
+		if (Math.abs(player.getXRot() - returnPitch) < 8.0f) {
+			player.setXRot(returnPitch);
+			finishAction();
+		}
+	}
+
+	private void finishAction() {
+		long now = net.minecraft.util.Util.getMillis();
+		cooldownUntil = now + (kind == PotionLogic.Kind.SPLASH
+				? splashCooldown.get() * 50L
+				: 250L);
+		// Ожидаемый эффект сброшен вместе с остальным состоянием
+		BuffPriority.Target done = target;
+		resetState();
+		target = BuffPriority.Target.NONE;
+		if (notify.isEnabled() && done != BuffPriority.Target.NONE && kindWasDrink(done)) {
+			Notifications.ok("AutoBuff", "Бафф обновлён");
+		}
+		phase = Phase.COOLDOWN;
+		cooldownUntil = Math.max(cooldownUntil, now);
+	}
+
+	private boolean kindWasDrink(BuffPriority.Target done) {
+		return done != BuffPriority.Target.HEAL || kind == PotionLogic.Kind.DRINK;
+	}
+
+	// ------------------------------------------------------------------
+	// Помощники: поиск и обмен
+	// ------------------------------------------------------------------
+
+	/** SWAP между слотом рюкзака и резервным слотом хотбара (двойной SWAP = исходное). */
+	private void swapReserve(LocalPlayer player) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.gameMode == null || bagSource < 0) {
+			return;
+		}
+		client.gameMode.handleContainerInput(player.inventoryMenu.containerId,
+				SlotMath.inventoryToMenuSlot(bagSource), RESERVE_SLOT,
+				net.minecraft.world.inventory.ContainerInput.SWAP, player);
+	}
+
+	private void restartIdle() {
+		resetState();
+		cooldownUntil = net.minecraft.util.Util.getMillis() + 250L; // не сканируем вхолостую каждый тик
+	}
+
+	private Holder<MobEffect> effectFor(BuffPriority.Target picked) {
+		return switch (picked) {
+			case HEAL -> MobEffects.INSTANT_HEALTH;
+			case FIRE_RESISTANCE -> MobEffects.FIRE_RESISTANCE;
+			case STRENGTH -> MobEffects.STRENGTH;
+			case SPEED -> MobEffects.SPEED;
+			case REGENERATION -> MobEffects.REGENERATION;
+			case NIGHT_VISION -> MobEffects.NIGHT_VISION;
+			default -> null;
+		};
+	}
+
+	private String targetName() {
+		return switch (target) {
+			case HEAL -> "лечение";
+			case FIRE_RESISTANCE -> "огнестойкость";
+			case STRENGTH -> "сила";
+			case SPEED -> "скорость";
+			case REGENERATION -> "регенерация";
+			case NIGHT_VISION -> "ночное зрение";
+			case GOLDEN_APPLE -> "золотое яблоко";
+			default -> "эффект";
+		};
+	}
+
+	/** Какой способ применения доступен для эффекта (с учётом режима), или null. */
+	private PotionLogic.Kind potionKindFor(Holder<MobEffect> effect) {
+		boolean splash = hasPotion(effect, PotionLogic.Kind.SPLASH);
+		boolean drink = hasPotion(effect, PotionLogic.Kind.DRINK);
+		return PotionLogic.pick(usage.current().id(), preferSplash.isEnabled(), splash, drink);
+	}
+
+	private boolean hasPotion(Holder<MobEffect> effect, PotionLogic.Kind wantedKind) {
+		return findPotion(effect, wantedKind) >= 0;
 	}
 
 	/**
-	 * Ищет питьевое зелье с нужным эффектом: сначала хотбар, потом весь
-	 * инвентарь (тогда предмет легитно перекладывается в хотбар).
+	 * Ищет зелье нужного вида: слоты строго 0..35 (броня и оффхенд не трогаем).
+	 * Возвращает слот хотбара (0..8) или рюкзака (9..35), −1 — нет.
 	 */
-	private int findPotionSlot(LocalPlayer player, Holder<MobEffect> wanted) {
-		int slot = findPotionSlot(player, wanted, false);
-		if (slot < 0) {
-			slot = findPotionSlot(player, wanted, true);
-		}
-		return slot;
-	}
-
-	private int findPotionSlot(LocalPlayer player,
-	                           Holder<MobEffect> wanted,
-	                           boolean searchInventory) {
-		var inventory = player.getInventory();
-		// Только 0..35: getContainerSize() включает броню (36..39) и оффхенд (40),
-		// их индексы бессмысленны для свапа; зелье во второй руке не трогаем
-		int last = searchInventory ? com.dreamcast.client.util.SlotMath.INVENTORY_SIZE : 9;
-		for (int i = 0; i < last; i++) {
-			ItemStack stack = inventory.getItem(i);
-			if (!isBuffPotion(stack, wanted)) {
-				continue;
-			}
-			if (i < 9) {
+	private int findPotion(Holder<MobEffect> wanted, PotionLogic.Kind wantedKind) {
+		var inventory = Minecraft.getInstance().player.getInventory();
+		for (int i = 0; i < SlotMath.INVENTORY_SIZE; i++) {
+			if (isBuffPotion(inventory.getItem(i), wanted, wantedKind)) {
 				return i;
 			}
-			// Вне хотбара: легитно перекладываем — вернём слот хотбара,
-			// с которого заберём предмет (обычно самый «мусорный» — последний)
-			return swapIntoHotbar(player, i);
 		}
 		return -1;
 	}
 
-	private int findGappleSlot(LocalPlayer player) {
-		var inventory = player.getInventory();
-		for (int pass = 0; pass < 2; pass++) {
-			int last = pass == 0 ? 9 : com.dreamcast.client.util.SlotMath.INVENTORY_SIZE;
-			for (int i = 0; i < last; i++) {
-				ItemStack stack = inventory.getItem(i);
-				if (stack.is(Items.GOLDEN_APPLE) || stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
-					if (i < 9) {
-						return i;
-					}
-					return swapIntoHotbar(player, i);
-				}
+	private int findGapple() {
+		var inventory = Minecraft.getInstance().player.getInventory();
+		for (int i = 0; i < SlotMath.INVENTORY_SIZE; i++) {
+			ItemStack stack = inventory.getItem(i);
+			if (stack.is(Items.GOLDEN_APPLE) || stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
+				return i;
 			}
 		}
 		return -1;
 	}
 
-	private int swapIntoHotbar(LocalPlayer player, int fromSlot) {
-		var inventory = player.getInventory();
-		int hotbarTarget = 8;
-		Minecraft client = Minecraft.getInstance();
-		if (client.player == null || client.gameMode == null) {
-			return -1;
-		}
-		// Клики рассчитаны на меню инвентаря игрока — inventoryMenu, не containerMenu:
-		// при открытом сундуке containerId принадлежал бы сундуку, и слот указывал
-		// бы в совершенно другое место (дополнительно гвардимся в tick())
-		client.gameMode.handleContainerInput(player.inventoryMenu.containerId,
-				com.dreamcast.client.util.SlotMath.inventoryToMenuSlot(fromSlot), hotbarTarget,
-				net.minecraft.world.inventory.ContainerInput.SWAP, player);
-		return hotbarTarget;
-	}
-
-	/** Питьевое зелье (не splash) с нужным эффектом и без вредных. */
-	private boolean isBuffPotion(ItemStack stack, Holder<MobEffect> wanted) {
-		if (!stack.is(Items.POTION)) {
+	/** Зелье нужного вида (POTION/SPLASH_POTION) с нужным эффектом и без вредных. */
+	private boolean isBuffPotion(ItemStack stack, Holder<MobEffect> wanted, PotionLogic.Kind wantedKind) {
+		boolean rightItem = wantedKind == PotionLogic.Kind.SPLASH
+				? stack.is(Items.SPLASH_POTION)
+				: stack.is(Items.POTION);
+		if (!rightItem) {
 			return false;
 		}
 		PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
@@ -451,53 +716,23 @@ public class AutoBuffModule extends Module {
 		return hasWanted;
 	}
 
+	/** Вредный эффект: чёрный список + вся категория HARMFUL ванили. */
 	private static boolean isBad(MobEffectInstance effect) {
-		return effect.getEffect() == MobEffects.WEAKNESS
-				|| effect.getEffect() == MobEffects.SLOWNESS
-				|| effect.getEffect() == MobEffects.POISON
-				|| effect.getEffect() == MobEffects.INSTANT_DAMAGE;
+		MobEffect mobEffect = effect.getEffect().value();
+		String path = BuiltInRegistries.MOB_EFFECT.getKey(mobEffect) == null
+				? "" : BuiltInRegistries.MOB_EFFECT.getKey(mobEffect).getPath();
+		return PotionLogic.harmful(path, mobEffect.getCategory() == MobEffectCategory.HARMFUL);
 	}
 
-	private static void selectSlot(LocalPlayer player, int slot) {
-		player.getInventory().setSelectedSlot(slot);
-	}
+	// ------------------------------------------------------------------
+	// Прочее
+	// ------------------------------------------------------------------
 
-	private static void useHeld(Minecraft client, LocalPlayer player) {
-		if (client.gameMode != null) {
-			client.gameMode.useItem(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+	/** Отпускаем программно зажатую клавишу — безопасно и для физического нажатия. */
+	private void releaseUseKey() {
+		Minecraft client = Minecraft.getInstance();
+		if (client != null && client.options != null) {
+			client.options.keyUse.setDown(false);
 		}
-	}
-
-	private static String buffName(Holder<MobEffect> effect) {
-		if (effect == MobEffects.SPEED) {
-			return "скорость";
-		}
-		if (effect == MobEffects.STRENGTH) {
-			return "сила";
-		}
-		if (effect == MobEffects.FIRE_RESISTANCE) {
-			return "огнестойкость";
-		}
-		if (effect == MobEffects.REGENERATION) {
-			return "регенерация";
-		}
-		if (effect == MobEffects.NIGHT_VISION) {
-			return "ночное зрение";
-		}
-		if (effect == MobEffects.INSTANT_HEALTH) {
-			return "лечение";
-		}
-		return "эффект";
-	}
-
-	private void reset() {
-		phase = Phase.IDLE;
-		previousSlot = -1;
-		pendingSlot = -1;
-		pendingEffect = null;
-		pendingGapple = false;
-		wasLookingDown = false;
-		cameraTouched = false;
-		sawUsing = false;
 	}
 }
