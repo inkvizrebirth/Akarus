@@ -73,9 +73,16 @@ public class HandEditorScreen extends Screen {
 	private int panelX;
 	private int panelY;
 	private int panelHeight;
+	/** Экран, из которого пришли в редактор: обычно тот же экземпляр ClickGUI. */
+	private final Screen parent;
 
 	public HandEditorScreen() {
+		this(null);
+	}
+
+	public HandEditorScreen(Screen parent) {
 		super(Component.literal("Раскладка рук"));
+		this.parent = parent;
 	}
 
 	@Override
@@ -282,7 +289,10 @@ public class HandEditorScreen extends Screen {
 	public boolean keyPressed(KeyEvent event) {
 		if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
 			save();
-			this.minecraft.gui.setScreen(new ClickGuiScreen());
+			// Возвращаемся к исходному экрану, а не создаём новый ClickGUI без
+			// фона/состояния. Иначе путь ClickGUI → редактор рук → Esc терял
+			// меню, из которого был открыт клиент.
+			this.minecraft.gui.setScreen(parent != null ? parent : new ClickGuiScreen());
 			return true;
 		}
 		// Стрелками удобно доводить значение, когда руками уже не поймать

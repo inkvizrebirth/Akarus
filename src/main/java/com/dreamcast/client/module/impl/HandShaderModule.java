@@ -99,7 +99,7 @@ public class HandShaderModule extends Module {
 	public static void openEditor() {
 		Minecraft client = Minecraft.getInstance();
 		if (client != null) {
-			client.gui.setScreen(new HandEditorScreen());
+			client.gui.setScreen(new HandEditorScreen(client.gui.screen()));
 		}
 	}
 }
