@@ -66,9 +66,7 @@ jobs:
           if [ "$status" -ne 0 ]; then
             # Превращаем ошибки компиляции в annotations, чтобы их можно было
             # прочитать через API check-runs (логи артефактом из песочницы не качаются)
-            grep -E '\.java:[0-9]+: ' build.log \
-              | sed -E 's|^([^:]+\.java):([0-9]+): ([a-z]+):(.*)$|::\3 file=\1,line=\2::\4|' \
-              | head -60 || true
+            python3 tools/ci_errors.py || true
             # А если это ошибка Gradle/Loom — выкладываем секцию «What went wrong»
             awk '/What went wrong/{flag=1} flag' build.log | head -50 \
               | while IFS= read -r line; do [ -n "$line" ] && echo "::error::${line}"; done || true
