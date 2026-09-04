@@ -137,13 +137,12 @@ public abstract class DreamcastScreen extends Screen {
 	/** Затемнение фона: «чёрное стекло» поверх того, что игра нарисовала сама. */
 	protected void drawDarkBackdrop(GuiGraphicsExtractor graphics) {
 		float t = openProgress();
-		graphics.fill(0, 0, width, height, RenderUtils.withAlpha(0xFF050506, 0.62f + 0.26f * t));
-		graphics.fillGradient(0, 0, width, height / 2,
-				RenderUtils.withAlpha(0xFF000000, 0.10f),
-				RenderUtils.withAlpha(0xFF000000, 0.34f));
-		graphics.fillGradient(0, height * 2 / 3, width, height,
-				RenderUtils.withAlpha(0xFF000000, 0.38f),
-				RenderUtils.withAlpha(0xFF000000, 0.02f));
+		// Один непрерывный градиент: прежние два перекрывающихся слоя давали
+		// заметную горизонтальную полосу на главном экране и прятали фон.
+		graphics.fill(0, 0, width, height, RenderUtils.withAlpha(0xFF050506, 0.34f + 0.13f * t));
+		graphics.fillGradient(0, 0, width, height,
+				RenderUtils.withAlpha(0xFF000000, 0.08f),
+				RenderUtils.withAlpha(0xFF000000, 0.30f));
 	}
 
 	/** Кадровый easing (как в ClickGUI): плавно, но конечное число шагов. */

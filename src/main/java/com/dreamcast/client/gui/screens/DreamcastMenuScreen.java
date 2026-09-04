@@ -24,6 +24,8 @@ public class DreamcastMenuScreen extends DreamcastScreen {
 
 	private static final Identifier BACKGROUND =
 			Identifier.fromNamespaceAndPath(DreamcastClient.MOD_ID, "textures/gui/main_menu_background.png");
+	private static final Identifier LOGO_MARK =
+			Identifier.fromNamespaceAndPath(DreamcastClient.MOD_ID, "textures/gui/dreamcast-logo.png");
 
 	/** Фирменная пара Dreamcast: фиолетовый → циан. */
 	private static final int ACCENT = 0xFF7C6CFF;
@@ -72,11 +74,14 @@ public class DreamcastMenuScreen extends DreamcastScreen {
 
 		drawDarkBackdrop(graphics);
 
-		// Логотип: DREAMCAST с разрядкой, строго по центру — без лишнего рядом
+		// Логотип: фирменный знак и DREAMCAST образуют единый центрированный блок.
 		String logo = DreamcastClient.LOGO_TEXT;
 		int logoY = height / 4 - 22;
 		int tracked = RenderUtils.trackedWidthBold(font, logo, 6);
-		int logoX = width / 2 - tracked / 2;
+		int markSize = 32;
+		int logoX = width / 2 - (markSize + 9 + tracked) / 2 + markSize + 9;
+		graphics.blit(RenderPipelines.GUI_TEXTURED, LOGO_MARK, logoX - markSize - 9, logoY - 9,
+				0.0f, 0.0f, markSize, markSize, 1254, 1254);
 		RenderUtils.drawTrackedBold(graphics, font, logo, logoX, logoY, 0xFFF4F4FA, 6);
 
 		// «Дышащая» линия под логотипом: градиент фиолетовый → циан

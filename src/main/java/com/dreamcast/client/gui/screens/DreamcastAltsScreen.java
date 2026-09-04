@@ -17,17 +17,16 @@ import java.util.List;
 /**
  * Alt Manager: выбор оффлайн-аккаунта.
  *
- * Слева — карточка текущего аккаунта (крупная буква-аватар, ник, статус),
- * справа — список альтов. Поле ввода снизу: вписать ник и «Добавить», либо
- * «Мгновенно» — клиент сам придумает ник, добавит и переключится.
+ * Широкий список альтов без растянутой карточки. Поле ввода снизу: вписать
+ * ник и «Добавить», либо «Рандом» — клиент сам придумает ник, добавит и
+ * переключится.
  */
 public class DreamcastAltsScreen extends DreamcastScreen {
 
 	private static final int ACCENT = 0xFF7C6CFF;
-	private static final int PANEL_WIDTH = 460;
+	private static final int PANEL_WIDTH = 620;
 	private static final int ROW_HEIGHT = 26;
 	private static final int ROW_GAP = 3;
-	private static final int CARD_WIDTH = 200;
 
 	private static final class AltRow {
 		final String name;
@@ -83,17 +82,14 @@ public class DreamcastAltsScreen extends DreamcastScreen {
 		int panelY = 44;
 		listHeight = Math.max(1, height - panelY - 66);
 		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
-		int listWidth = panelWidth - CARD_WIDTH - 12;
-		int listX = 18 + CARD_WIDTH + 12;
+		int listWidth = panelWidth - 20;
+		int listX = 28;
 
 		drawGlassPanel(graphics, 18, panelY, panelWidth, listHeight, 12, 1.0f, ACCENT);
 
-		// Карточка текущего аккаунта
-		drawCurrentCard(graphics, 18 + 10, panelY + 8, CARD_WIDTH, listHeight - 16);
-
 		if (rows.isEmpty()) {
 			RenderUtils.text(graphics, font, "Альтов пока нет", listX + 4, panelY + 12, 0xFFE8E8F0);
-			RenderUtils.text(graphics, font, "добавь ниже или «мгновенно»", listX + 4, panelY + 24, 0xFF80808C);
+			RenderUtils.text(graphics, font, "добавь ниже или выбери «Рандом»", listX + 4, panelY + 24, 0xFF80808C);
 		} else {
 			graphics.enableScissor(listX - 2, panelY + 4, listX + listWidth + 4, panelY + listHeight - 4);
 			int y = panelY + 8;
@@ -123,7 +119,7 @@ public class DreamcastAltsScreen extends DreamcastScreen {
 		} else {
 			chips.add(chip("Войти", () -> loginSelected()));
 			chips.add(chip("Добавить", this::addFromField));
-			chips.add(chip("Мгновенно", this::addRandom));
+			chips.add(chip("Рандом", this::addRandom));
 			Chip delete = chip("Удалить", () -> confirmDelete = true);
 			delete.enabled = selected >= 0;
 			delete.danger = true;
@@ -215,8 +211,8 @@ public class DreamcastAltsScreen extends DreamcastScreen {
 		}
 
 		int panelWidth = Math.min(PANEL_WIDTH, width - 24);
-		int listWidth = panelWidth - CARD_WIDTH - 12;
-		int listX = 18 + CARD_WIDTH + 12;
+		int listWidth = panelWidth - 20;
+		int listX = 28;
 		int panelY = 44;
 		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
 		if (mx >= listX && mx < listX + listWidth && my >= panelY + 4 && my < panelY + listHeight - 4) {

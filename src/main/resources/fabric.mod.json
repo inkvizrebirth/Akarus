@@ -3,7 +3,7 @@
   "id": "dreamcast",
   "version": "${version}",
   "name": "Dreamcast DLC",
-  "description": "Клиентский мод для Minecraft 26.2: свои меню, HUD, модули (Trails, ESP), музыкальный плеер и встроенный ViaFabricPlus.",
+  "description": "Клиентский мод для Minecraft 26.2: свои меню, HUD, модули (Trails, ESP) и музыкальный плеер.",
   "authors": [
     "inkvizrebirth"
   ],
@@ -25,9 +25,6 @@
     "fabric-api": "*"
   },
   "jars": [
-    {
-      "file": "META-INF/jars/ViaFabricPlus.jar"
-    },
     {
       "file": "META-INF/jars/Sodium.jar"
     },

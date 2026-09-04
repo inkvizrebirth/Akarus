@@ -32,7 +32,7 @@ jobs:
           mkdir -p libs
           # Свежие релизные jar под Minecraft 26.2 из GitHub releases; при проблемах с API —
           # запасной путь к известному тегу. Сборка требует полный набор: fabric.mod.json
-          # объявляет все пять nested jar.
+          # объявляет все nested jar.
           fetch() { # repo tag pattern out
             local url
             url=$(curl -fsSL --max-time 20 "https://api.github.com/repos/$1/releases/tags/$2" \
@@ -44,7 +44,6 @@ jobs:
             echo "Скачиваю: $url"
             curl -fL --retry 3 --max-time 180 -o "libs/$4" "$url"
           }
-          fetch ViaVersion/ViaFabricPlus 4.6.3 'ViaFabricPlus-[0-9.]+' ViaFabricPlus.jar
           # Sodium не выкладывает jar в GitHub-релизы — берём с Modrinth (fabric, 26.2)
           sodium_url=$(curl -fsSL --max-time 20 \
             'https://api.modrinth.com/v2/project/sodium/version?loaders=%5B%22fabric%22%5D&game_versions=%5B%2226.2%22%5D' \
@@ -87,8 +86,8 @@ jobs:
           echo "--- ссылка на конфиг миксинов в fabric.mod.json ---"
           unzip -p "$JAR" fabric.mod.json | grep -q 'dreamcast\.mixins\.json' || { echo "::error::fabric.mod.json не объявляет mixins!"; exit 1; }
           echo "OK: fabric.mod.json ссылается на dreamcast.mixins.json"
-          echo "--- nested jars (ViaFabricPlus) ---"
-          unzip -l "$JAR" | grep -E 'META-INF/jars/.*\.jar' || echo "::warning::VFP не вшита (libs/ViaFabricPlus.jar отсутствовал на сборке)"; true
+          echo "--- nested jars ---"
+          unzip -l "$JAR" | grep -E 'META-INF/jars/.*\.jar' || { echo "::error::В jar нет вложенных модов"; exit 1; }
           echo "--- refmap / intermediary (информационно) ---"
           # В Minecraft 26.2 нет intermediary-маппингов (26.2.tiny отсутствует в
           # FabricMC/intermediary), а runtime использует официальные имена Mojang,

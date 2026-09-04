@@ -117,7 +117,11 @@ public final class RenderUtils {
 	 */
 	public static void drawHexPattern(GuiGraphicsExtractor graphics, int x, int y, int w, int h,
 	                                  int accent, float mouseX, float mouseY, float glow) {
-		if (w <= 4 || h <= 4) {
+		// Соты с расчётом расстояния для каждой ячейки были главным источником
+		// просадок FPS в меню: семь кнопок обсчитывались на каждом кадре.
+		// Текстура нужна только при наведении, поэтому в обычном состоянии её
+		// не рисуем вовсе.
+		if (w <= 4 || h <= 4 || glow <= 0.02f) {
 			return;
 		}
 		final float r = 4.6f;                 // радиус соты (центр → вершина)
@@ -187,7 +191,7 @@ public final class RenderUtils {
 	// ------------------------------------------------------------------
 
 	/** Длительность жизни волны, мс. */
-	private static final long CLICK_WAVE_DURATION = 640;
+	private static final long CLICK_WAVE_DURATION = 360;
 
 	private record ClickWave(float x, float y, long born) {
 	}
@@ -197,7 +201,7 @@ public final class RenderUtils {
 	/** Регистрирует волну клика (экранные координаты) — рисуется всеми экранами. */
 	public static void addClickWave(double x, double y) {
 		CLICK_WAVES.add(new ClickWave((float) x, (float) y, net.minecraft.util.Util.getMillis()));
-		while (CLICK_WAVES.size() > 8) {
+		while (CLICK_WAVES.size() > 3) {
 			CLICK_WAVES.remove(0);
 		}
 	}
@@ -219,15 +223,15 @@ public final class RenderUtils {
 	private static void drawClickWave(GuiGraphicsExtractor graphics, float cx, float cy,
 	                                  float progress, int accent, long now) {
 		float eased = 1.0f - progress * progress * progress;
-		float radius = 10.0f + 52.0f * eased;
+		float radius = 6.0f + 28.0f * eased;
 		float fade = (1.0f - progress) * (1.0f - progress);
 
 		// 1. «Блюр»-ореол: слои с гауссовым затуханием
-		for (int i = 5; i >= 1; i--) {
-			float spread = 1.0f + i * 0.055f;
-			float layerFade = (float) Math.exp(-i * i * 0.35f);
+		for (int i = 2; i >= 1; i--) {
+			float spread = 1.0f + i * 0.06f;
+			float layerFade = (float) Math.exp(-i * i * 0.45f);
 			fillCircle(graphics, cx, cy, radius * spread,
-					withAlpha(accent, 0.085f * layerFade * fade));
+					withAlpha(accent, 0.075f * layerFade * fade));
 		}
 
 		// 2. Ядро волны
@@ -235,7 +239,7 @@ public final class RenderUtils {
 		fillCircle(graphics, cx, cy, radius * 0.22f, withAlpha(accent, 0.20f * fade));
 
 		// 3. Мерцающее точечное кольцо
-		int dots = 44;
+		int dots = 18;
 		for (int k = 0; k < dots; k++) {
 			float angle = (k / (float) dots) * 6.2831855f;
 			float shimmer = 0.5f + 0.5f * (float) Math.sin(angle * 3.0f + now * 0.012f);
@@ -249,16 +253,6 @@ public final class RenderUtils {
 					withAlpha(dotColor, (0.35f + 0.55f * shimmer) * fade));
 		}
 
-		// 4. Хроматическое эхо вторым цветом
-		int echoColor = mix(accent, 0xFF7C6CFF, 0.5f);
-		for (int k = 0; k < 22; k++) {
-			float angle = (k / 22.0f) * 6.2831855f + 0.18f;
-			float shimmer = 0.5f + 0.5f * (float) Math.sin(angle * 3.0f + now * 0.012f + 1.2f);
-			float dx = cx + (float) Math.cos(angle) * radius * 0.84f;
-			float dy = cy + (float) Math.sin(angle) * radius * 0.84f;
-			graphics.fill((int) dx - 1, (int) dy - 1, (int) dx + 1, (int) dy + 1,
-					withAlpha(echoColor, 0.30f * fade * (0.4f + 0.6f * shimmer)));
-		}
 	}
 
 	// ------------------------------------------------------------------

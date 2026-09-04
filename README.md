@@ -19,7 +19,7 @@
 - ClickGUI со стеклом, поиском, темами и анимациями;
 - перетаскиваемый HUD: Target HUD, эффекты, броня/оффхенд, keystrokes + CPS, сессия, бинды, уведомления и музыка;
 - KillAura, Scaffold (Normal/Legit/Telly), AutoBuff с питьём и splash-зельями, AutoTotem, NoFall, ESP, Trails, FreeCam/FreeLook, Baritone-модули и другое;
-- встроенные ViaFabricPlus, Sodium, Lithium, ImmediatelyFast и Mod Menu.
+- встроенные Sodium, Lithium, ImmediatelyFast и Mod Menu.
 
 ![ClickGUI](docs/preview-clickgui.png)
 

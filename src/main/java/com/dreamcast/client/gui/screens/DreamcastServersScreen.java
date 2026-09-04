@@ -27,23 +27,19 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Экран мультиплеера — «монитор серверов», а не список.
- *
- * Уникальная композиция: слева — крупная панель выбранного сервера
- * (иконка, MOTD, игроки, пинг крупными цифрами), справа — колонка быстрых
- * строк. Новая строка (после «Добавить») въезжает со вспышкой и волной,
- * смена выбора подсвечивает карточку. Пилюля версии ViaFabricPlus —
- * сверху справа, открывает {@link DreamcastVersionSelectScreen}.
+ * Экран мультиплеера с одной широкой колонкой серверов. Компактные favicon
+ * и строки не зависят от разрешения окна; новая строка вспыхивает при
+ * добавлении. Пилюля версии открывает {@link DreamcastVersionSelectScreen},
+ * только если совместимый ViaFabricPlus установлен отдельно.
  */
 public class DreamcastServersScreen extends DreamcastScreen {
 
 	private static final int ACCENT = 0xFF45E3FF;
-	private static final int PANEL_WIDTH = 460;
+	private static final int PANEL_WIDTH = 620;
 	private static final int ROW_HEIGHT = 30;
 	private static final int ROW_GAP = 3;
 	private static final int LIST_TOP = 44;
 	private static final int LIST_BOTTOM = 46;
-	private static final int CARD_WIDTH = 200;
 
 	/** Строка сервера: данные + иконка + анимации. */
 	private static final class ServerRow {
@@ -235,8 +231,8 @@ public class DreamcastServersScreen extends DreamcastScreen {
 		listHeight = Math.max(1, height - panelY - LIST_BOTTOM);
 		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
 
-		int listWidth = panelWidth - CARD_WIDTH - 12;
-		int listX = panelX + CARD_WIDTH + 12;
+		int listWidth = panelWidth - 20;
+		int listX = panelX + 10;
 
 		drawGlassPanel(graphics, panelX, panelY, panelWidth, listHeight, 12, 1.0f, ACCENT);
 
@@ -244,11 +240,6 @@ public class DreamcastServersScreen extends DreamcastScreen {
 			RenderUtils.text(graphics, font, "Серверов пока нет", panelX + 14, panelY + 14, 0xFFE8E8F0);
 			RenderUtils.text(graphics, font, "«Добавить» — адрес и название", panelX + 14, panelY + 26, 0xFF80808C);
 		} else {
-			ServerData selection = selected >= 0 && selected < rows.size() ? rows.get(selected).data : null;
-			if (selection != null) {
-				drawServerCard(graphics, rows.get(selected), panelX + 10, panelY + 8, CARD_WIDTH, listHeight - 16);
-			}
-
 			graphics.enableScissor(listX - 2, panelY + 4, listX + listWidth + 4, panelY + listHeight - 4);
 			int y = panelY + 8;
 			int index = 0;
@@ -491,7 +482,7 @@ public class DreamcastServersScreen extends DreamcastScreen {
 			return true;
 		}
 
-		if (versionPillBounds != null) {
+		if (ViaIntegration.available() && versionPillBounds != null) {
 			double mx = event.x();
 			double my = event.y();
 			if (mx >= versionPillBounds[0] && mx < versionPillBounds[0] + versionPillBounds[2]
@@ -505,8 +496,8 @@ public class DreamcastServersScreen extends DreamcastScreen {
 		double mx = event.x();
 		double my = event.y();
 		int panelWidth = Math.min(PANEL_WIDTH, width - 24);
-		int listWidth = panelWidth - CARD_WIDTH - 12;
-		int listX = 18 + CARD_WIDTH + 12;
+		int listWidth = panelWidth - 20;
+		int listX = 28;
 		int panelY = LIST_TOP;
 		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
 		if (mx >= listX && mx < listX + listWidth && my >= panelY + 4 && my < panelY + listHeight - 4) {

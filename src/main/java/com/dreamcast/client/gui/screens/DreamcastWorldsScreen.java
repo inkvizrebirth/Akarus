@@ -34,24 +34,19 @@ import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Экран выбора миров — «полка», а не список.
+ * Экран выбора миров с одной привычной широкой колонкой строк.
  *
- * Уникальная композиция: слева — крупная карточка выбранного мира (иконка
- * во весь рост, имя, подробности, метки), справа — узкая колонка строк
- * с мини-иконками для навигации. Строки въезжают «лесницей» при открытии,
- * новая выборка подсвечивается волной. Создание/редактирование — ванильные
- * экраны (большие формы клонировать себе дороже), всё остальное — наше.
+ * Предыдущая композиция с крупной карточкой растягивала favicon мира на
+ * реальных разрешениях. Превью теперь остаётся компактной иконкой в строке.
  */
 public class DreamcastWorldsScreen extends DreamcastScreen {
 
 	private static final int ACCENT = 0xFF7C6CFF;
-	private static final int PANEL_WIDTH = 460;
+	private static final int PANEL_WIDTH = 620;
 	private static final int ROW_HEIGHT = 30;
 	private static final int ROW_GAP = 3;
 	private static final int LIST_TOP = 44;
 	private static final int LIST_BOTTOM = 46;
-	/** Ширина левой карточки-превью. */
-	private static final int CARD_WIDTH = 196;
 
 	/** Одна строка списка: мир и его иконка + анимации. */
 	private static final class WorldRow {
@@ -208,9 +203,8 @@ public class DreamcastWorldsScreen extends DreamcastScreen {
 		listHeight = Math.max(1, height - panelY - LIST_BOTTOM);
 		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
 
-		// Строки справа: узкая колонка
-		int listWidth = panelWidth - CARD_WIDTH - 12;
-		int listX = panelX + CARD_WIDTH + 12;
+		int listWidth = panelWidth - 20;
+		int listX = panelX + 10;
 
 		drawGlassPanel(graphics, panelX, panelY, panelWidth, listHeight, 12, 1.0f, ACCENT);
 
@@ -221,13 +215,7 @@ public class DreamcastWorldsScreen extends DreamcastScreen {
 			RenderUtils.text(graphics, font, "Миров пока нет", panelX + 14, panelY + 14, 0xFFE8E8F0);
 			RenderUtils.text(graphics, font, "«Создать» — первый мир", panelX + 14, panelY + 26, 0xFF80808C);
 		} else if (!rows.isEmpty()) {
-			// Левая карточка выбранного мира
-			LevelSummary selection = selected >= 0 && selected < rows.size() ? rows.get(selected).summary : null;
-			if (selection != null) {
-				drawWorldCard(graphics, rows.get(selected), panelX + 10, panelY + 8, CARD_WIDTH, listHeight - 16);
-			}
-
-			// Правая колонка строк
+			// Одна широкая колонка: иконка всегда остаётся компактной (18 px).
 			graphics.enableScissor(listX - 2, panelY + 4, listX + listWidth + 4, panelY + listHeight - 4);
 			int y = panelY + 8;
 			int index = 0;
@@ -390,8 +378,8 @@ public class DreamcastWorldsScreen extends DreamcastScreen {
 		double mx = event.x();
 		double my = event.y();
 		int panelWidth = Math.min(PANEL_WIDTH, width - 24);
-		int listWidth = panelWidth - CARD_WIDTH - 12;
-		int listX = 18 + CARD_WIDTH + 12;
+		int listWidth = panelWidth - 20;
+		int listX = 28;
 		int panelY = LIST_TOP;
 		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
 		if (mx >= listX && mx < listX + listWidth && my >= panelY + 4 && my < panelY + listHeight - 4) {

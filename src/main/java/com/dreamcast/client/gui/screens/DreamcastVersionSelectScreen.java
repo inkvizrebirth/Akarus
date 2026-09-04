@@ -56,7 +56,7 @@ public class DreamcastVersionSelectScreen extends DreamcastScreen {
 		this.parent = parent;
 
 		if (!ViaIntegration.available()) {
-			allRows.add(new Row("ViaFabricPlus не найден", "вшит в релизный jar", false, null));
+			allRows.add(new Row("ViaFabricPlus не найден", "можно установить отдельно", false, null));
 			allRows.add(new Row("Открыть страницу VFP", "Modrinth", false,
 					() -> FileOpener.openUrl("https://modrinth.com/mod/viafabricplus")));
 		} else {
