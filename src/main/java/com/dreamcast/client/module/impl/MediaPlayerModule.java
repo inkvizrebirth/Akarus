@@ -88,11 +88,17 @@ public class MediaPlayerModule extends Module {
 	@Override
 	protected void onDisable() {
 		player.pause();
+		pausedByMenu = false;
+		wasUsingMenu = false;
 	}
 
 	@Override
 	public void onSettingsChanged() {
 		player.setVolume(volume.get() / 100.0f);
+		if (!pauseInMenu.isEnabled() && pausedByMenu) {
+			player.play();
+			pausedByMenu = false;
+		}
 	}
 
 	@Override
@@ -126,8 +132,12 @@ public class MediaPlayerModule extends Module {
 				player.play();
 				pausedByMenu = false;
 			}
-			wasUsingMenu = inMenu;
+		} else if (pausedByMenu) {
+			// Настройку могли выключить прямо в открытом ClickGUI.
+			player.play();
+			pausedByMenu = false;
 		}
+		wasUsingMenu = inMenu;
 
 		// Трек доиграл — реагируем по режиму повтора
 		if (player.pumpFinished()) {

@@ -8,6 +8,7 @@ import com.dreamcast.client.module.impl.AutoWalkModule;
 import com.dreamcast.client.module.impl.FreeCamModule;
 import com.dreamcast.client.module.impl.FreeLookModule;
 import com.dreamcast.client.module.impl.HudInfoModule;
+import com.dreamcast.client.module.impl.KillAuraModule;
 import com.dreamcast.client.module.impl.MediaPlayerModule;
 import com.dreamcast.client.util.Notifications;
 import com.dreamcast.client.util.RenderUtils;
@@ -25,12 +26,20 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.UUID;
 
 /**
  * Отрисовка HUD.
@@ -60,6 +69,15 @@ public final class HudRenderer {
 
 	/** Кадровое время для анимаций (обновляется в начале отрисовки). */
 	private static float frameDelta;
+	private static final Deque<Long> LEFT_CLICKS = new ArrayDeque<>();
+	private static final Deque<Long> RIGHT_CLICKS = new ArrayDeque<>();
+	private static boolean leftWasDown;
+	private static boolean rightWasDown;
+	private static UUID sessionPlayer;
+	private static Object sessionLevel;
+	private static long sessionStarted;
+	private static Vec3 sessionLastPosition;
+	private static double sessionDistance;
 
 	private HudRenderer() {
 	}
@@ -87,8 +105,13 @@ public final class HudRenderer {
 			case HudInfoModule.ELEMENT_INFO -> "Инфопанель";
 			case HudInfoModule.ELEMENT_MODULE_LIST -> "Список модулей";
 			case HudInfoModule.ELEMENT_KEYBINDS -> "Бинды";
-			case HudInfoModule.ELEMENT_MEDIA -> "Медиаплеер";
-			case HudInfoModule.ELEMENT_NOTIFICATIONS -> "Уведомления";
+				case HudInfoModule.ELEMENT_MEDIA -> "Медиаплеер";
+				case HudInfoModule.ELEMENT_NOTIFICATIONS -> "Уведомления";
+				case HudInfoModule.ELEMENT_TARGET -> "Target HUD";
+				case HudInfoModule.ELEMENT_EFFECTS -> "Активные эффекты";
+				case HudInfoModule.ELEMENT_ARMOR -> "Броня и оффхенд";
+				case HudInfoModule.ELEMENT_KEYSTROKES -> "Keystrokes и CPS";
+				case HudInfoModule.ELEMENT_SESSION -> "Статистика сессии";
 			default -> elementId;
 		};
 	}
@@ -132,6 +155,7 @@ public final class HudRenderer {
 	 * но приглушённо — чтобы их тоже можно было схватить и поставить).
 	 */
 	public static void renderElements(GuiGraphicsExtractor graphics, Minecraft client, boolean editorMode) {
+		HudLayout.beginFrame();
 		long now = Util.getMillis();
 		frameDelta = Math.min((now - lastFrame) / 1000.0f, 0.05f);
 		lastFrame = now;
@@ -147,6 +171,11 @@ public final class HudRenderer {
 		boolean keybinds = hud.shows(HudInfoModule.ELEMENT_KEYBINDS);
 		boolean media = hud.shows(HudInfoModule.ELEMENT_MEDIA);
 		boolean notifications = hud.shows(HudInfoModule.ELEMENT_NOTIFICATIONS);
+		boolean target = hud.shows(HudInfoModule.ELEMENT_TARGET);
+		boolean effects = hud.shows(HudInfoModule.ELEMENT_EFFECTS);
+		boolean armor = hud.shows(HudInfoModule.ELEMENT_ARMOR);
+		boolean keystrokes = hud.shows(HudInfoModule.ELEMENT_KEYSTROKES);
+		boolean session = hud.shows(HudInfoModule.ELEMENT_SESSION);
 
 		if (watermark || editorMode) {
 			drawWatermark(graphics, client, watermark ? 1.0f : 0.35f, now);
@@ -165,6 +194,21 @@ public final class HudRenderer {
 		}
 		if (notifications || editorMode) {
 			drawNotifications(graphics, client, notifications ? 1.0f : 0.35f, now);
+		}
+		if (target || editorMode) {
+			drawTarget(graphics, client, target ? 1.0f : 0.35f, now);
+		}
+		if (effects || editorMode) {
+			drawEffects(graphics, client, effects ? 1.0f : 0.35f, now);
+		}
+		if (armor || editorMode) {
+			drawArmor(graphics, client, armor ? 1.0f : 0.35f, now);
+		}
+		if (keystrokes || editorMode) {
+			drawKeystrokes(graphics, client, keystrokes ? 1.0f : 0.35f, now);
+		}
+		if (session || editorMode) {
+			drawSession(graphics, client, session ? 1.0f : 0.35f, now);
 		}
 	}
 
@@ -467,6 +511,275 @@ public final class HudRenderer {
 
 	private static float easeIn(float t) {
 		return t * t;
+	}
+
+	// ------------------------------------------------------------------
+	// Элемент: Target HUD
+	// ------------------------------------------------------------------
+
+	private static void drawTarget(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
+		KillAuraModule aura = ModuleManager.find(KillAuraModule.class);
+		Entity raw = aura == null ? null : aura.currentTarget();
+		LivingEntity target = raw instanceof LivingEntity living && living.isAlive() ? living : null;
+		if (target == null && alpha >= 1.0f) {
+			return;
+		}
+
+		Font font = client.font;
+		int width = Math.min(176, client.getWindow().getGuiScaledWidth() - 12);
+		int height = 48;
+		int defaultX = (client.getWindow().getGuiScaledWidth() - width) / 2;
+		int defaultY = client.getWindow().getGuiScaledHeight() - height - 42;
+		int[] position = HudLayout.position(HudInfoModule.ELEMENT_TARGET, defaultX, defaultY);
+		int x = position[0];
+		int y = position[1];
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_TARGET, x, y, width, height);
+
+		String name = target == null ? "Текущая цель" : target.getName().getString();
+		float health = target == null ? 14.0f : Math.max(0.0f, target.getHealth());
+		float absorption = target == null ? 2.0f : Math.max(0.0f, target.getAbsorptionAmount());
+		float maximum = target == null ? 20.0f : Math.max(1.0f, target.getMaxHealth());
+		float progress = Math.min(1.0f, (health + absorption) / maximum);
+		int armor = target == null ? 12 : target.getArmorValue();
+		double distance = target == null || client.player == null ? 3.4 : client.player.distanceTo(target);
+
+		int accent = ClientTheme.gradientAt(0.25f, now);
+		int healthColor = progress < 0.25f ? 0xFFFF667D : progress < 0.55f ? 0xFFFFC66C : accent;
+		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 7, 4);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 7,
+				RenderUtils.withAlpha(accent, 0.48f * alpha), RenderUtils.withAlpha(0xE609090C, alpha));
+
+		// Абстрактный аватар остаётся читаемым и для мобов, и для игроков.
+		RenderUtils.fillCircle(graphics, x + 20, y + 20, 12, RenderUtils.withAlpha(0xFF16161D, alpha));
+		RenderUtils.fillCircle(graphics, x + 20, y + 20, 10, RenderUtils.withAlpha(accent, 0.30f * alpha));
+		String initial = name.isBlank() ? "?" : name.substring(0, 1).toUpperCase(java.util.Locale.ROOT);
+		RenderUtils.textCentered(graphics, font, initial, x + 20, y + 15,
+				RenderUtils.withAlpha(TEXT_COLOR, alpha), false);
+
+		String shownName = RenderUtils.clamp(font, name, width - 74);
+		RenderUtils.textBold(graphics, font, shownName, x + 38, y + 7, RenderUtils.withAlpha(TEXT_COLOR, alpha));
+		String meta = String.format(java.util.Locale.ROOT, "%.1f HP  ·  %.1f m  ·  %d armor",
+				health + absorption, distance, armor);
+		RenderUtils.textFlat(graphics, font, meta, x + 38, y + 7 + font.lineHeight + 2,
+				RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
+
+		int barX = x + 8;
+		int barY = y + height - 8;
+		int barW = width - 16;
+		RenderUtils.fillRounded(graphics, barX, barY, barW, 3, 2, RenderUtils.withAlpha(0xFF25252D, alpha));
+		if (progress > 0.0f) {
+			RenderUtils.fillRounded(graphics, barX, barY, Math.max(2, Math.round(barW * progress)), 3, 2,
+					RenderUtils.withAlpha(healthColor, alpha));
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// Элемент: активные эффекты
+	// ------------------------------------------------------------------
+
+	private static void drawEffects(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
+		LocalPlayer player = client.player;
+		List<MobEffectInstance> effects = player == null ? List.of() : player.getActiveEffects().stream()
+				.filter(MobEffectInstance::showIcon)
+				.sorted(Comparator.comparingInt(MobEffectInstance::getDuration))
+				.limit(6)
+				.toList();
+		if (effects.isEmpty() && alpha >= 1.0f) {
+			return;
+		}
+		Font font = client.font;
+		int rows = Math.max(1, effects.size());
+		int rowH = font.lineHeight + 5;
+		int width = 150;
+		int height = 19 + rows * rowH + 4;
+		int[] position = HudLayout.position(HudInfoModule.ELEMENT_EFFECTS,
+				client.getWindow().getGuiScaledWidth() - width - MARGIN, 170);
+		int x = position[0];
+		int y = position[1];
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_EFFECTS, x, y, width, height);
+
+		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 3);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6,
+				RenderUtils.withAlpha(PANEL_BORDER, alpha), RenderUtils.withAlpha(PANEL_BACKGROUND, alpha));
+		RenderUtils.textBold(graphics, font, "ЭФФЕКТЫ", x + 8, y + 6,
+				RenderUtils.withAlpha(ClientTheme.accent(now), alpha));
+
+		int rowY = y + 18;
+		if (effects.isEmpty()) {
+			RenderUtils.textFlat(graphics, font, "Нет активных эффектов", x + 8, rowY,
+					RenderUtils.withAlpha(TEXT_DIM, alpha));
+		} else {
+			for (MobEffectInstance effect : effects) {
+				int effectColor = 0xFF000000 | effect.getEffect().value().getColor();
+				RenderUtils.fillCircle(graphics, x + 9, rowY + font.lineHeight / 2.0f, 3.0f,
+						RenderUtils.withAlpha(effectColor, alpha));
+				String amplifier = effect.getAmplifier() > 0 ? " " + roman(effect.getAmplifier() + 1) : "";
+				String name = effect.getEffect().value().getDisplayName().getString() + amplifier;
+				String duration = effect.isInfiniteDuration() ? "∞" : formatDurationTicks(effect.getDuration());
+				int durationW = RenderUtils.width(font, duration);
+				RenderUtils.drawClamped(graphics, font, name, x + 17, rowY, width - 29 - durationW,
+						RenderUtils.withAlpha(TEXT_COLOR, alpha));
+				RenderUtils.textFlat(graphics, font, duration, x + width - 8 - durationW, rowY,
+						RenderUtils.withAlpha(effect.getDuration() < 200 ? 0xFFFF8095 : TEXT_SECONDARY, alpha));
+				rowY += rowH;
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// Элемент: броня и оффхенд
+	// ------------------------------------------------------------------
+
+	private static void drawArmor(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
+		LocalPlayer player = client.player;
+		Font font = client.font;
+		int width = 122;
+		int height = 34;
+		int[] position = HudLayout.position(HudInfoModule.ELEMENT_ARMOR, MARGIN,
+				client.getWindow().getGuiScaledHeight() - height - MARGIN);
+		int x = position[0];
+		int y = position[1];
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_ARMOR, x, y, width, height);
+
+		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 3);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6,
+				RenderUtils.withAlpha(PANEL_BORDER, alpha), RenderUtils.withAlpha(0xD908080B, alpha));
+		EquipmentSlot[] slots = {EquipmentSlot.FEET, EquipmentSlot.LEGS, EquipmentSlot.CHEST, EquipmentSlot.HEAD};
+		for (int index = 0; index < slots.length + 1; index++) {
+			int itemX = x + 5 + index * 22 + (index == 4 ? 4 : 0);
+			RenderUtils.fillRounded(graphics, itemX, y + 5, 20, 24, 4, RenderUtils.withAlpha(0x661C1C24, alpha));
+			ItemStack stack = player == null ? ItemStack.EMPTY
+					: index < slots.length ? player.getItemBySlot(slots[index]) : player.getOffhandItem();
+			if (!stack.isEmpty()) {
+				graphics.item(player, stack, itemX + 2, y + 6, 0);
+				graphics.itemDecorations(font, stack, itemX + 2, y + 6);
+				if (stack.isDamageableItem()) {
+					int percent = Math.max(0, Math.round((stack.getMaxDamage() - stack.getDamageValue())
+							* 100.0f / Math.max(1, stack.getMaxDamage())));
+					int color = percent < 20 ? 0xFFFF667D : percent < 50 ? 0xFFFFC66C : 0xFF7BE08A;
+					graphics.fill(itemX + 3, y + 27, itemX + 3 + Math.max(1, Math.round(14 * percent / 100.0f)), y + 29,
+							RenderUtils.withAlpha(color, alpha));
+				}
+			}
+		}
+		graphics.fill(x + 94, y + 8, x + 95, y + 26, RenderUtils.withAlpha(ClientTheme.accent(now), 0.45f * alpha));
+	}
+
+	// ------------------------------------------------------------------
+	// Элемент: Keystrokes + CPS
+	// ------------------------------------------------------------------
+
+	private static void drawKeystrokes(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
+		boolean left = client.mouseHandler != null && client.mouseHandler.isLeftPressed();
+		boolean right = client.mouseHandler != null && client.mouseHandler.isRightPressed();
+		if (left && !leftWasDown) LEFT_CLICKS.addLast(now);
+		if (right && !rightWasDown) RIGHT_CLICKS.addLast(now);
+		leftWasDown = left;
+		rightWasDown = right;
+		while (!LEFT_CLICKS.isEmpty() && now - LEFT_CLICKS.peekFirst() > 1000) LEFT_CLICKS.removeFirst();
+		while (!RIGHT_CLICKS.isEmpty() && now - RIGHT_CLICKS.peekFirst() > 1000) RIGHT_CLICKS.removeFirst();
+
+		int key = 19;
+		int gap = 2;
+		int width = key * 3 + gap * 2;
+		int height = key * 3 + gap * 2;
+		int[] position = HudLayout.position(HudInfoModule.ELEMENT_KEYSTROKES, MARGIN,
+				client.getWindow().getGuiScaledHeight() - height - 46);
+		int x = position[0];
+		int y = position[1];
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_KEYSTROKES, x, y, width, height);
+
+		drawInputKey(graphics, client.font, "W", x + key + gap, y, key, key,
+				client.options.keyUp.isDown(), alpha, now, 0.0f);
+		drawInputKey(graphics, client.font, "A", x, y + key + gap, key, key,
+				client.options.keyLeft.isDown(), alpha, now, 0.13f);
+		drawInputKey(graphics, client.font, "S", x + key + gap, y + key + gap, key, key,
+				client.options.keyDown.isDown(), alpha, now, 0.26f);
+		drawInputKey(graphics, client.font, "D", x + (key + gap) * 2, y + key + gap, key, key,
+				client.options.keyRight.isDown(), alpha, now, 0.39f);
+		int mouseW = (width - gap) / 2;
+		drawInputKey(graphics, client.font, "L " + LEFT_CLICKS.size(), x, y + (key + gap) * 2, mouseW, key,
+				left, alpha, now, 0.52f);
+		drawInputKey(graphics, client.font, "R " + RIGHT_CLICKS.size(), x + mouseW + gap,
+				y + (key + gap) * 2, width - mouseW - gap, key, right, alpha, now, 0.65f);
+	}
+
+	private static void drawInputKey(GuiGraphicsExtractor graphics, Font font, String label,
+			int x, int y, int width, int height, boolean down, float alpha, long now, float gradientOffset) {
+		int accent = ClientTheme.gradientAt(gradientOffset, now);
+		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 4, down ? 3 : 1);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 4,
+				RenderUtils.withAlpha(down ? accent : PANEL_BORDER, (down ? 0.9f : 0.55f) * alpha),
+				RenderUtils.withAlpha(down ? accent : 0xC909090D, (down ? 0.24f : 1.0f) * alpha));
+		RenderUtils.textCentered(graphics, font, label, x + width / 2,
+				y + (height - font.lineHeight) / 2, RenderUtils.withAlpha(TEXT_COLOR, alpha), false);
+	}
+
+	// ------------------------------------------------------------------
+	// Элемент: статистика текущей сессии
+	// ------------------------------------------------------------------
+
+	private static void drawSession(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
+		LocalPlayer player = client.player;
+		if (player != null && (sessionPlayer == null || !sessionPlayer.equals(player.getUUID())
+				|| sessionLevel != client.level)) {
+			sessionPlayer = player.getUUID();
+			sessionLevel = client.level;
+			sessionStarted = now;
+			sessionLastPosition = player.position();
+			sessionDistance = 0.0;
+		}
+		if (player != null && sessionLastPosition != null) {
+			double moved = player.position().distanceTo(sessionLastPosition);
+			if (moved < 16.0) {
+				sessionDistance += moved;
+			}
+			sessionLastPosition = player.position();
+		}
+		Font font = client.font;
+		int width = 132;
+		int height = 52;
+		int[] position = HudLayout.position(HudInfoModule.ELEMENT_SESSION, MARGIN, 172);
+		int x = position[0];
+		int y = position[1];
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_SESSION, x, y, width, height);
+
+		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 3);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6,
+				RenderUtils.withAlpha(PANEL_BORDER, alpha), RenderUtils.withAlpha(PANEL_BACKGROUND, alpha));
+		RenderUtils.textBold(graphics, font, "СЕССИЯ", x + 8, y + 6,
+				RenderUtils.withAlpha(ClientTheme.accent(now), alpha));
+		long elapsed = sessionStarted == 0 ? 0 : now - sessionStarted;
+		double bps = player == null ? 0.0 : Math.sqrt(
+				player.getDeltaMovement().x * player.getDeltaMovement().x
+						+ player.getDeltaMovement().z * player.getDeltaMovement().z) * 20.0;
+		RenderUtils.textFlat(graphics, font, "Время  " + formatLongTime(elapsed), x + 8, y + 19,
+				RenderUtils.withAlpha(TEXT_COLOR, alpha));
+		RenderUtils.textFlat(graphics, font, String.format(java.util.Locale.ROOT, "Путь   %.0f m", sessionDistance),
+				x + 8, y + 30, RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
+		RenderUtils.textFlat(graphics, font, String.format(java.util.Locale.ROOT, "Скорость  %.1f BPS", bps),
+				x + 8, y + 41, RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
+	}
+
+	private static String formatDurationTicks(int ticks) {
+		long seconds = Math.max(0, ticks / 20L);
+		return String.format(java.util.Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60);
+	}
+
+	private static String formatLongTime(long millis) {
+		long seconds = Math.max(0, millis / 1000L);
+		return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d",
+				seconds / 3600, seconds / 60 % 60, seconds % 60);
+	}
+
+	private static String roman(int value) {
+		return switch (value) {
+			case 2 -> "II";
+			case 3 -> "III";
+			case 4 -> "IV";
+			case 5 -> "V";
+			default -> Integer.toString(value);
+		};
 	}
 
 	// ------------------------------------------------------------------

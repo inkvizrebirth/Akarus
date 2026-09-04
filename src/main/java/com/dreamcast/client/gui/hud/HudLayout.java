@@ -7,11 +7,12 @@ import com.google.gson.JsonObject;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.StandardCopyOption;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -46,6 +47,7 @@ public final class HudLayout {
 	}
 
 	public static void load() {
+		POSITIONS.clear();
 		if (!Files.exists(PATH)) {
 			return;
 		}
@@ -72,7 +74,8 @@ public final class HudLayout {
 
 	public static synchronized void save() {
 		StringBuilder builder = new StringBuilder();
-		for (Map.Entry<String, int[]> entry : POSITIONS.entrySet()) {
+		// Стабильный порядок делает файл воспроизводимым и не создаёт случайные diff.
+		for (Map.Entry<String, int[]> entry : new java.util.TreeMap<>(POSITIONS).entrySet()) {
 			if (!builder.isEmpty()) {
 				builder.append(';');
 			}
@@ -86,8 +89,12 @@ public final class HudLayout {
 		root.addProperty("elements", encoded);
 		try {
 			Files.createDirectories(PATH.getParent());
-			try (BufferedWriter writer = Files.newBufferedWriter(PATH, StandardCharsets.UTF_8)) {
-				writer.write(GSON.toJson(root));
+			Path temp = PATH.resolveSibling(PATH.getFileName() + ".tmp");
+			Files.writeString(temp, GSON.toJson(root), StandardCharsets.UTF_8);
+			try {
+				Files.move(temp, PATH, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+			} catch (AtomicMoveNotSupportedException unsupported) {
+				Files.move(temp, PATH, StandardCopyOption.REPLACE_EXISTING);
 			}
 		} catch (IOException exception) {
 			DreamcastClient.LOGGER.error("Не удалось сохранить раскладку HUD {}", PATH, exception);
@@ -170,6 +177,11 @@ public final class HudLayout {
 	/** Помнит границы элемента этого кадра — по ним ловится клик при перетаскивании. */
 	public static void publishBounds(String id, int x, int y, int width, int height) {
 		LAST_BOUNDS.put(id, new int[]{x, y, width, height});
+	}
+
+	/** Удаляет геометрию прошлого кадра, чтобы скрытый элемент нельзя было тащить. */
+	public static void beginFrame() {
+		LAST_BOUNDS.clear();
 	}
 
 	public static Map<String, int[]> boundsSnapshot() {

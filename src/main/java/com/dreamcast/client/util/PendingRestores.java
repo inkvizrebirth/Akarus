@@ -1,5 +1,6 @@
 package com.dreamcast.client.util;
 
+import com.dreamcast.client.DreamcastClient;
 import net.minecraft.client.Minecraft;
 
 import java.util.Queue;
@@ -35,7 +36,8 @@ public final class PendingRestores {
 		PENDING.removeIf(restore -> {
 			try {
 				return restore.tryRestore(client);
-			} catch (Throwable error) {
+			} catch (RuntimeException error) {
+				DreamcastClient.LOGGER.warn("Отложенное восстановление инвентаря завершилось ошибкой", error);
 				return true; // битое восстановление не зависает в очереди навсегда
 			}
 		});

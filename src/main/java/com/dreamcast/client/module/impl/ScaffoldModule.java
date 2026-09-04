@@ -316,6 +316,8 @@ public class ScaffoldModule extends Module {
 	// =================================================================
 
 	private void tickNormal(Minecraft client, LocalPlayer player) {
+		// AutoJump — импульс на один тик, а не вечное удержание пробела.
+		releaseJump(client);
 		int slot = findBlockSlot(player);
 		if (outOfBlocks(client, slot)) {
 			return;
@@ -325,6 +327,7 @@ public class ScaffoldModule extends Module {
 		if (target != null) {
 			tryPlace(client, player, target, slot);
 		} else {
+			lastTarget = null;
 			tickTower(client, player, slot);
 		}
 		// авто-прыжок через разрывы
@@ -340,6 +343,8 @@ public class ScaffoldModule extends Module {
 	// =================================================================
 
 	private void tickLegit(Minecraft client, LocalPlayer player) {
+		// Отпускаем импульс прошлого тика до проверки следующего края.
+		releaseJump(client);
 		int slot = findBlockSlot(player);
 		if (outOfBlocks(client, slot)) {
 			return;
@@ -875,6 +880,7 @@ public class ScaffoldModule extends Module {
 		restoreRotation(player);
 		restoreVisibleSlot(player);
 		releaseOwnedKeys(client);
+		resetCycleState();
 	}
 
 	private void rollback(Minecraft client) {
@@ -884,6 +890,11 @@ public class ScaffoldModule extends Module {
 			restoreVisibleSlot(player);
 		}
 		releaseOwnedKeys(client);
+		resetCycleState();
+	}
+
+	/** Сбрасывает только краткоживущий цикл; activeLevel и Keep Y остаются валидными. */
+	private void resetCycleState() {
 		phase = Phase.IDLE;
 		jumpedThisEdge = false;
 		wasAscending = false;

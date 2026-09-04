@@ -8,6 +8,7 @@ import com.dreamcast.client.settings.IntSetting;
 import com.dreamcast.client.util.KeyOwnership;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
@@ -46,6 +47,7 @@ public class FreeCamModule extends Module {
 	private Vec3 previous = Vec3.ZERO;
 
 	private boolean initialised;
+	private ClientLevel activeLevel;
 
 	public FreeCamModule() {
 		super("free_cam", "FreeCam", "Свободная камера: игрок стоит на месте, летает только вид",
@@ -54,21 +56,13 @@ public class FreeCamModule extends Module {
 
 	@Override
 	protected void onEnable() {
-		Minecraft client = Minecraft.getInstance();
-		LocalPlayer player = client == null ? null : client.player;
-		if (player == null) {
-			setEnabledSilently(false);
-			return;
-		}
-
-		this.position = player.getEyePosition();
-		this.previous = this.position;
-		this.initialised = true;
+		initialiseIfReady(Minecraft.getInstance());
 	}
 
 	@Override
 	protected void onDisable() {
 		this.initialised = false;
+		this.activeLevel = null;
 		KeyOwnership.releaseAll(Minecraft.getInstance(), this);
 	}
 
@@ -83,7 +77,8 @@ public class FreeCamModule extends Module {
 			return;
 		}
 
-		if (!module.isEnabled() || client.player == null || client.level == null) {
+		if (!module.isEnabled() || !module.initialiseIfReady(client)) {
+			KeyOwnership.releaseAll(client, module);
 			return;
 		}
 		// В меню мышь и клавиатура принадлежат экрану: иначе FreeCam гасил
@@ -101,10 +96,26 @@ public class FreeCamModule extends Module {
 	@Override
 	public void tick() {
 		Minecraft client = Minecraft.getInstance();
-		// Вышли из мира или умерли — камеру возвращаем игроку сразу
-		if (client.player == null || client.level == null) {
-			setEnabled(false);
+		if (!initialiseIfReady(client)) {
+			KeyOwnership.releaseAll(client, this);
 		}
+	}
+
+	/** Включение из конфига до входа в мир ждёт игрока, а не самоотменяется. */
+	private boolean initialiseIfReady(Minecraft client) {
+		LocalPlayer player = client == null ? null : client.player;
+		if (player == null || client.level == null || !player.isAlive()) {
+			initialised = false;
+			activeLevel = null;
+			return false;
+		}
+		if (!initialised || activeLevel != client.level) {
+			position = player.getEyePosition();
+			previous = position;
+			activeLevel = client.level;
+			initialised = true;
+		}
+		return true;
 	}
 
 	// ------------------------------------------------------------------
@@ -221,7 +232,8 @@ public class FreeCamModule extends Module {
 	/** Позиция камеры с интерполяцией между тиками. Null, если свободной камеры нет. */
 	public static Vec3 cameraPosition(float partialTicks) {
 		FreeCamModule module = ModuleManager.find(FreeCamModule.class);
-		if (module == null || !module.isEnabled() || !module.initialised) {
+		if (module == null || !module.isEnabled()
+				|| !module.initialiseIfReady(Minecraft.getInstance())) {
 			return null;
 		}
 		return module.previous.lerp(module.position, partialTicks);

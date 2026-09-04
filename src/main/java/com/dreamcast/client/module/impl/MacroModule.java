@@ -14,6 +14,9 @@ import org.lwjgl.glfw.GLFW;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,14 +80,24 @@ public class MacroModule extends Module {
 		try {
 			JsonObject root = new GsonBuilder().setPrettyPrinting().create().fromJson(
 					Files.readString(store), JsonObject.class);
-			if (root == null || !root.has("macros")) {
+			if (root == null || !root.has("macros") || !root.get("macros").isJsonArray()) {
 				return;
 			}
 			for (var element : root.getAsJsonArray("macros")) {
+				if (macros.size() >= MAX_MACROS || !element.isJsonObject()) {
+					break;
+				}
 				JsonObject entry = element.getAsJsonObject();
-				String command = entry.get("command").getAsString();
+				if (!entry.has("command") || !entry.get("command").isJsonPrimitive()) {
+					continue;
+				}
+				String command = entry.get("command").getAsString().trim();
+				if (command.isEmpty()) {
+					continue;
+				}
 				macros.add(new Macro(command,
-						entry.has("key") ? entry.get("key").getAsInt() : -1));
+						entry.has("key") && entry.get("key").isJsonPrimitive()
+								? entry.get("key").getAsInt() : -1));
 			}
 		} catch (Exception error) {
 			DreamcastClient.LOGGER.warn("Не удалось прочитать макросы: {}", error.toString());
@@ -102,7 +115,15 @@ public class MacroModule extends Module {
 		}
 		root.add("macros", array);
 		try {
-			Files.writeString(store, new GsonBuilder().setPrettyPrinting().create().toJson(root));
+			Files.createDirectories(store.getParent());
+			Path temp = store.resolveSibling(store.getFileName() + ".tmp");
+			Files.writeString(temp, new GsonBuilder().setPrettyPrinting().create().toJson(root),
+					StandardCharsets.UTF_8);
+			try {
+				Files.move(temp, store, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+			} catch (AtomicMoveNotSupportedException unsupported) {
+				Files.move(temp, store, StandardCopyOption.REPLACE_EXISTING);
+			}
 		} catch (IOException error) {
 			DreamcastClient.LOGGER.warn("Не удалось сохранить макросы: {}", error.toString());
 		}

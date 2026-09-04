@@ -44,6 +44,10 @@ public final class ModuleManager {
 
 	/** Регистрация модулей. Новые модули добавляются здесь одной строкой. */
 	public static void init() {
+		if (!MODULES.isEmpty()) {
+			DreamcastClient.LOGGER.warn("Повторная инициализация модулей проигнорирована");
+			return;
+		}
 		// Порядок регистрации = порядок тика = приоритет действий:
 		// тотем важнее воды, вода важнее баффов, баффы важнее строения,
 		// строение важнее удара — так модули не перетягивают инвентарь
@@ -77,6 +81,9 @@ public final class ModuleManager {
 	}
 
 	public static void register(Module module) {
+		if (MODULES.stream().anyMatch(existing -> existing.getId().equals(module.getId()))) {
+			throw new IllegalArgumentException("Модуль уже зарегистрирован: " + module.getId());
+		}
 		MODULES.add(module);
 		// Подтягиваем сохранённые значения из конфига
 		ConfigManager.applyTo(module);
@@ -122,12 +129,24 @@ public final class ModuleManager {
 	/** Вызывается каждый тик клиента: обрабатывает клавиши модулей и их логику. */
 	public static void tick() {
 		for (Module module : MODULES) {
-			while (module.getKeyMapping().consumeClick()) {
-				module.onBindPressed();
-			}
+			try {
+				while (module.getKeyMapping().consumeClick()) {
+					module.onBindPressed();
+				}
 
-			if (module.isEnabled()) {
-				module.tick();
+				if (module.isEnabled()) {
+					module.tick();
+				}
+			} catch (RuntimeException error) {
+				DreamcastClient.LOGGER.error("Модуль {} аварийно остановлен", module.getId(), error);
+				try {
+					module.setEnabledSilently(false);
+				} catch (RuntimeException cleanupError) {
+					error.addSuppressed(cleanupError);
+					DreamcastClient.LOGGER.error("Не удалось безопасно выключить модуль {}", module.getId(), cleanupError);
+				}
+				com.dreamcast.client.util.Notifications.error(
+						module.getName(), "Остановлен из-за внутренней ошибки; подробности в latest.log");
 			}
 		}
 	}

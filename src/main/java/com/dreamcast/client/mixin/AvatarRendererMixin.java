@@ -29,7 +29,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(AvatarRenderer.class)
 public abstract class AvatarRendererMixin {
 
-	@Inject(method = "renderHand", at = @At("TAIL"))
+	@Inject(method = "renderHand", at = @At("TAIL"), require = 0)
 	private void dreamcast$outlineHand(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords,
 			Identifier skinTexture, ModelPart arm, boolean hasSleeve, CallbackInfo ci) {
 

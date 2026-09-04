@@ -42,6 +42,8 @@ public class AutoMineModule extends Module {
 
 	/** Степень «человечности» доворотов в легитном режиме (0 — почти без шума, 100 — максимум). */
 	private final IntSetting randomization = intSetting("randomization", "Рандомизация, %", 80, 0, 100);
+	/** Не останавливаем чужую задачу Baritone, если модуль ещё ничего не запускал. */
+	private boolean startedByModule;
 
 	public AutoMineModule() {
 		super("auto_mine", "AutoMine", "Автоматическая добыча блоков через Baritone",
@@ -58,11 +60,13 @@ public class AutoMineModule extends Module {
 			return;
 		}
 
-		start();
+		startedByModule = false;
+		startIfReady();
 	}
 
 	@Override
 	public void tick() {
+		startIfReady();
 		// Baritone сам управляет процессом, но цель выдаёт не каждый тик — в легитном
 		// режиме здесь доживается «человеческий» доворот камеры
 		if (isLegit()) {
@@ -73,15 +77,28 @@ public class AutoMineModule extends Module {
 
 	@Override
 	protected void onDisable() {
-		BaritoneBridge.stop();
+		if (startedByModule) {
+			BaritoneBridge.stop();
+		}
+		startedByModule = false;
 	}
 
 	@Override
 	public void onSettingsChanged() {
 		// Изменили блок или количество — перезапускаем задачу
-		if (isEnabled()) {
-			start();
+		if (isEnabled() && startedByModule) {
+			BaritoneBridge.stop();
+			startedByModule = false;
+			startIfReady();
 		}
+	}
+
+	private void startIfReady() {
+		Minecraft client = Minecraft.getInstance();
+		if (startedByModule || client == null || client.player == null || client.getConnection() == null) {
+			return;
+		}
+		start();
 	}
 
 	private void start() {
@@ -95,6 +112,7 @@ public class AutoMineModule extends Module {
 		int quantity = amount.get();
 		// Легитный режим идёт только чат-командой: #legitmine — это отдельный процесс Baritone
 		if (BaritoneBridge.mine(target, quantity, chatCommands.isEnabled() || legit, legit)) {
+			startedByModule = true;
 			notify("§7[Dreamcast] Добываю" + (legit ? " §f(легитно)§7" : "") + ": §f" + target
 					+ (quantity > 0 ? " §7x§f" + quantity : " §7(без лимита)"));
 		} else {

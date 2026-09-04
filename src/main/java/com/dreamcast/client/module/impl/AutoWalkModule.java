@@ -51,6 +51,10 @@ public class AutoWalkModule extends Module {
 
 	/** Сколько тиков Baritone ещё не начинал путь — даём ему время стартовать. */
 	private int walkingTicks;
+	/** Включение могло прийти из конфига до появления игрока. */
+	private boolean initialised;
+	/** Маршрут действительно был выдан нами, значит только его можно отменять. */
+	private boolean startedRoute;
 
 	public AutoWalkModule() {
 		super("auto_walk", "AutoWalk", "Смотришь на блок, жмёшь ПКМ — Baritone ведёт туда",
@@ -62,8 +66,10 @@ public class AutoWalkModule extends Module {
 		this.target = null;
 		this.phase = Phase.CHOOSING;
 		this.walkingTicks = 0;
+		this.startedRoute = false;
 		// Если клавиша «использовать» уже зажата — не считаем это выбором точки
 		this.useWasDown = true;
+		this.initialised = false;
 
 		if (!BaritoneBridge.isAvailable()) {
 			notify("§c[Dreamcast] Baritone не найден — AutoWalk нечему отдавать команду");
@@ -72,25 +78,33 @@ public class AutoWalkModule extends Module {
 			return;
 		}
 
-		// Клиент может быть ещё не готов: модуль мог быть включён сохранённым
-		// конфигом во время onInitializeClient — NPE здесь ронял бы игру на старте
-		Minecraft client = Minecraft.getInstance();
-		if (client == null || client.player == null) {
-			setEnabledSilently(false);
-			return;
-		}
+		// Инициализация камеры откладывается до первого тика в мире. Так сохранённое
+		// enabled не теряется во время загрузочного экрана.
+	}
 
+	private boolean initialiseIfReady(Minecraft client) {
+		if (initialised) {
+			return true;
+		}
+		if (client == null || client.player == null || client.level == null) {
+			return false;
+		}
 		FreeCamModule freeCam = ModuleManager.find(FreeCamModule.class);
 		this.freeCamWasEnabled = freeCam != null && freeCam.isEnabled();
 		if (useFreeCam.isEnabled() && freeCam != null && !freeCam.isEnabled()) {
-			freeCam.setEnabled(true);
+			freeCam.setEnabledSilently(true);
 		}
 
+		this.initialised = true;
 		notify("§7[Dreamcast] Смотри на точку и нажми §fПКМ§7 — Baritone пойдёт туда");
+		return true;
 	}
 
 	@Override
 	public void tick() {
+		if (!initialiseIfReady(Minecraft.getInstance())) {
+			return;
+		}
 		if (phase != Phase.WALKING || target == null) {
 			return;
 		}
@@ -125,16 +139,20 @@ public class AutoWalkModule extends Module {
 		if (client != null && client.options != null) {
 			KeyOwnership.releaseSuppression(client, client.options.keyUse, this);
 		}
-		BaritoneBridge.stop();
+		if (startedRoute) {
+			BaritoneBridge.stop();
+		}
+		startedRoute = false;
 		this.phase = Phase.CHOOSING;
 		this.target = null;
 		this.walkingTicks = 0;
 
-		// Возвращаем фрикам в то состояние, в котором он был до нас
+		// Возвращаем фрикам ровно в то состояние, в котором он был до нас.
 		FreeCamModule freeCam = ModuleManager.find(FreeCamModule.class);
-		if (freeCam != null && !this.freeCamWasEnabled && freeCam.isEnabled()) {
-			freeCam.setEnabled(false);
+		if (initialised && freeCam != null && freeCam.isEnabled() != freeCamWasEnabled) {
+			freeCam.setEnabledSilently(freeCamWasEnabled);
 		}
+		this.initialised = false;
 	}
 
 	@Override
@@ -167,14 +185,17 @@ public class AutoWalkModule extends Module {
 	}
 
 	private void cancelRoute() {
-		BaritoneBridge.stop();
+		if (startedRoute) {
+			BaritoneBridge.stop();
+		}
+		startedRoute = false;
 		this.target = null;
 		this.phase = Phase.CHOOSING;
 		this.walkingTicks = 0;
 
 		FreeCamModule freeCam = ModuleManager.find(FreeCamModule.class);
 		if (useFreeCam.isEnabled() && freeCam != null && !freeCam.isEnabled()) {
-			freeCam.setEnabled(true);
+			freeCam.setEnabledSilently(true);
 		}
 		notify("§7[Dreamcast] Маршрут отменён — §fПКМ§7 снова задаёт цель");
 	}
@@ -184,13 +205,14 @@ public class AutoWalkModule extends Module {
 		// Идти нужно уже в обычном режиме: камера возвращается игроку
 		FreeCamModule freeCam = ModuleManager.find(FreeCamModule.class);
 		if (freeCam != null && freeCam.isEnabled()) {
-			freeCam.setEnabled(false);
+			freeCam.setEnabledSilently(false);
 		}
 
 		if (BaritoneBridge.goal(position.getX(), position.getY(), position.getZ(), chatCommands.isEnabled())) {
 			this.target = position;
 			this.phase = Phase.WALKING;
 			this.walkingTicks = 0;
+			this.startedRoute = true;
 			notify("§a[Dreamcast] Иду на §f" + format(position));
 		} else {
 			notify("§c[Dreamcast] Не удалось задать цель Baritone");
@@ -282,7 +304,7 @@ public class AutoWalkModule extends Module {
 		if (module == null) {
 			return;
 		}
-		if (!module.isEnabled() || client.player == null || client.mouseHandler == null) {
+		if (!module.isEnabled() || client.mouseHandler == null || !module.initialiseIfReady(client)) {
 			KeyOwnership.releaseSuppression(client, client.options.keyUse, module);
 			return;
 		}

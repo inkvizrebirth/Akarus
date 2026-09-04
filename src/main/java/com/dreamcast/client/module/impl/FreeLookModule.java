@@ -5,6 +5,7 @@ import com.dreamcast.client.module.ModuleCategory;
 import com.dreamcast.client.module.ModuleManager;
 import com.dreamcast.client.settings.IntSetting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
@@ -46,6 +47,8 @@ public class FreeLookModule extends Module {
 	/** Куда камера смотрит: углы поворота в тех же единицах, что у игрока (градусы). */
 	private float yaw;
 	private float pitch;
+	private boolean initialised;
+	private ClientLevel activeLevel;
 
 	public FreeLookModule() {
 		super("free_look", "FreeLook", "Камера от третьего лица: вращается мышью вокруг игрока, игрок всегда в центре и живёт своей жизнью",
@@ -54,17 +57,18 @@ public class FreeLookModule extends Module {
 
 	@Override
 	protected void onEnable() {
-		Minecraft client = Minecraft.getInstance();
-		LocalPlayer player = client == null ? null : client.player;
-		if (player == null) {
-			// Включение из сохранённого конфига до входа в мир — просто молча выключаемся
-			setEnabledSilently(false);
-			return;
-		}
+		initialiseIfReady(Minecraft.getInstance());
+	}
 
-		// Начинаем с текущего взгляда игрока: камера оказывается «за спиной» без прыжка
-		this.yaw = player.getYRot();
-		this.pitch = player.getXRot();
+	@Override
+	protected void onDisable() {
+		initialised = false;
+		activeLevel = null;
+	}
+
+	@Override
+	public void tick() {
+		initialiseIfReady(Minecraft.getInstance());
 	}
 
 	private static FreeLookModule module() {
@@ -77,8 +81,30 @@ public class FreeLookModule extends Module {
 		if (module == null || !module.isEnabled()) {
 			return false;
 		}
+		FreeCamModule freeCam = ModuleManager.find(FreeCamModule.class);
+		if (freeCam != null && freeCam.isEnabled()) {
+			return false;
+		}
 		Minecraft client = Minecraft.getInstance();
-		return client != null && client.player != null && client.level != null;
+		return module.initialiseIfReady(client);
+	}
+
+	/** Отложенный старт сохраняет включённое состояние из конфига до входа в мир. */
+	private boolean initialiseIfReady(Minecraft client) {
+		LocalPlayer player = client == null ? null : client.player;
+		if (player == null || client.level == null) {
+			initialised = false;
+			activeLevel = null;
+			return false;
+		}
+		if (!initialised || activeLevel != client.level) {
+			// Начинаем с текущего взгляда: камера появляется за спиной без рывка.
+			yaw = player.getYRot();
+			pitch = player.getXRot();
+			activeLevel = client.level;
+			initialised = true;
+		}
+		return true;
 	}
 
 	/**

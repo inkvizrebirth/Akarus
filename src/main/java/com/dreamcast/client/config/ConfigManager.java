@@ -107,13 +107,9 @@ public final class ConfigManager {
 			DreamcastClient.LOGGER.warn("Не удалось применить сохранённое состояние модуля {}", module.getId(), exception);
 		}
 		JsonObject settings = getObject(data, "settings");
-		if (settings == null) {
-			return;
-		}
-
 		for (Setting<?> setting : module.getSettings()) {
 			// Кнопки значения не хранят — в конфиге им делать нечего
-			if (setting instanceof ButtonSetting) {
+			if (settings == null || setting instanceof ButtonSetting) {
 				continue;
 			}
 
@@ -227,7 +223,8 @@ public final class ConfigManager {
 			}
 		} catch (IOException exception) {
 			DreamcastClient.LOGGER.error("Не удалось сохранить конфиг {}", PATH, exception);
-		}	}
+		}
+	}
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	private static void setRaw(Setting setting, Object value) {
