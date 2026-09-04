@@ -3,6 +3,7 @@ package com.dreamcast.client.module.impl;
 import com.dreamcast.client.DreamcastClient;
 import com.dreamcast.client.module.Module;
 import com.dreamcast.client.module.ModuleCategory;
+import com.dreamcast.client.settings.ButtonSetting;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;

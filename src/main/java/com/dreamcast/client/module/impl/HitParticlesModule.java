@@ -67,7 +67,7 @@ public class HitParticlesModule extends Module {
 
 	/** true, если стиль — «искры» (иначе фирменная волна). */
 	public boolean sparks() {
-		return "sparks".equals(style.get());
+		return style.is("sparks");
 	}
 
 	public float radiusBlocks() {
@@ -111,7 +111,7 @@ public class HitParticlesModule extends Module {
 		long now = Util.getMillis();
 		int seed = (int) (Util.getNanos() & 0xFFFF);
 		module.waves.add(new HitWave(point.x, point.y, point.z, now, seed,
-				"sparks".equals(module.style.get())));
+				module.sparks()));
 		if (module.waves.size() > 24) {
 			module.waves.remove(0);
 		}

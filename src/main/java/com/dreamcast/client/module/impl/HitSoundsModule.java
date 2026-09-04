@@ -63,7 +63,7 @@ public class HitSoundsModule extends Module {
 		}
 
 		float volume = this.volume.get() * 0.1f;
-		switch (sound.get()) {
+		switch (sound.current().id()) {
 			case "amethyst" -> client.getSoundManager().play(
 					SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_CHIME, pitch, volume));
 			case "orb" -> client.getSoundManager().play(

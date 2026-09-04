@@ -8,7 +8,9 @@ import com.dreamcast.client.settings.ModeSetting;
 import com.dreamcast.client.util.Notifications;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
@@ -78,7 +80,7 @@ public class AutoBuffModule extends Module {
 			return;
 		}
 
-		if ("fast".equals(mode.get())) {
+		if (mode.is("fast")) {
 			tickFast(player);
 		} else {
 			tickLegit(client, player);
@@ -278,7 +280,7 @@ public class AutoBuffModule extends Module {
 			return false;
 		}
 		boolean hasWanted = false;
-		for (MobEffectInstance effect : contents.allEffects()) {
+		for (MobEffectInstance effect : contents.getAllEffects()) {
 			if (effect.getEffect() == wanted) {
 				hasWanted = true;
 			}

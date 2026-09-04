@@ -1,5 +1,7 @@
 package com.dreamcast.client.util;
 
+import com.dreamcast.client.DreamcastClient;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 

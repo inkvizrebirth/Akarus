@@ -434,7 +434,7 @@ public final class WorldRenderHook {
 			for (net.minecraft.network.chat.Component text : tag.lines()) {
 				collector.submitNameTag(poseStack,
 						new net.minecraft.world.phys.Vec3(ax, ay - line * 0.30, az),
-						8, text, true, 0xF000F0, tag.distanceSq(), camera);
+						8, text, true, 0xF000F0, camera);
 				line++;
 			}
 		}

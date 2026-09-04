@@ -91,7 +91,7 @@ public class NametagsModule extends Module {
 
 			List<net.minecraft.network.chat.Component> lines = new ArrayList<>();
 			net.minecraft.network.chat.MutableComponent name =
-					net.minecraft.network.chat.Component.literal(player.getGameProfile().getName());
+					net.minecraft.network.chat.Component.literal(player.getGameProfile().name());
 			if (showHealth.isEnabled()) {
 				name = name.append(net.minecraft.network.chat.Component.literal(
 						String.format("  %.0f❤", Math.ceil(player.getHealth()))));
