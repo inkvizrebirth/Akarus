@@ -54,7 +54,15 @@ jobs:
             curl -fL --retry 3 --max-time 180 -o "libs/$4" "$url"
           }
           fetch ViaVersion/ViaFabricPlus 4.6.3 'ViaFabricPlus-[0-9.]+' ViaFabricPlus.jar
-          fetch CaffeineMC/sodium mc26.2-0.9.2-beta.1 'sodium.*fabric.*26\.2' Sodium.jar
+          # Sodium не выкладывает jar в GitHub-релизы — берём с Modrinth (fabric, 26.2)
+          sodium_url=$(curl -fsSL --max-time 20 \
+            'https://api.modrinth.com/v2/project/sodium/version?loaders=%5B%22fabric%22%5D&game_versions=%5B%2226.2%22%5D' \
+            | grep -oE 'https://cdn\.modrinth\.com/[^"]+\.jar' | head -1 || true)
+          if [ -z "$sodium_url" ]; then
+            echo "::error::Sodium (fabric, mc26.2) не найден на Modrinth"; exit 1
+          fi
+          echo "Скачиваю: $sodium_url"
+          curl -fL --retry 3 --max-time 180 -o libs/Sodium.jar "$sodium_url"
           fetch CaffeineMC/lithium mc26.2-0.25.3 'lithium.*fabric.*26\.2' Lithium.jar
           fetch Prospector/modmenu v20.0.1 'modmenu-20\.0\.1' ModMenu.jar
           fetch RaphiMC/ImmediatelyFast v1.16.4 'ImmediatelyFast-Fabric-1\.16\.4\+26\.2' ImmediatelyFast.jar
