@@ -158,7 +158,7 @@ jobs:
             - **Вшиты Sodium, Lithium, ImmediatelyFast и Mod Menu** (jar-in-jar):
               ставить отдельно не нужно; кнопки «Графика (Sodium)» и «Моды» в
               настройках. ViaFabricPlus по-прежнему внутри.
-            - **Диагностика**: исправленыHolder-типы звуков, API ModeSetting,
+            - **Диагностика**: исправлены Holder-типы звуков, API ModeSetting,
               submitNameTag-арность, URL-энкодинг + в CI-отчётах ошибок теперь
               полный контекст (авто-issue).
 
