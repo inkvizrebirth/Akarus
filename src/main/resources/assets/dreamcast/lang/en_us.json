@@ -19,5 +19,11 @@
   "key.dreamcast.esp": "Module: ESP",
   "key.dreamcast.block_esp": "Module: BlockESP",
   "key.dreamcast.spider": "Module: Spider",
-  "key.dreamcast.jump_effect": "Jump Effect"
+  "key.dreamcast.jump_effect": "Jump Effect",
+  "key.dreamcast.nametags": "Nametags",
+  "key.dreamcast.no_slow": "NoSlow",
+  "key.dreamcast.auto_buff": "AutoBuff",
+  "key.dreamcast.macros": "Macros",
+  "key.dreamcast.hit_sounds": "HitSounds",
+  "key.dreamcast.hit_particles": "HitParticles"
 }

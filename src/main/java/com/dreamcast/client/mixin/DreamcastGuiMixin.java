@@ -39,6 +39,33 @@ public final class DreamcastGuiMixin {
 	@Unique
 	private static final AtomicBoolean DREAMCAST$REPLACING = new AtomicBoolean();
 
+	/** Читает приватное поле parent у DisconnectedScreen (для кнопки «назад»). */
+	@Unique
+	private static Screen readScreenParent(net.minecraft.client.gui.screens.DisconnectedScreen screen) {
+		try {
+			var field = net.minecraft.client.gui.screens.DisconnectedScreen.class.getDeclaredField("parent");
+			field.setAccessible(true);
+			return (Screen) field.get(screen);
+		} catch (Throwable ignored) {
+			return null;
+		}
+	}
+
+	/** Читает причину отключения из приватного поля details. */
+	@Unique
+	private static net.minecraft.network.chat.Component readDisconnectReason(
+			net.minecraft.client.gui.screens.DisconnectedScreen screen) {
+		try {
+			var field = net.minecraft.client.gui.screens.DisconnectedScreen.class.getDeclaredField("details");
+			field.setAccessible(true);
+			Object details = field.get(screen);
+			var reason = details.getClass().getMethod("reason");
+			return (net.minecraft.network.chat.Component) reason.invoke(details);
+		} catch (Throwable ignored) {
+			return net.minecraft.network.chat.Component.literal("Соединение потеряно");
+		}
+	}
+
 	@Unique
 	private void dreamcast$replaceScreen(Screen incoming, CallbackInfo ci) {
 		if (incoming == null || DREAMCAST$REPLACING.get()) {
@@ -48,6 +75,11 @@ public final class DreamcastGuiMixin {
 		Screen replacement = null;
 		if (incoming instanceof TitleScreen) {
 			replacement = new DreamcastMenuScreen();
+		} else if (incoming instanceof net.minecraft.client.gui.screens.DisconnectedScreen disconnected) {
+			// Кик: наш экран с быстрым реконнектом (в т.ч. под случайным ником)
+			replacement = new com.dreamcast.client.gui.screens.DreamcastDisconnectedScreen(
+					readScreenParent(disconnected), disconnected.getTitle(),
+					readDisconnectReason(disconnected));
 		} else if (incoming instanceof PauseScreen) {
 			replacement = new DreamcastPauseScreen();
 		} else if (incoming instanceof SelectWorldScreen) {

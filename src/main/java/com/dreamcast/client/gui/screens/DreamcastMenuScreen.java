@@ -41,6 +41,8 @@ public class DreamcastMenuScreen extends DreamcastScreen {
 				() -> this.minecraft.gui.setScreen(new DreamcastServersScreen(this))));
 		items.add(item("Настройки", "",
 				() -> this.minecraft.gui.setScreen(new DreamcastSettingsScreen(this))));
+		items.add(item("Аккаунты", "",
+				() -> this.minecraft.gui.setScreen(new DreamcastAltsScreen(this))));
 		items.add(item("ClickGUI", "",
 				() -> this.minecraft.gui.setScreen(new ClickGuiScreen())));
 		items.add(item("Telegram", "",
@@ -107,6 +109,9 @@ public class DreamcastMenuScreen extends DreamcastScreen {
 		String build = net.minecraft.SharedConstants.getCurrentVersion().name();
 		String buildLabel = "build " + build;
 		RenderUtils.text(graphics, font, buildLabel, width - 6 - RenderUtils.width(font, buildLabel), height - 10, 0xFF80808C);
+	
+		// Фирменная волна клика — поверх всего содержимого
+		RenderUtils.drawClickWaves(graphics, ACCENT);
 	}
 
 	/** Каждой кнопке — свой акцент: меню переливается сверху вниз. */
@@ -117,6 +122,7 @@ public class DreamcastMenuScreen extends DreamcastScreen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		RenderUtils.addClickWave(event.x(), event.y());
 		if (clickItems(event)) {
 			return true;
 		}

@@ -247,6 +247,9 @@ public class DreamcastWorldsScreen extends DreamcastScreen {
 		}
 		chips.add(chip("Назад", this::onClose));
 		drawChipRow(graphics, width / 2, height - 36, 20, 5, ACCENT, mouseX, mouseY);
+	
+		// Фирменная волна клика — поверх всего содержимого
+		RenderUtils.drawClickWaves(graphics, ACCENT);
 	}
 
 	/** Крупная карточка выбранного мира: иконка, имя, детали, метки состояния. */
@@ -362,6 +365,7 @@ public class DreamcastWorldsScreen extends DreamcastScreen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		RenderUtils.addClickWave(event.x(), event.y());
 		if (clickChips(event)) {
 			return true;
 		}

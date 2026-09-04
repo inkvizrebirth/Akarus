@@ -129,10 +129,14 @@ public class DreamcastPauseScreen extends DreamcastScreen {
 			drawItem(graphics, entry, x, y, BUTTON_WIDTH, BUTTON_HEIGHT, ACCENT, mouseX, mouseY);
 			y += BUTTON_HEIGHT + BUTTON_GAP;
 		}
+	
+		// Фирменная волна клика — поверх всего содержимого
+		RenderUtils.drawClickWaves(graphics, ACCENT);
 	}
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		RenderUtils.addClickWave(event.x(), event.y());
 		if (clickItems(event)) {
 			return true;
 		}

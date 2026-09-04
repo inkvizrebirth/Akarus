@@ -264,6 +264,9 @@ public class DreamcastServersScreen extends DreamcastScreen {
 		}
 		chips.add(chip("Назад", this::onClose));
 		drawChipRow(graphics, width / 2, height - 36, 20, 5, ACCENT, mouseX, mouseY);
+	
+		// Фирменная волна клика — поверх всего содержимого
+		RenderUtils.drawClickWaves(graphics, ACCENT);
 	}
 
 	private String stateOfRows() {
@@ -462,6 +465,7 @@ public class DreamcastServersScreen extends DreamcastScreen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		RenderUtils.addClickWave(event.x(), event.y());
 		if (clickChips(event)) {
 			return true;
 		}
@@ -530,6 +534,8 @@ public class DreamcastServersScreen extends DreamcastScreen {
 		if (data == null) {
 			return;
 		}
+		// Помним сервер: после кика экран отключения предложит реконнект
+		com.dreamcast.client.util.AltsManager.rememberServer(data);
 		ConnectScreen.startConnecting(this, this.minecraft, ServerAddress.parseString(data.ip), data, false, null);
 	}
 

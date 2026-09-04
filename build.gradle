@@ -50,19 +50,25 @@ processResources {
 		expand "version": version
 	}
 
-	// ViaFabricPlus вшиваем как nested jar (jar-in-jar): Fabric Loader 0.19+ сам
-	// подхватывает META-INF/jars. Локальная сборка без скачанного libs/ViaFabricPlus.jar
-	// просто не получит папку — мод собирается и работает, только без виа внутри.
-	// Компилируем мы против VFP через рефлексию (ViaIntegration), поэтому отсутствие
-	// jar не ломает даже компиляцию.
-	def nested = file("libs/ViaFabricPlus.jar")
-	if (nested.exists()) {
+	// Встроенные моды вшиваем как nested jar (jar-in-jar): список объявлен
+	// в fabric.mod.json (секция "jars"), файлы кладёт CI из GitHub releases
+	// (Sodium, Lithium, Mod Menu, ImmediatelyFast, ViaFabricPlus). Компилируемся
+	// мы против них через рефлексию (EmbeddedMods/ViaIntegration), поэтому
+	// отсутствие jar не ломает компиляцию — но CI требует полный набор.
+	fileTree("libs") {
+		include "*.jar"
+	}.each { nested ->
 		from(nested) {
 			into "META-INF/jars"
 		}
-		logger.lifecycle("ViaFabricPlus вшивается в META-INF/jars ({})", nested.length())
-	} else {
-		logger.warn("libs/ViaFabricPlus.jar не найден — собираем без встроенного ViaFabricPlus")
+		logger.lifecycle("{} вшивается в META-INF/jars ({})", nested.name, nested.length())
+	}
+	// Рассинхрон с fabric.mod.json недопустим: loader не найдёт объявленный jar
+	def declared = new groovy.json.JsonSlurper().parse(file("src/main/resources/fabric.mod.json")).jars
+	declared.each { entry ->
+		if (!file("libs/" + entry.file.substring(entry.file.lastIndexOf('/') + 1)).exists()) {
+			logger.warn("fabric.mod.json объявляет {}, но libs/ его нет — релиз соберётся БЕЗ него", entry.file)
+		}
 	}
 }
 

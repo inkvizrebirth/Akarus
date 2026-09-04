@@ -14,7 +14,9 @@
     "KeyboardInputMixin",
     "MinecraftMixin",
     "MouseHandlerMixin",
-    "SubmitNodeCollectionMixin"
+    "SubmitNodeCollectionMixin",
+    "LocalPlayerMixin",
+    "MultiPlayerGameModeMixin"
   ],
   "injectors": {
     "defaultRequire": 1

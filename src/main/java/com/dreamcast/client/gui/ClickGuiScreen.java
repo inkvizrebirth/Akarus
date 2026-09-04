@@ -73,7 +73,6 @@ public class ClickGuiScreen extends Screen {
 	private static final int SETTING_TOGGLE_WIDTH = 24;
 	private static final int SETTING_TOGGLE_HEIGHT = 10;
 
-	private static final int RIPPLE_DURATION = 640;
 	private static final int SHADOW_LAYERS = 5;
 
 	// --- Цвета: всё в чёрных тонах, акцент берётся из категории ---
@@ -122,7 +121,6 @@ public class ClickGuiScreen extends Screen {
 
 	private final Map<String, Float> hoverAnimations = new HashMap<>();
 	private final Map<String, Float> toggleAnimations = new HashMap<>();
-	private final List<Ripple> ripples = new ArrayList<>();
 	private float openAnimation;
 	/** Закрытие — сначала доигрываем анимацию, потом реально уходим. */
 	private boolean closing;
@@ -298,8 +296,10 @@ public class ClickGuiScreen extends Screen {
 			drawBindingOverlay(graphics, x, y, accent);
 		}
 
+		// Фирменная волна клика — поверх всего GUI, без ножниц по кнопке
+		RenderUtils.drawClickWaves(graphics, accent);
+
 		// Волна по клику в любом месте панели
-		drawRipples(graphics, new Hitbox(x, y, GUI_WIDTH, panelHeight), accent);
 	}
 
 	/** Сдвиг окна в анимации открытия/закрытия (пиксели, 0 в покое). */
@@ -415,7 +415,6 @@ public class ClickGuiScreen extends Screen {
 			RenderUtils.textFlat(graphics, font, badge, badgeX, badgeY,
 					active == 0 ? TEXT_DIM : RenderUtils.withAlpha(category.getAccent(), 0.95f));
 
-			drawRipples(graphics, box, accent);
 
 			rowY += CATEGORY_ROW_HEIGHT + CATEGORY_GAP;
 		}
@@ -521,7 +520,6 @@ public class ClickGuiScreen extends Screen {
 		int contentDy = Math.round(press * 1.5f);
 
 		// Волна от клика — рисуется под текстом
-		drawRipples(graphics, box, accent);
 
 		boolean binding = bindingModule == module;
 		String bindLabel = binding ? "..." : module.getBindLabel();
@@ -689,7 +687,6 @@ public class ClickGuiScreen extends Screen {
 					selected ? TEXT_PRIMARY : TEXT_DIM);
 		}
 
-		drawRipples(graphics, box, accent);
 	}
 
 	/** Геометрия строк-вариантов внутри списка (12 px на вариант). */
@@ -893,7 +890,6 @@ public class ClickGuiScreen extends Screen {
 			}
 		}
 
-		drawRipples(graphics, box, accent);
 	}
 
 	/**
@@ -968,7 +964,6 @@ public class ClickGuiScreen extends Screen {
 			graphics.fill(cursorX, textY - 1, cursorX + 1, textY + font.lineHeight - 1, accent);
 		}
 
-		drawRipples(graphics, box, accent);
 	}
 
 	/** Строка-кнопка: действие, которое открывается прямо из списка настроек. */
@@ -996,7 +991,6 @@ public class ClickGuiScreen extends Screen {
 				buttonY + (height - font.lineHeight) / 2 + 1,
 				RenderUtils.mix(TEXT_SECONDARY, TEXT_PRIMARY, hover));
 
-		drawRipples(graphics, box, accent);
 	}
 
 	private void drawToggleRow(GuiGraphicsExtractor graphics, BooleanSetting setting, String key, Hitbox box, int accent, int mouseX, int mouseY) {
@@ -1007,7 +1001,6 @@ public class ClickGuiScreen extends Screen {
 		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
 				0x10FFFFFF, RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.6f));
 
-		drawRipples(graphics, box, accent);
 
 		RenderUtils.textFlat(graphics, font, RenderUtils.clamp(font, setting.getName(), box.width() - SETTING_TOGGLE_WIDTH - 26),
 				box.x() + 9, box.y() + (box.height() - 2 - font.lineHeight) / 2 + 1,
@@ -1042,7 +1035,6 @@ public class ClickGuiScreen extends Screen {
 		RenderUtils.drawSlider(graphics, trackX, box.y() + 14, trackWidth, 5,
 				setting.getNormalized(), accent);
 
-		drawRipples(graphics, box, accent);
 	}
 
 	private void drawTextRow(GuiGraphicsExtractor graphics, StringSetting setting, String key, Hitbox box, int accent, int mouseX, int mouseY) {
@@ -1071,7 +1063,6 @@ public class ClickGuiScreen extends Screen {
 			graphics.fill(cursorX, textY - 1, cursorX + 1, textY + font.lineHeight - 1, accent);
 		}
 
-		drawRipples(graphics, box, accent);
 	}
 
 	private void drawHint(GuiGraphicsExtractor graphics, int x, int y) {
@@ -1125,86 +1116,6 @@ public class ClickGuiScreen extends Screen {
 	// Волна по клику
 	// ------------------------------------------------------------------
 
-	private void addRipple(double mouseX, double mouseY, Hitbox bounds) {
-		float maxRadius = (float) Math.max(
-				Math.hypot(mouseX - bounds.x(), mouseY - bounds.y()),
-				Math.max(Math.hypot(mouseX - (bounds.x() + bounds.width()), mouseY - bounds.y()),
-						Math.max(Math.hypot(mouseX - bounds.x(), mouseY - (bounds.y() + bounds.height())),
-								Math.hypot(mouseX - (bounds.x() + bounds.width()), mouseY - (bounds.y() + bounds.height())))));
-		ripples.add(new Ripple((float) mouseX, (float) mouseY, bounds, Util.getMillis(), maxRadius + 8.0f));
-	}
-
-	private void drawRipples(GuiGraphicsExtractor graphics, Hitbox box, int accent) {
-		if (ripples.isEmpty()) {
-			return;
-		}
-
-		long now = Util.getMillis();
-		graphics.enableScissor(box.x(), box.y(), box.x() + box.width(), box.y() + box.height());
-
-		for (Ripple ripple : ripples) {
-			if (!ripple.bounds().equals(box)) {
-				continue;
-			}
-
-			float progress = Math.min((now - ripple.startTime()) / (float) RIPPLE_DURATION, 1.0f);
-			float eased = 1.0f - (float) Math.pow(1.0f - progress, 3.0f);
-			float radius = ripple.maxRadius() * eased;
-			float fade = (1.0f - progress) * (1.0f - progress);
-			float cx = ripple.x();
-			float cy = ripple.y();
-
-			// 1. «Блюр»-ореол: слои с падающей по гауссу альфой — широкий мягкий
-			//    ореол вокруг фронта волны, как будто кольцо расфокусировано
-			for (int i = 5; i >= 1; i--) {
-				float spread = 1.0f + i * 0.055f;
-				float layerFade = (float) Math.exp(-i * i * 0.35f);
-				RenderUtils.fillCircle(graphics, cx, cy, radius * spread,
-						RenderUtils.withAlpha(accent, 0.085f * layerFade * fade));
-			}
-
-			// 2. Ядро волны: плотная кромка и мягкая сердцевина
-			RenderUtils.fillCircle(graphics, cx, cy, radius,
-					RenderUtils.withAlpha(accent, 0.16f * fade));
-			RenderUtils.fillCircle(graphics, cx, cy, radius * 0.55f,
-					RenderUtils.withAlpha(accent, 0.12f * fade));
-			RenderUtils.fillCircle(graphics, cx, cy, radius * 0.22f,
-					RenderUtils.withAlpha(accent, 0.20f * fade));
-
-			// 3. Мерцающее кольцо из точек — «детализированная» кромка волны:
-			//    точки разгораются и гаснут бегущей синусоидой
-			int dots = (int) Math.max(28, Math.min(72, radius * 1.4f));
-			for (int k = 0; k < dots; k++) {
-				float angle = (k / (float) dots) * 6.2831855f;
-				float shimmer = 0.5f + 0.5f * (float) Math.sin(angle * 3.0f + now * 0.012f);
-				float dotR = radius * (1.0f - 0.035f * shimmer);
-				float dx = cx + (float) Math.cos(angle) * dotR;
-				float dy = cy + (float) Math.sin(angle) * dotR;
-				int size = shimmer > 0.6f ? 3 : 2;
-				int dotColor = RenderUtils.mix(accent, 0xFFF6F6F8, 0.35f * shimmer);
-				graphics.fill((int) dx - size / 2, (int) dy - size / 2,
-						(int) dx - size / 2 + size, (int) dy - size / 2 + size,
-						RenderUtils.withAlpha(dotColor, (0.35f + 0.55f * shimmer) * fade));
-			}
-
-			// 4. Хроматическое эхо: второе кольцо в дополнительном цвете, чуть
-			//    меньше и с задержкой фазы — эффект рассеянного спектра
-			int echoColor = RenderUtils.mix(accent, 0xFF7C6CFF, 0.5f);
-			int echoDots = Math.max(16, dots / 2);
-			for (int k = 0; k < echoDots; k++) {
-				float angle = (k / (float) echoDots) * 6.2831855f + 0.18f;
-				float shimmer = 0.5f + 0.5f * (float) Math.sin(angle * 3.0f + now * 0.012f + 1.2f);
-				float dotR = radius * 0.84f;
-				float dx = cx + (float) Math.cos(angle) * dotR;
-				float dy = cy + (float) Math.sin(angle) * dotR;
-				graphics.fill((int) dx - 1, (int) dy - 1, (int) dx + 1, (int) dy + 1,
-						RenderUtils.withAlpha(echoColor, 0.30f * fade * (0.4f + 0.6f * shimmer)));
-			}
-		}
-
-		graphics.disableScissor();
-	}
-
 	// ------------------------------------------------------------------
 	// Анимации
 	// ------------------------------------------------------------------
@@ -1223,7 +1134,6 @@ public class ClickGuiScreen extends Screen {
 		openAnimation = approach(openAnimation, closing ? 0.0f : 1.0f);
 		panelHeightAnim = approach(panelHeightAnim, targetPanelHeight());
 		scroll = approach(scroll, scrollTarget);
-		ripples.removeIf(ripple -> now - ripple.startTime() >= RIPPLE_DURATION);
 		pressAnimations.values().removeIf(pressedAt -> now - pressedAt >= 160L);
 
 		// Закрытие доиграло — уходим по-настоящему (один раз)
@@ -1269,15 +1179,12 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		RenderUtils.addClickWave(event.x(), event.y());
 		if (closing) {
 			return true;
 		}
 		double mouseX = event.x();
 		double mouseY = event.y();
-
-		int panelHeight = panelHeight();
-		boolean insidePanel = isInside(mouseX, mouseY, guiX, guiY, GUI_WIDTH, panelHeight);
-		Hitbox rippleBounds = insidePanel ? new Hitbox(Math.round(guiX), Math.round(guiY), GUI_WIDTH, panelHeight) : null;
 
 		// Перетаскивание за шапку
 		if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT
@@ -1293,9 +1200,6 @@ public class ClickGuiScreen extends Screen {
 			dragOffsetX = mouseX - guiX;
 			dragOffsetY = mouseY - guiY;
 			clearSettingFocus();
-			if (rippleBounds != null) {
-				addRipple(mouseX, mouseY, rippleBounds);
-			}
 			return true;
 		}
 
@@ -1333,7 +1237,6 @@ public class ClickGuiScreen extends Screen {
 				continue;
 			}
 
-			addRipple(mouseX, mouseY, box);
 
 			switch (entry.kind()) {
 				case CATEGORY -> {
@@ -1378,9 +1281,6 @@ public class ClickGuiScreen extends Screen {
 		}
 
 		// Клик по пустому месту панели — просто волна
-		if (rippleBounds != null) {
-			addRipple(mouseX, mouseY, rippleBounds);
-		}
 
 		return super.mouseClicked(event, doubleClick);
 	}
@@ -1945,6 +1845,4 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	/** Волна, расходящаяся от места клика. */
-	private record Ripple(float x, float y, Hitbox bounds, long startTime, float maxRadius) {
-	}
 }

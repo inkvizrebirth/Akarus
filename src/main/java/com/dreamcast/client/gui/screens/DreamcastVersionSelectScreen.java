@@ -148,6 +148,9 @@ public class DreamcastVersionSelectScreen extends DreamcastScreen {
 		} else {
 			drawScrollbar(graphics, x + PANEL_WIDTH + 3, listTop, listHeight, scroll, visible, visibleRows.size(), ACCENT);
 		}
+	
+		// Фирменная волна клика — поверх всего содержимого
+		RenderUtils.drawClickWaves(graphics, ACCENT);
 	}
 
 	private void drawRow(GuiGraphicsExtractor graphics, Row row, int x, int y, int w, int mouseX, int mouseY) {
@@ -179,6 +182,7 @@ public class DreamcastVersionSelectScreen extends DreamcastScreen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		RenderUtils.addClickWave(event.x(), event.y());
 		if (search.contains(event.x(), event.y())) {
 			search.focused = true;
 			return true;

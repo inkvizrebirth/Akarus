@@ -39,6 +39,7 @@ public class DreamcastClient implements ClientModInitializer {
 
 		// Порядок важен: сначала читаем конфиг, потом создаём модули (они подхватят сохранённые значения)
 		ConfigManager.load();
+		com.dreamcast.client.util.AltsManager.load();
 		ModuleManager.init();
 		HudRenderer.register();
 		WorldRenderHook.register();

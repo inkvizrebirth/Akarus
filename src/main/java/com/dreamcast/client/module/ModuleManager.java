@@ -14,6 +14,12 @@ import com.dreamcast.client.module.impl.FreeLookModule;
 import com.dreamcast.client.module.impl.HandShaderModule;
 import com.dreamcast.client.module.impl.HudInfoModule;
 import com.dreamcast.client.module.impl.JumpEffectModule;
+import com.dreamcast.client.module.impl.HitParticlesModule;
+import com.dreamcast.client.module.impl.HitSoundsModule;
+import com.dreamcast.client.module.impl.MacroModule;
+import com.dreamcast.client.module.impl.AutoBuffModule;
+import com.dreamcast.client.module.impl.NoSlowModule;
+import com.dreamcast.client.module.impl.NametagsModule;
 import com.dreamcast.client.module.impl.KillAuraModule;
 import com.dreamcast.client.module.impl.MediaPlayerModule;
 import com.dreamcast.client.module.impl.NoBlindModule;
@@ -57,6 +63,12 @@ public final class ModuleManager {
 		register(new BlockEspModule());
 		register(new JumpEffectModule());
 		register(new SpiderModule());
+		register(new NametagsModule());
+		register(new NoSlowModule());
+		register(new AutoBuffModule());
+		register(new MacroModule());
+		register(new HitSoundsModule());
+		register(new HitParticlesModule());
 	}
 
 	public static void register(Module module) {

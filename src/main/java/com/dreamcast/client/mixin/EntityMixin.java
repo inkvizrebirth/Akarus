@@ -35,6 +35,24 @@ public abstract class EntityMixin {
 	@Unique
 	private boolean dreamcast$writingHumanized;
 
+	/**
+	 * NoWeb: паутина «приклеивает» игрока через makeStuckInBlock. Пока модуль
+	 * включён — просто не даём ей выставить замедление; для всех остальных
+	 * блоков и сущностей вызов проходит как есть.
+	 */
+	@Inject(method = "makeStuckInBlock", at = @At("HEAD"), cancellable = true, require = 0)
+	private void dreamcast$noWeb(net.minecraft.world.level.block.state.BlockState state,
+	                              net.minecraft.world.phys.Vec3 speedMultiplier, CallbackInfo ci) {
+		if ((Object) this instanceof net.minecraft.client.player.LocalPlayer player) {
+			com.dreamcast.client.module.impl.NoSlowModule noSlow =
+					com.dreamcast.client.module.ModuleManager.find(com.dreamcast.client.module.impl.NoSlowModule.class);
+			if (noSlow != null && noSlow.isEnabled() && noSlow.noWebEnabled()
+					&& state.is(net.minecraft.world.level.block.Blocks.COBWEB)) {
+				ci.cancel();
+			}
+		}
+	}
+
 	@Inject(method = "setRot", at = @At("HEAD"), cancellable = true, require = 0)
 	private void dreamcast$humanizeRotation(float yRot, float xRot, CallbackInfo ci) {
 		if (this.dreamcast$writingHumanized) {

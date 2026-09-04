@@ -241,6 +241,82 @@ def icon_jump_effect():
     return icon
 
 
+def icon_nametags():
+    # табличка: рамка + строка имени + две строки данных
+    icon = Icon()
+    icon.rrect([6, 9, 34, 31], 4)
+    icon.line(6, 16, 34, 16, 2.6)
+    icon.line(10, 21, 24, 21, 2.4)
+    icon.line(10, 26, 28, 26, 2.4)
+    icon.dot(29, 21.5, 1.6)
+    icon.dot(31.5, 21.5, 1.6)
+    return icon
+
+
+def icon_no_slow():
+    # стрелка-рывок сквозь «барьер»
+    icon = Icon()
+    icon.line(6, 14, 28, 14, 3.4)
+    icon.line(28, 14, 22, 8, 3.0)
+    icon.line(28, 14, 22, 20, 3.0)
+    # паутина позади
+    icon.line(6, 6, 6, 34, 2.0)
+    icon.line(6, 6, 14, 13, 1.6)
+    icon.line(6, 20, 12, 26, 1.6)
+    icon.line(6, 34, 14, 27, 1.6)
+    return icon
+
+
+def icon_auto_buff():
+    # бутылёк зелья с пузырьками и звёздочкой
+    icon = Icon()
+    icon.line(18, 5, 22, 5, 2.6)
+    icon.line(18, 5, 18, 10, 2.6)
+    icon.ellipse([12, 10, 26, 31], 2.8)
+    icon.dot(17, 19, 1.6)
+    icon.dot(21, 24, 1.3)
+    icon.dot(19, 28, 1.1)
+    icon.dot(28, 9, 1.8)
+    icon.dot(31, 13, 1.3)
+    return icon
+
+
+def icon_macros():
+    # скруглённая кнопка «>» — команда по клавише
+    icon = Icon()
+    icon.rrect([7, 8, 33, 32], 6)
+    icon.line(15, 14, 24, 20, 3.2)
+    icon.line(24, 20, 15, 26, 3.2)
+    return icon
+
+
+def icon_hit_sounds():
+    # динамик с волнами звука
+    icon = Icon()
+    icon.rrect([7, 14, 14, 26], 2)
+    icon.line(14, 14, 21, 8, 2.8)
+    icon.line(21, 8, 21, 32, 2.8)
+    icon.line(14, 26, 21, 32, 2.8)
+    icon.arc([16, 10, 36, 30], -55, 55, 2.4)
+    icon.arc([12, 6, 40, 34], -55, 55, 2.0)
+    return icon
+
+
+def icon_hit_particles():
+    # точка удара с расходящимися искрами
+    icon = Icon()
+    icon.dot(20, 20, 3.2)
+    for angle in range(0, 360, 45):
+        import math
+        x0 = 20 + math.cos(math.radians(angle)) * 6
+        y0 = 20 + math.sin(math.radians(angle)) * 6
+        x1 = 20 + math.cos(math.radians(angle)) * 14
+        y1 = 20 + math.sin(math.radians(angle)) * 14
+        icon.line(x0, y0, x1, y1, 2.2)
+        icon.dot(x1, y1, 1.4)
+    return icon
+
+
 def icon_click_gui():
     # окно меню: заголовок + строки-настройки
     icon = Icon()
@@ -333,6 +409,12 @@ ICONS = {
     "block_esp": icon_block_esp,
     "spider": icon_spider,
     "jump_effect": icon_jump_effect,
+    "nametags": icon_nametags,
+    "no_slow": icon_no_slow,
+    "auto_buff": icon_auto_buff,
+    "macros": icon_macros,
+    "hit_sounds": icon_hit_sounds,
+    "hit_particles": icon_hit_particles,
     "arrow_down": icon_arrow_down,
     "arrow_up": icon_arrow_up,
 }

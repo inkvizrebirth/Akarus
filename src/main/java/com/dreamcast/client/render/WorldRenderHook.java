@@ -98,10 +98,17 @@ public final class WorldRenderHook {
 			TrailsModule trails = ModuleManager.find(TrailsModule.class);
 			com.dreamcast.client.module.impl.JumpEffectModule jumpEffect =
 					ModuleManager.find(com.dreamcast.client.module.impl.JumpEffectModule.class);
+			com.dreamcast.client.module.impl.HitParticlesModule hitParticles =
+					ModuleManager.find(com.dreamcast.client.module.impl.HitParticlesModule.class);
+			com.dreamcast.client.module.impl.NametagsModule nametags =
+					ModuleManager.find(com.dreamcast.client.module.impl.NametagsModule.class);
 			List<EspModule.EspBox> boxes = espBoxes;
 			boolean hasTrail = trails != null && trails.wantsLine();
 			boolean hasRings = jumpEffect != null && jumpEffect.wantsRings();
-			if (!hasTrail && boxes.isEmpty() && !hasRings) {
+			boolean hasHits = hitParticles != null && hitParticles.wantsWaves();
+			boolean hasTags = nametags != null && nametags.wantsTags();
+			if (!hasTrail && boxes.isEmpty() && !hasRings && !hasHits && !hasTags
+					&& targetBar == null && blockBoxes.isEmpty()) {
 				return;
 			}
 
@@ -139,7 +146,14 @@ public final class WorldRenderHook {
 						if (hasRings) {
 							drawJumpRings(jumpEffect, pose, buffer, camX, camY, camZ, unitsPerPixel, now);
 						}
+						if (hasHits) {
+							drawHitWaves(hitParticles, pose, buffer, camX, camY, camZ, unitsPerPixel, now);
+						}
 					});
+					// Nametags: текстовые биллборды — той же трубой, что ванильные ники
+					if (hasTags) {
+						drawNametags(context, nametags, camX, camY, camZ);
+					}
 		} catch (Exception ignored) {
 			// Рендер не должен падать: любая ошибка в наших линиях — просто пропуск кадра
 		}
@@ -340,6 +354,93 @@ public final class WorldRenderHook {
 	}
 
 	// ------------------------------------------------------------------
+	// HitParticles: волна в точке удара
+	// ------------------------------------------------------------------
+
+	/**
+	 * Волны попаданий. Режим «Волна» — то же кольцо, что у Jump Effect
+	 * (мерцание, эхо, ореол), режим «Искры» — три мелких кольца в стороны.
+	 */
+	private static void drawHitWaves(com.dreamcast.client.module.impl.HitParticlesModule effect,
+	                                 PoseStack.Pose pose, VertexConsumer buffer,
+	                                 double camX, double camY, double camZ,
+	                                 float unitsPerPixel, long now) {
+		float maxRadius = effect.radiusBlocks();
+		long duration = effect.durationMs();
+		float intensity = effect.intensityScale();
+		float width = 2.6F;
+
+		effect.gc(now);
+		for (com.dreamcast.client.module.impl.HitParticlesModule.HitWave wave : effect.waves()) {
+			float age = now - wave.bornMs();
+			float progress = age / (float) duration;
+			if (progress >= 1.0f) {
+				continue;
+			}
+			float x = (float) (wave.x() - camX);
+			float y = (float) (wave.y() - camY);
+			float z = (float) (wave.z() - camZ);
+			float eased = 1.0f - (1.0f - progress) * (1.0f - progress) * (1.0f - progress);
+			float fade = (1.0f - progress) * (1.0f - progress);
+			float seed = (wave.seed() % 1000) / 1000.0f * 6.28f;
+
+			if (wave.spark()) {
+				// «Искры»: три мелких волны со сдвигом фаз — дробная отдача
+				for (int k = 0; k < 3; k++) {
+					float phase = progress - k * 0.12f;
+					if (phase <= 0.0f) {
+						continue;
+					}
+					float easedK = 1.0f - (1.0f - phase) * (1.0f - phase);
+					drawRingCircle(effect::waveColor, pose, buffer, x, y, z,
+							maxRadius * (0.5f + k * 0.25f) * easedK, width * 0.8f, 18,
+							0.55f * fade * intensity, seed + k, now, 2.0f, unitsPerPixel);
+				}
+			} else {
+				// «Волна»: фирменное кольцо — ореол, кромка с мерцанием, эхо
+				com.dreamcast.client.render.WorldRenderHook.RingColor color = effect::waveColor;
+				drawRingCircle(color, pose, buffer, x, y, z, maxRadius * eased * 1.06f,
+						width * 3.2f, 32, 0.10f * fade * intensity, seed, now, 0.0f, unitsPerPixel);
+				drawRingCircle(color, pose, buffer, x, y, z, maxRadius * eased,
+						width, 32, 0.85f * fade * intensity, seed, now, 1.0f, unitsPerPixel);
+				float echoProgress = Math.max(0.0f, progress - 0.16f);
+				float echoEased = 1.0f - (1.0f - echoProgress) * (1.0f - echoProgress);
+				drawRingCircle(color, pose, buffer, x, y, z, maxRadius * echoEased * 0.7f,
+						width * 0.7f, 20, 0.35f * fade * intensity, seed, now, 2.0f, unitsPerPixel);
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// Nametags: расширенные таблички игроков
+	// ------------------------------------------------------------------
+
+	/**
+	 * Текстовые биллборды через {@code submitNameTag} — та же труба, что у
+	 * ванильных ников: масштаб по дистанции, фон и подсветка берутся из игры.
+	 * Строки идут вниз от точки над головой с шагом 0.3 блока.
+	 */
+	private static void drawNametags(LevelRenderContext context,
+	                                 com.dreamcast.client.module.impl.NametagsModule nametags,
+	                                 double camX, double camY, double camZ) {
+		var collector = context.submitNodeCollector();
+		var camera = context.levelState().cameraRenderState;
+		PoseStack poseStack = context.poseStack();
+		for (com.dreamcast.client.module.impl.NametagsModule.TagEntry tag : nametags.entries()) {
+			double ax = tag.x() - camX;
+			double ay = tag.y() - camY;
+			double az = tag.z() - camZ;
+			int line = 0;
+			for (net.minecraft.network.chat.Component text : tag.lines()) {
+				collector.submitNameTag(poseStack,
+						new net.minecraft.world.phys.Vec3(ax, ay - line * 0.30, az),
+						8, text, true, 0xF000F0, tag.distanceSq(), camera);
+				line++;
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------
 	// Jump Effect: ударная волна при прыжке
 	// ------------------------------------------------------------------
 
@@ -378,30 +479,36 @@ public final class WorldRenderHook {
 			float fade = (1.0f - progress) * (1.0f - progress);
 			float seed = (ring.seed() % 1000) / 1000.0f * 6.28f;
 
+			com.dreamcast.client.render.WorldRenderHook.RingColor color =
+					t -> effect.ringColor(t, progress, now);
 			// 1. Широкое мягкое свечение позади волны — «блюр»-ореол
-			drawRingCircle(effect, pose, buffer, x, y, z, maxRadius * eased * 1.06f, width * 3.2f,
-					0, 6.28f, segments, 0.10f * fade * intensity, progress, seed, now, 0.0f, unitsPerPixel);
+			drawRingCircle(color, pose, buffer, x, y, z, maxRadius * eased * 1.06f, width * 3.2f,
+					segments, 0.10f * fade * intensity, seed, now, 0.0f, unitsPerPixel);
 			// 2. Основная волна: мерцающие дуги
-			drawRingCircle(effect, pose, buffer, x, y, z, maxRadius * eased, width,
-					0, 6.28f, segments, 0.85f * fade * intensity, progress, seed, now, 1.0f, unitsPerPixel);
+			drawRingCircle(color, pose, buffer, x, y, z, maxRadius * eased, width,
+					segments, 0.85f * fade * intensity, seed, now, 1.0f, unitsPerPixel);
 			// 3. Эхо: задержанная волна поменьше
 			float echoProgress = Math.max(0.0f, progress - 0.16f);
 			float echoEased = 1.0f - (1.0f - echoProgress) * (1.0f - echoProgress);
-			drawRingCircle(effect, pose, buffer, x, y, z, maxRadius * echoEased * 0.78f, width * 0.7f,
-					0, 6.28f, Math.max(16, segments / 2), 0.38f * fade * intensity, progress, seed, now, 2.0f, unitsPerPixel);
+			drawRingCircle(color, pose, buffer, x, y, z, maxRadius * echoEased * 0.78f, width * 0.7f,
+					Math.max(16, segments / 2), 0.38f * fade * intensity, seed, now, 2.0f, unitsPerPixel);
 			// 4. Поднимающееся кольцо-«подъём» — отмечает сам отрыв
 			float riseY = y + eased * 0.55f;
-			drawRingCircle(effect, pose, buffer, x, riseY, z, maxRadius * eased * 0.5f, width * 0.6f,
-					0, 6.28f, Math.max(16, segments / 2), 0.30f * fade * intensity, progress, seed, now, 3.0f, unitsPerPixel);
+			drawRingCircle(color, pose, buffer, x, riseY, z, maxRadius * eased * 0.5f, width * 0.6f,
+					Math.max(16, segments / 2), 0.30f * fade * intensity, seed, now, 3.0f, unitsPerPixel);
 		}
 	}
 
 	/** Круг из сегментов; яркость дуги модулируется бегущей синусоидой (shimmer). */
-	private static void drawRingCircle(com.dreamcast.client.module.impl.JumpEffectModule effect,
+	/** Источник цвета кольца: t — доля окружности. */
+	private interface RingColor {
+		int at(float t);
+	}
+
+	private static void drawRingCircle(RingColor color,
 	                                   PoseStack.Pose pose, VertexConsumer buffer,
-	                                   float x, float y, float z, float radius, float width,
-	                                   float angleFrom, float angleTo, int segments,
-	                                   float alpha, float phase, float seed, long now, float shimmerSpeed,
+	                                   float x, float y, float z, float radius, float width, int segments,
+	                                   float alpha, float seed, long now, float shimmerSpeed,
 	                                   float unitsPerPixel) {
 		if (radius < 0.02f || alpha <= 0.01f) {
 			return;
@@ -409,16 +516,16 @@ public final class WorldRenderHook {
 		for (int i = 0; i < segments; i++) {
 			float t0 = (float) i / segments;
 			float t1 = (float) (i + 1) / segments;
-			float a0 = angleFrom + (angleTo - angleFrom) * t0;
-			float a1 = angleFrom + (angleTo - angleFrom) * t1;
+			float a0 = t0 * 6.2831855f;
+			float a1 = t1 * 6.2831855f;
 			// Мерцание: три «луча» яркости бегут по окружности
 			float shimmer0 = shimmerSpeed <= 0.0f ? 1.0f
 					: 0.55f + 0.45f * (float) Math.sin(a0 * 3.0f + now * 0.008f * shimmerSpeed + seed);
 			float shimmer1 = shimmerSpeed <= 0.0f ? 1.0f
 					: 0.55f + 0.45f * (float) Math.sin(a1 * 3.0f + now * 0.008f * shimmerSpeed + seed);
 
-			int c0 = withAlpha(effect.ringColor(t0, phase, now), (int) (0xFF * alpha * shimmer0));
-			int c1 = withAlpha(effect.ringColor(t1, phase, now), (int) (0xFF * alpha * shimmer1));
+			int c0 = withAlpha(color.at(t0), (int) (0xFF * alpha * shimmer0));
+			int c1 = withAlpha(color.at(t1), (int) (0xFF * alpha * shimmer1));
 			WorldGeometryRenderer.line(buffer, pose,
 					x + (float) Math.cos(a0) * radius, y, z + (float) Math.sin(a0) * radius, c0,
 					x + (float) Math.cos(a1) * radius, y, z + (float) Math.sin(a1) * radius, c1,

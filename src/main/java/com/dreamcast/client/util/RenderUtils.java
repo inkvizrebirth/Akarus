@@ -105,6 +105,163 @@ public final class RenderUtils {
 	}
 
 	// ------------------------------------------------------------------
+	// Гексагональная текстура кнопок
+	// ------------------------------------------------------------------
+
+	/**
+	 * Сотовая текстура для кнопок меню: маленькие шестиугольники с зазорами.
+	 *
+	 * Возле курсора соты «расступаются» — радиальный сдвиг с гауссовым
+	 * затуханием — и подсвечиваются акцентом. {@code glow} — общий уровень
+	 * подсветки кнопки (наведение), 0 — только базовая тёмная сетка.
+	 */
+	public static void drawHexPattern(GuiGraphicsExtractor graphics, int x, int y, int w, int h,
+	                                  int accent, float mouseX, float mouseY, float glow) {
+		if (w <= 4 || h <= 4) {
+			return;
+		}
+		final float r = 4.6f;                 // радиус соты (центр → вершина)
+		final float stepX = 1.7320508f * r;   // √3·r — шаг по горизонтали
+		final float stepY = 1.5f * r;         // шаг по вертикали
+		final float pushRadius = 26.0f;       // радиус «расступания» вокруг курсора
+		final float pushStrength = 3.4f;      // насколько соты отодвигаются
+
+		graphics.enableScissor(x, y, x + w, y + h);
+		int cols = (int) Math.ceil(w / stepX) + 2;
+		int rows = (int) Math.ceil(h / stepY) + 2;
+		for (int row = 0; row < rows; row++) {
+			float cy = y + r + row * stepY;
+			float shift = (row & 1) == 0 ? 0.0f : stepX * 0.5f;
+			for (int col = 0; col < cols; col++) {
+				float cx = x + r + col * stepX + shift - stepX;
+
+				// Дистанция до курсора: соты рядом отодвигаются наружу
+				float dx = cx - mouseX;
+				float dy = cy - mouseY;
+				float dist = (float) Math.sqrt(dx * dx + dy * dy);
+				float influence = (float) Math.exp(-(dist * dist) / (2.0f * pushRadius * pushRadius / 4.0f));
+				float ox = 0.0f;
+				float oy = 0.0f;
+				if (dist > 0.001f && influence > 0.02f) {
+					float push = pushStrength * influence;
+					ox = dx / dist * push;
+					oy = dy / dist * push;
+				}
+
+				// Подсветка: у курсора соты наливаются акцентом
+				float near = influence;
+				int hexColor = mix(0x1AFFFFFF, accent, Math.min(1.0f, near * 0.85f + glow * 0.25f));
+				float alpha = 0.30f + 0.55f * near + 0.25f * glow;
+				drawHex(graphics, cx + ox, cy + oy, r - 0.9f, withAlpha(hexColor, Math.min(1.0f, alpha)));
+			}
+		}
+		graphics.disableScissor();
+	}
+
+	/** Один шестиугольник (вершина сверху), построчно с антиалиасингом. */
+	private static void drawHex(GuiGraphicsExtractor graphics, float cx, float cy, float r, int color) {
+		for (int dy = 0; dy <= (int) Math.floor(r); dy++) {
+			// Верхняя половина шире к середине, нижняя симметрична
+			float halfUpper = hexHalfWidth(r, dy);
+			if (halfUpper <= 0.0f) {
+				continue;
+			}
+			fillRow(graphics, (int) Math.floor(cy - dy), cx - halfUpper, cx + halfUpper, color);
+			fillRow(graphics, (int) Math.floor(cy + dy), cx - halfUpper, cx + halfUpper, color);
+		}
+	}
+
+	/** Полуширина соты на вертикальном смещении dy: трапеция → прямоугольник. */
+	private static float hexHalfWidth(float r, float dy) {
+		if (dy > r) {
+			return 0.0f;
+		}
+		if (dy <= r * 0.5f) {
+			return 0.8660254f * r;
+		}
+		return Math.max(0.0f, (r - dy) * 1.7320508f);
+	}
+
+	// ------------------------------------------------------------------
+	// Волна клика: одна на все экраны, рисуется поверх содержимого
+	// ------------------------------------------------------------------
+
+	/** Длительность жизни волны, мс. */
+	private static final long CLICK_WAVE_DURATION = 640;
+
+	private record ClickWave(float x, float y, long born) {
+	}
+
+	private static final java.util.List<ClickWave> CLICK_WAVES = new java.util.ArrayList<>();
+
+	/** Регистрирует волну клика (экранные координаты) — рисуется всеми экранами. */
+	public static void addClickWave(double x, double y) {
+		CLICK_WAVES.add(new ClickWave((float) x, (float) y, net.minecraft.util.Util.getMillis()));
+		while (CLICK_WAVES.size() > 8) {
+			CLICK_WAVES.remove(0);
+		}
+	}
+
+	/** Рисует активные волны поверх содержимого; вызывать в конце extractRenderState. */
+	public static void drawClickWaves(GuiGraphicsExtractor graphics, int accent) {
+		if (CLICK_WAVES.isEmpty()) {
+			return;
+		}
+		long now = net.minecraft.util.Util.getMillis();
+		CLICK_WAVES.removeIf(wave -> now - wave.born() >= CLICK_WAVE_DURATION);
+		for (ClickWave wave : CLICK_WAVES) {
+			float progress = Math.min((now - wave.born()) / (float) CLICK_WAVE_DURATION, 1.0f);
+			drawClickWave(graphics, wave.x(), wave.y(), progress, accent, now);
+		}
+	}
+
+	/** Одна волна: гауссов ореол («блюр»), ядро, мерцающее точечное кольцо, эхо. */
+	private static void drawClickWave(GuiGraphicsExtractor graphics, float cx, float cy,
+	                                  float progress, int accent, long now) {
+		float eased = 1.0f - progress * progress * progress;
+		float radius = 10.0f + 52.0f * eased;
+		float fade = (1.0f - progress) * (1.0f - progress);
+
+		// 1. «Блюр»-ореол: слои с гауссовым затуханием
+		for (int i = 5; i >= 1; i--) {
+			float spread = 1.0f + i * 0.055f;
+			float layerFade = (float) Math.exp(-i * i * 0.35f);
+			fillCircle(graphics, cx, cy, radius * spread,
+					withAlpha(accent, 0.085f * layerFade * fade));
+		}
+
+		// 2. Ядро волны
+		fillCircle(graphics, cx, cy, radius, withAlpha(accent, 0.16f * fade));
+		fillCircle(graphics, cx, cy, radius * 0.22f, withAlpha(accent, 0.20f * fade));
+
+		// 3. Мерцающее точечное кольцо
+		int dots = 44;
+		for (int k = 0; k < dots; k++) {
+			float angle = (k / (float) dots) * 6.2831855f;
+			float shimmer = 0.5f + 0.5f * (float) Math.sin(angle * 3.0f + now * 0.012f);
+			float dotR = radius * (1.0f - 0.035f * shimmer);
+			float dx = cx + (float) Math.cos(angle) * dotR;
+			float dy = cy + (float) Math.sin(angle) * dotR;
+			int size = shimmer > 0.6f ? 3 : 2;
+			int dotColor = mix(accent, 0xFFF6F6F8, 0.35f * shimmer);
+			graphics.fill((int) dx - size / 2, (int) dy - size / 2,
+					(int) dx - size / 2 + size, (int) dy - size / 2 + size,
+					withAlpha(dotColor, (0.35f + 0.55f * shimmer) * fade));
+		}
+
+		// 4. Хроматическое эхо вторым цветом
+		int echoColor = mix(accent, 0xFF7C6CFF, 0.5f);
+		for (int k = 0; k < 22; k++) {
+			float angle = (k / 22.0f) * 6.2831855f + 0.18f;
+			float shimmer = 0.5f + 0.5f * (float) Math.sin(angle * 3.0f + now * 0.012f + 1.2f);
+			float dx = cx + (float) Math.cos(angle) * radius * 0.84f;
+			float dy = cy + (float) Math.sin(angle) * radius * 0.84f;
+			graphics.fill((int) dx - 1, (int) dy - 1, (int) dx + 1, (int) dy + 1,
+					withAlpha(echoColor, 0.30f * fade * (0.4f + 0.6f * shimmer)));
+		}
+	}
+
+	// ------------------------------------------------------------------
 	// Цвета
 	// ------------------------------------------------------------------
 

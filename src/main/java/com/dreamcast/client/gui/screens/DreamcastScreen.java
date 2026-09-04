@@ -176,6 +176,9 @@ public abstract class DreamcastScreen extends Screen {
 		item.hover = ease(item.hover, inside ? 1.0f : 0.0f, 0.22);
 
 		drawGlassPanel(graphics, x, y, w, h, 8, item.hover, accent);
+		// Сотовая текстура: шестиугольники расступаются у курсора и подсвечиваются
+		RenderUtils.drawHexPattern(graphics, x + 2, y + 2, w - 4, h - 4, accent,
+				mouseX, mouseY, item.hover);
 
 		int textY = y + (h - font.lineHeight) / 2;
 		int textColor = RenderUtils.mix(0xFFE8E8F0, 0xFFFFFFFF, item.hover);
@@ -214,6 +217,10 @@ public abstract class DreamcastScreen extends Screen {
 		RenderUtils.fillRoundedBorder(graphics, x, y, w, h, 6,
 				chip.enabled ? RenderUtils.mix(0x20FFFFFF, color, chip.hover * 0.65f) : 0x14FFFFFF,
 				base);
+		if (chip.enabled) {
+			RenderUtils.drawHexPattern(graphics, x + 2, y + 2, w - 4, h - 4,
+					chip.danger ? 0xFFFF5C7A : accent, mouseX, mouseY, chip.hover * 0.8f);
+		}
 
 		int textY = y + (h - font.lineHeight) / 2;
 		int textColor = chip.enabled

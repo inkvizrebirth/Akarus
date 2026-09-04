@@ -192,6 +192,16 @@ public class DreamcastSettingsScreen extends DreamcastScreen {
 					}
 				});
 		rows.add(keys);
+
+		// Встроенные моды: кнопки появляются только если мод действительно вшит
+		if (com.dreamcast.client.util.EmbeddedMods.sodiumPresent()) {
+			rows.add(new Row("Графика (Sodium)", ACTION,
+					() -> com.dreamcast.client.util.EmbeddedMods.open("sodium", this)));
+		}
+		if (com.dreamcast.client.util.EmbeddedMods.modMenuPresent()) {
+			rows.add(new Row("Моды (Mod Menu)", ACTION,
+					() -> com.dreamcast.client.util.EmbeddedMods.open("modmenu", this)));
+		}
 	}
 
 	@Override
@@ -235,6 +245,9 @@ public class DreamcastSettingsScreen extends DreamcastScreen {
 			RenderUtils.textFlat(graphics, font, "Готово", x + PANEL_WIDTH / 2 - RenderUtils.width(font, "Готово") / 2,
 					backY + (20 - font.lineHeight) / 2, 0xFFE8E8F0);
 		}
+	
+		// Фирменная волна клика — поверх всего содержимого
+		RenderUtils.drawClickWaves(graphics, ACCENT);
 	}
 
 	private float backHover;
@@ -307,6 +320,7 @@ public class DreamcastSettingsScreen extends DreamcastScreen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		RenderUtils.addClickWave(event.x(), event.y());
 		if (event.button() != 0) {
 			return super.mouseClicked(event, doubleClick);
 		}
