@@ -106,15 +106,15 @@ public final class UiKit {
 			RenderUtils.drawSoftShadow(graphics, x, y, width, height, (int) radius, 4);
 		}
 		// Наружное кольцо чуть темнее стекла — читается как толщина стекла
-		RenderUtils.fillRounded(graphics, x - 1, y - 1, width + 2, height + 2, (float) radius + 1,
+		RenderUtils.fillRounded(graphics, x - 1, y - 1, width + 2, height + 2, radius + 1.0,
 				RenderUtils.withAlpha(OUTER_RING, 0.55F * alpha));
-		RenderUtils.fillRounded(graphics, x, y, width, height, (float) radius, top, bottom);
+		RenderUtils.fillRounded(graphics, x, y, width, height, radius, top, bottom);
 
 		// Граница: сверху светлее, снизу — текущий цвет темы (перелив по краю)
 		int border = RenderUtils.mix(0x3AFFFFFF, accent, 0.28F + accentMix * 0.5F);
-		RenderUtils.fillRounded(graphics, x, y, width, height, (float) radius,
+		RenderUtils.fillRounded(graphics, x, y, width, height, radius,
 				RenderUtils.withAlpha(border, 0.55F * alpha), RenderUtils.withAlpha(border, 0.22F * alpha));
-		RenderUtils.fillRounded(graphics, x + 1, y + 1, width - 2, height - 2, (float) Math.max(0, radius - 1),
+		RenderUtils.fillRounded(graphics, x + 1, y + 1, width - 2, height - 2, Math.max(0.0, radius - 1.0),
 				top, bottom);
 
 		// Блик сверху и волосяная акцентная линия снизу — то, что делает панель «объёмной»

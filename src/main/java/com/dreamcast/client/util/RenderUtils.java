@@ -426,23 +426,23 @@ public final class RenderUtils {
 	// ------------------------------------------------------------------
 
 	/** Прямоугольник со скруглёнными углами. */
-	public static void fillRounded(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius, int color) {
+	public static void fillRounded(GuiGraphicsExtractor graphics, int x, int y, int width, int height, double radius, int color) {
 		fillRounded(graphics, x, y, width, height, radius, color, color, true, true, true, true);
 	}
 
 	/** Прямоугольник со скруглёнными углами и вертикальным градиентом. */
-	public static void fillRounded(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius,
+	public static void fillRounded(GuiGraphicsExtractor graphics, int x, int y, int width, int height, double radius,
 			int topColor, int bottomColor) {
 		fillRounded(graphics, x, y, width, height, radius, topColor, bottomColor, true, true, true, true);
 	}
 
 	/** Прямоугольник, у которого скруглён только верх (для «шапок» панелей). */
-	public static void fillRoundedTop(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius, int color) {
+	public static void fillRoundedTop(GuiGraphicsExtractor graphics, int x, int y, int width, int height, double radius, int color) {
 		fillRounded(graphics, x, y, width, height, radius, color, color, true, true, false, false);
 	}
 
 	/** Прямоугольник, у которого скруглён только низ. */
-	public static void fillRoundedBottom(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius, int color) {
+	public static void fillRoundedBottom(GuiGraphicsExtractor graphics, int x, int y, int width, int height, double radius, int color) {
 		fillRounded(graphics, x, y, width, height, radius, color, color, false, false, true, true);
 	}
 
@@ -453,13 +453,13 @@ public final class RenderUtils {
 	 * построчно, где край пикселя прикрывается пропорционально тому, насколько он
 	 * попал внутрь дуги. За счёт этого угол выглядит круглым, а не «ступеньками».
 	 */
-	public static void fillRounded(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius,
+	public static void fillRounded(GuiGraphicsExtractor graphics, int x, int y, int width, int height, double radius,
 			int topColor, int bottomColor, boolean topLeft, boolean topRight, boolean bottomLeft, boolean bottomRight) {
 		if (width <= 0 || height <= 0) {
 			return;
 		}
 
-		int r = Math.max(0, Math.min(radius, Math.min(width, height) / 2));
+		int r = (int) Math.max(0.0, Math.min(radius, Math.min(width, height) / 2.0));
 		int x1 = x + width;
 		int y1 = y + height;
 
@@ -537,18 +537,18 @@ public final class RenderUtils {
 	}
 
 	/** Скруглённая «рамка»: цветной контур нужной толщины и заливка внутри. */
-	public static void fillRoundedBorder(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius,
+	public static void fillRoundedBorder(GuiGraphicsExtractor graphics, int x, int y, int width, int height, double radius,
 			int borderColor, int fillColor) {
 		fillRoundedBorder(graphics, x, y, width, height, radius, borderColor, fillColor, fillColor, 1);
 	}
 
 	/** Рамка с внутренним градиентом и настраиваемой толщиной линии. */
-	public static void fillRoundedBorder(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius,
+	public static void fillRoundedBorder(GuiGraphicsExtractor graphics, int x, int y, int width, int height, double radius,
 			int borderColor, int fillTop, int fillBottom, int thickness) {
 		int t = Math.max(1, thickness);
 		fillRounded(graphics, x, y, width, height, radius, borderColor);
 		if (width > t * 2 && height > t * 2) {
-			fillRounded(graphics, x + t, y + t, width - t * 2, height - t * 2, Math.max(0, radius - t), fillTop, fillBottom);
+			fillRounded(graphics, x + t, y + t, width - t * 2, height - t * 2, (int) Math.max(0.0, radius - t), fillTop, fillBottom);
 		}
 	}
 
@@ -570,7 +570,7 @@ public final class RenderUtils {
 	 * Мягкая многослойная тень: концентрические скруглённые прямоугольники, у которых
 	 * прозрачность падает по гауссу, а не линейно — так край тени не полосатый.
 	 */
-	public static void drawSoftShadow(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius, int layers) {
+	public static void drawSoftShadow(GuiGraphicsExtractor graphics, int x, int y, int width, int height, double radius, int layers) {
 		int count = Math.max(1, layers);
 		for (int i = count; i >= 1; i--) {
 			float t = i / (float) count;
