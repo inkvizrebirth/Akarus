@@ -4,7 +4,6 @@ import com.dreamcast.client.module.Module;
 import com.dreamcast.client.module.ModuleCategory;
 import com.dreamcast.client.util.KeyOwnership;
 import com.dreamcast.client.util.TargetLockLogic;
-import com.dreamcast.client.module.ModuleManager;
 import com.dreamcast.client.settings.BooleanSetting;
 import com.dreamcast.client.settings.ElementListSetting;
 import com.dreamcast.client.settings.IntSetting;
