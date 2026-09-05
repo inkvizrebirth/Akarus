@@ -107,7 +107,7 @@ public class GlintColorModule extends Module {
 		if (!isEnabled()) {
 			return;
 		}
-		write(strengthOption(), rainbow.get() ? phase : hueOf(color.get()), MIN_STRENGTH, MAX_STRENGTH);
+		write(strengthOption(), rainbow.isEnabled() ? phase : hueOf(color.get()), MIN_STRENGTH, MAX_STRENGTH);
 		write(scrollOption(), MIN_SCROLL + (MAX_SCROLL - MIN_SCROLL) * (scrollSpeed.get() / 10.0),
 				MIN_SCROLL, MAX_SCROLL);
 	}
