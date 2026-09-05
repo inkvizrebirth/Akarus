@@ -18,7 +18,8 @@
     "SubmitNodeCollectionMixin",
     "LocalPlayerMixin",
     "LocalPlayerRotationMixin",
-    "MultiPlayerGameModeMixin"
+    "MultiPlayerGameModeMixin",
+    "ScreenEffectRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1
