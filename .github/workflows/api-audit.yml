@@ -353,6 +353,32 @@ jobs:
               unzip -l "$MC" | grep -E 'core/particles/[A-Za-z]+ParticleOptions\\.class' | awk '{print $NF}' | head -40 || true
               echo; echo "=== ParticleTypes (константы) ==="
               javap -p -cp "$MC" net.minecraft.core.particles.ParticleTypes 2>&1 | grep -iE 'public static final' | head -60 || true
+              echo; echo "=== assets/minecraft: верхнеуровневые папки ==="
+              unzip -l "$MC" | awk '{print $NF}' | grep -E '^assets/minecraft/[a-z_]+/' | sed 's#^assets/minecraft/##' | cut -d/ -f1 | sort -u | head -40 || true
+              echo; echo "=== json с shader/post/pipeline в имени ==="
+              unzip -l "$MC" | awk '{print $NF}' | grep -E 'json$' | grep -iE 'shader|post|pipeline|blur|nausea|transparency|sobel|entity_vision' | head -40 || true
+              echo; echo "=== ShaderManager: публичный API ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.ShaderManager 2>&1 | head -40 || true
+              echo; echo "=== ShaderManager: строки (папки ресурсов) ==="
+              javap -c -p -cp "$MC" net.minecraft.client.renderer.ShaderManager 2>&1 | grep -E 'String' | head -40 || true
+              echo; echo "=== GameRenderer: строки ==="
+              javap -c -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | grep -E 'String' | head -40 || true
+              echo; echo "=== PostChain: строки ==="
+              javap -c -p -cp "$MC" net.minecraft.client.renderer.PostChain 2>&1 | grep -E 'String|public' | head -30 || true
+              echo; echo "=== UniformValue ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.UniformValue 2>&1 | head -25 || true
+              echo; echo "=== shaders/: все файлы ==="
+              unzip -l "$MC" | awk '{print $NF}' | grep -E 'shaders/' | head -80 || true
+              echo; echo "=== RenderTarget (blaze3d) ==="
+              javap -p -cp "$MC" com.mojang.blaze3d.pipeline.RenderTarget 2>&1 | head -30 || true
+              echo; echo "=== MainTarget ==="
+              javap -p -cp "$MC" com.mojang.blaze3d.pipeline.MainTarget 2>&1 | head -30 || true
+              echo; echo "=== Iris/Sodium-пути: RenderPipeline.Snippet ==="
+              javap -p -cp "$MC" com.mojang.blaze3d.pipeline.RenderPipeline$Snippet 2>&1 | head -40 || true
+              echo; echo "=== RenderPipelines все ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.RenderPipelines 2>&1 | grep -E 'public static final' | head -60 || true
+              echo; echo "=== setPostEffect вызовы (checkEntityPostEffect) ==="
+              javap -c -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | grep -iE 'postEffect|PostChain|blur' | head -40 || true
             fi
 
           } > api-audit-result.txt 2>&1
