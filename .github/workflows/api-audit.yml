@@ -257,7 +257,7 @@ jobs:
               echo; echo "=== Entity fire ==="
               javap -p -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'fire|Fire' | head -20
               echo; echo "=== FlameOverlay/классы ==="
-              unzip -l "$MC" | grep -iE 'client/renderer/(Fire|.*Overlay)' | head -20
+              unzip -l "$MC" | grep -iE 'client/renderer/(Fire|.*Overlay)' | head -20 || true
               echo; echo "=== ScreenEffect / camera overlay компонент ==="
               javap -p -cp "$MC" net.minecraft.world.effect.MobEffect 2>&1 | grep -iE 'screen|overlay|postEffect|attributes' | head -20
               echo; echo "=== DataComponents (список) ==="
@@ -267,7 +267,7 @@ jobs:
               echo; echo "=== CameraType ==="
               javap -p -cp "$MC" net.minecraft.client.CameraType 2>&1 | head -25
               echo; echo "=== ClientPacketListener (send/playerinfo) ==="
-              javap -p -cp "$MC" net.minecraft.client.multiplayer.ClientPacketListener 2>&1 | grep -iE 'public (void|.*) (send|getPlayerInfo|disconnect|hasClientLoaded)' | head -20
+              javap -p -cp "$MC" net.minecraft.client.multiplayer.ClientPacketListener 2>&1 | grep -iE 'send|getPlayerInfo|hasClientLoaded' | head -20 || true
               echo; echo "=== Player (abilities) ==="
               javap -p -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | grep -iE 'getAbilities|abilities|isCreative|getMainHandItem|getOffhandItem|getArmorValue|absorb|foodData|getFoodData' | head -20
               echo; echo "=== PlayerAbilities ==="
@@ -281,8 +281,7 @@ jobs:
               echo; echo "=== ItemCooldowns full ==="
               javap -p -cp "$MC" net.minecraft.world.item.ItemCooldowns 2>&1 | head -16
               echo; echo "=== MobEffectInstance ==="
-              javap -p -cp "$MC" net.minecraft.world.effect.MobEffectInstance 2>&1 | grep -iE 'public' | head -20
-            fi
+              javap -p -cp "$MC" net.minecraft.world.effect.MobEffectInstance 2>&1 | grep -iE 'public' | head -20 || true
               echo; echo "=== Minecraft (crosshair/misc) ==="
               javap -p -cp "$MC" net.minecraft.client.Minecraft 2>&1 | grep -iE 'crosshairPickEntity|isPaused|getCameraEntity|setCameraEntity|levelRenderer|isLocalServer|getUser|getWindow|getSoundManager|level;|player;|mouseHandler|options|gameMode|hitResult|fps' | head -30
               echo; echo "=== Entity (velocity/util) ==="

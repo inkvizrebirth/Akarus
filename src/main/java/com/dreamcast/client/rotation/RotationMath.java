@@ -13,7 +13,7 @@ public final class RotationMath {
 	private RotationMath() {
 	}
 
-	/** Разница углов в диапазоне (−180; 180]. Тот же смысл, что у {@code Mth.wrapDegrees}. */
+	/** Заматывает угол в диапазон [−180; 180) — ровно как {@code Mth.wrapDegrees}. */
 	public static float wrap(float degrees) {
 		float wrapped = degrees % 360.0F;
 		if (wrapped >= 180.0F) {
