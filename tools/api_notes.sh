@@ -102,3 +102,29 @@ echo "--- скин игрока ---" >> "$OUT"
 javap -p -cp "$JAR" net.minecraft.client.renderer.entity.AbstractClientPlayerRenderer 2>/dev/null | grep -iE "getTexture|shouldRender|Skin" | head -12 >> "$OUT"
 javap -p -cp "$JAR" net.minecraft.client.resources.DefaultPlayerSkin 2>/dev/null | head -14 >> "$OUT"
 javap -p -cp "$JAR" net.minecraft.client.renderer.texture.AbstractTexture 2>/dev/null | grep -iE "public" | head -14 >> "$OUT"
+
+echo "=== GUI: экраны, контейнеры, чат, тултипы ===" >> "$OUT"
+unzip -l "$JAR" 2>/dev/null | grep -E "client/gui/screens/(inventory|chat|world|options)/[A-Za-z]+\.class" | awk '{print "  cls: " $4}' | head -60 >> "$OUT"
+for c in net.minecraft.client.gui.screens.Screen \
+         net.minecraft.client.gui.GuiGraphicsExtractor \
+         net.minecraft.client.gui.screens.inventory.AbstractContainerScreen \
+         net.minecraft.client.gui.screens.inventory.ContainerScreen \
+         net.minecraft.client.gui.screens.inventory.ChestScreen \
+         net.minecraft.world.inventory.ContainerMenu net.minecraft.world.inventory.Slot; do
+  echo "--- $c ---" >> "$OUT"
+  javap -p -cp "$JAR" "$c" 2>/dev/null | grep -vE "^Compiled|^}" | head -46 >> "$OUT"
+done
+echo "--- Minecraft#setScreen / getScreen ---" >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.Minecraft 2>/dev/null | grep -iE "setScreen|getScreen|pause|disconnected|handleChatScreenKey|setPaused" | head -14 >> "$OUT"
+echo "--- ChatScreen / DeathScreen / Options ---" >> "$OUT"
+for c in net.minecraft.client.gui.screens.ChatScreen net.minecraft.client.gui.screens.DeathScreen \
+         net.minecraft.client.gui.screens.PauseScreen net.minecraft.client.gui.screens.OptionsScreen \
+         net.minecraft.client.gui.screens.TitleScreen net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen; do
+  echo "--- $c ---" >> "$OUT"
+  javap -p -cp "$JAR" "$c" 2>/dev/null | grep -vE "^Compiled|^}" | head -18 >> "$OUT"
+done
+echo "--- Sprite / GuiAtlas / RenderPipelines (GUI) ---" >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.gui.GuiAtlas 2>/dev/null | grep -iE "public|sprite" | head -16 >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.renderer.RenderPipelines 2>/dev/null | grep -iE "GUI|TOOLTIP|BLUR|TEXT" | head -18 >> "$OUT"
+echo "--- ItemRenderer / модели предметов (для превью в GUI) ---" >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.renderer.item.ItemRenderer 2>/dev/null | grep -iE "public" | head -20 >> "$OUT"
