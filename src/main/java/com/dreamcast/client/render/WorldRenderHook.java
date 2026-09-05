@@ -162,6 +162,8 @@ public final class WorldRenderHook {
 
 	private static void render(LevelRenderContext context) {
 		try {
+			EspModule contrastOwner = ModuleManager.find(EspModule.class);
+			WorldGeometryRenderer.setUnderlayEnabled(contrastOwner == null || contrastOwner.underlayOn());
 			TrailsModule trails = ModuleManager.find(TrailsModule.class);
 			com.dreamcast.client.module.impl.JumpEffectModule jumpEffect =
 					ModuleManager.find(com.dreamcast.client.module.impl.JumpEffectModule.class);
@@ -371,33 +373,24 @@ public final class WorldRenderHook {
 			int colorTop = esp.boxColor(box.entityId(), maxY, minY, maxY);
 			int alpha = 0xE6;
 
-			// Тёмная подложка на 2.4px шире основной линии. Это единственный приём,
-			// который честно решает «ESP не видно на снегу/небе/лаве»: контур остаётся
-			// читаемым на любом фоне, потому что контраст рисуется самим контуром, а не
-			// цветом. Рисуем её первой, сверху — цветной.
-			int underlay = RenderUtils.withAlpha(0xFF000000, 0.62F);
+			// Контраст обеспечивает сам WorldGeometryRenderer: плотные линии он
+			// автоматически кладёт на тёмный подбой, поэтому здесь рисуем только ядро.
 			if (corners) {
-				drawCornerBrackets(pose, buffer, minX, minY, minZ, maxX, maxY, maxZ,
-						underlay, underlay, width + 2.4F, unitsPerPixel);
 				drawCornerBrackets(pose, buffer, minX, minY, minZ, maxX, maxY, maxZ,
 						withAlpha(colorTop, alpha), withAlpha(colorBottom, alpha), width, unitsPerPixel);
 			} else {
-				for (int pass = 0; pass < 2; pass++) {
-					boolean back = pass == 0;
-					float passWidth = back ? width + 2.4F : width;
-					for (int[] edge : BOX_EDGES) {
-						double x0 = edge[0] == 0 ? minX : maxX;
-						double y0 = edge[1] == 0 ? minY : maxY;
-						double z0 = edge[2] == 0 ? minZ : maxZ;
-						double x1 = edge[3] == 0 ? minX : maxX;
-						double y1 = edge[4] == 0 ? minY : maxY;
-						double z1 = edge[5] == 0 ? minZ : maxZ;
+				for (int[] edge : BOX_EDGES) {
+					double x0 = edge[0] == 0 ? minX : maxX;
+					double y0 = edge[1] == 0 ? minY : maxY;
+					double z0 = edge[2] == 0 ? minZ : maxZ;
+					double x1 = edge[3] == 0 ? minX : maxX;
+					double y1 = edge[4] == 0 ? minY : maxY;
+					double z1 = edge[5] == 0 ? minZ : maxZ;
 
-						int c0 = back ? underlay : withAlpha(edge[1] == 0 ? colorBottom : colorTop, alpha);
-						int c1 = back ? underlay : withAlpha(edge[4] == 0 ? colorBottom : colorTop, alpha);
-						WorldGeometryRenderer.line(buffer, pose, x0, y0, z0, c0, x1, y1, z1, c1,
-								passWidth, unitsPerPixel);
-					}
+					int c0 = withAlpha(edge[1] == 0 ? colorBottom : colorTop, alpha);
+					int c1 = withAlpha(edge[4] == 0 ? colorBottom : colorTop, alpha);
+					WorldGeometryRenderer.line(buffer, pose, x0, y0, z0, c0, x1, y1, z1, c1,
+							width, unitsPerPixel);
 				}
 			}
 
@@ -409,8 +402,9 @@ public final class WorldRenderHook {
 				double columnTop = maxY - 0.05;
 				double filled = columnBottom + (columnTop - columnBottom) * health;
 				int hpColor = health < 0.3F ? 0xFFFF5C7A : health < 0.6F ? 0xFFFFC66C : 0xFF7CE58C;
-				WorldGeometryRenderer.line(buffer, pose, columnX, columnBottom, maxZ, underlay,
-						columnX, columnTop, maxZ, underlay, width + 3.2F, unitsPerPixel);
+				WorldGeometryRenderer.line(buffer, pose, columnX, columnBottom, maxZ,
+						RenderUtils.withAlpha(0xFF000000, 0.75F), columnX, columnTop, maxZ,
+						RenderUtils.withAlpha(0xFF000000, 0.75F), width + 3.2F, unitsPerPixel);
 				WorldGeometryRenderer.line(buffer, pose, columnX, columnBottom, maxZ, hpColor,
 						columnX, filled, maxZ, hpColor, width + 0.6F, unitsPerPixel);
 			}

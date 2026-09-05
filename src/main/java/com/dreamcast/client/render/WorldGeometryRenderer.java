@@ -42,11 +42,45 @@ public final class WorldGeometryRenderer {
 		return type;
 	}
 
-	/** Одна светящаяся линия от (x0,y0,z0) до (x1,y1,z1), уже в координатах камеры. */
+	/** Тёмный подбой под яркими линиями: контраст, который не зависит от фона. */
+	private static final int UNDERLAY_COLOR = 0xB4000000;
+	/** Насколько подбой шире ядра, в пикселях. */
+	private static final double UNDERLAY_EXTRA_PX = 2.4;
+	/**
+	 * Порог альфы. Мягкие ореолы (гало, дымка, свечение) рисуются полупрозрачным —
+	 * подбой превратил бы их в грязное пятно, поэтому им он не положен: только
+	 * плотным «ядрам» линий, у которых и есть задача «не потеряться на снегу».
+	 */
+	private static final int UNDERLAY_ALPHA_MIN = 176;
+	private static boolean underlayEnabled = true;
+
+	/** Включено ли глобальное усиление контраста линий (см. {@link #line}). */
+	public static boolean underlayOn() {
+		return underlayEnabled;
+	}
+
+	public static void setUnderlayEnabled(boolean enabled) {
+		underlayEnabled = enabled;
+	}
+
+	/**
+	 * Одна светящаяся линия от (x0,y0,z0) до (x1,y1,z1), уже в координатах камеры.
+	 *
+	 * <p>Плотные линии автоматически получают тёмную подложку на 2.4 px шире. Приём
+	 * тот же, что в интерфейсе: контраст обеспечивает не цвет, а соседний тёмный
+	 * слой — иначе ESP одинаково исчезает и на снегу, и на лаве, и на светлом камне,
+	 * и никакой «красивый» цвет этого не лечит.</p>
+	 */
 	public static void line(VertexConsumer buffer, PoseStack.Pose pose,
 	                        double x0, double y0, double z0, int color0,
 	                        double x1, double y1, double z1, int color1,
 	                        double widthPx, double unitsPerPixel) {
+		if (underlayEnabled && Math.max(color0 >>> 24, color1 >>> 24) >= UNDERLAY_ALPHA_MIN) {
+			quad(buffer, pose,
+					x0, y0, z0, UNDERLAY_COLOR, UNDERLAY_COLOR,
+					x1, y1, z1, UNDERLAY_COLOR, UNDERLAY_COLOR,
+					widthPx + UNDERLAY_EXTRA_PX, unitsPerPixel);
+		}
 		quad(buffer, pose,
 				x0, y0, z0, color0, color0,
 				x1, y1, z1, color1, color1,

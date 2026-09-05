@@ -60,6 +60,7 @@ public class EspModule extends Module {
 	// --- «Свечение» (bloom): слои ореола, его раздув и «живость» ---
 	private final IntSetting haloLayers = intSetting("halo_layers", "Слоёв ореола", 4, 0, 6);
 	private final IntSetting haloSpread = intSetting("halo_spread", "Раздув ореола, px", 5, 1, 14);
+	private final BooleanSetting underlay = bool("underlay", "Тёмный подбой контуров", true);
 	private final BooleanSetting breath = bool("breath", "Дыхание", true);
 	private final BooleanSetting brackets = bool("brackets", "Уголки", true);
 	private final BooleanSetting pool = bool("ground_pool", "Кольца под ногами", true);
@@ -177,6 +178,11 @@ public class EspModule extends Module {
 					entity.getId(), healthFraction(entity)));
 		}
 		return result;
+	}
+
+	/** Рисовать ли тёмный подбой под ядрами линий (см. {@code WorldGeometryRenderer#line}). */
+	public boolean underlayOn() {
+		return underlay.isEnabled();
 	}
 
 	public int boxWidth() {
