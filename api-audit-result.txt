@@ -1,33 +1,635 @@
 === PostPass: байткод (биндинг входов) ===
-Error: class not found: net.minecraft.client.renderer.PostPass
+Compiled from "PostPass.java"
+public class net.minecraft.client.renderer.PostPass implements java.lang.AutoCloseable {
+  private static final int UBO_SIZE_PER_SAMPLER;
+
+  private final java.lang.String name;
+
+  private final com.mojang.blaze3d.pipeline.RenderPipeline pipeline;
+
+  private final net.minecraft.resources.Identifier outputTargetId;
+
+  private final java.util.Map<java.lang.String, com.mojang.blaze3d.buffers.GpuBuffer> customUniforms;
+
+  private final net.minecraft.client.renderer.MappableRingBuffer infoUbo;
+
+  private final java.util.List<net.minecraft.client.renderer.PostPass$Input> inputs;
+
+  public net.minecraft.client.renderer.PostPass(com.mojang.blaze3d.pipeline.RenderPipeline, net.minecraft.resources.Identifier, java.util.Map<java.lang.String, java.util.List<net.minecraft.client.renderer.UniformValue>>, java.util.List<net.minecraft.client.renderer.PostPass$Input>);
+    Code:
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: aload_0
+         5: new           #7                  // class java/util/HashMap
+         8: dup
+         9: invokespecial #9                  // Method java/util/HashMap."<init>":()V
+        12: putfield      #10                 // Field customUniforms:Ljava/util/Map;
+        15: aload_0
+        16: aload_1
+        17: putfield      #16                 // Field pipeline:Lcom/mojang/blaze3d/pipeline/RenderPipeline;
+        20: aload_0
+        21: aload_1
+        22: invokevirtual #20                 // Method com/mojang/blaze3d/pipeline/RenderPipeline.getLocation:()Lnet/minecraft/resources/Identifier;
+        25: invokevirtual #26                 // Method net/minecraft/resources/Identifier.toString:()Ljava/lang/String;
+        28: putfield      #32                 // Field name:Ljava/lang/String;
+        31: aload_0
+        32: aload_2
+        33: putfield      #36                 // Field outputTargetId:Lnet/minecraft/resources/Identifier;
+        36: aload_0
+        37: aload         4
+        39: putfield      #40                 // Field inputs:Ljava/util/List;
+        42: aload_3
+        43: invokeinterface #44,  1           // InterfaceMethod java/util/Map.entrySet:()Ljava/util/Set;
+        48: invokeinterface #50,  1           // InterfaceMethod java/util/Set.iterator:()Ljava/util/Iterator;
+        53: astore        5
+        55: aload         5
+        57: invokeinterface #56,  1           // InterfaceMethod java/util/Iterator.hasNext:()Z
+        62: ifeq          303
+        65: aload         5
+        67: invokeinterface #62,  1           // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+        72: checkcast     #66                 // class java/util/Map$Entry
+        75: astore        6
+        77: aload         6
+        79: invokeinterface #68,  1           // InterfaceMethod java/util/Map$Entry.getValue:()Ljava/lang/Object;
+        84: checkcast     #71                 // class java/util/List
+        87: astore        7
+        89: aload         7
+        91: invokeinterface #73,  1           // InterfaceMethod java/util/List.isEmpty:()Z
+        96: ifeq          102
+        99: goto          55
+       102: new           #76                 // class com/mojang/blaze3d/buffers/Std140SizeCalculator
+       105: dup
+       106: invokespecial #78                 // Method com/mojang/blaze3d/buffers/Std140SizeCalculator."<init>":()V
+       109: astore        8
+       111: aload         7
+       113: invokeinterface #79,  1           // InterfaceMethod java/util/List.iterator:()Ljava/util/Iterator;
+       118: astore        9
+       120: aload         9
+       122: invokeinterface #56,  1           // InterfaceMethod java/util/Iterator.hasNext:()Z
+       127: ifeq          154
+       130: aload         9
+       132: invokeinterface #62,  1           // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+       137: checkcast     #80                 // class net/minecraft/client/renderer/UniformValue
+       140: astore        10
+       142: aload         10
+       144: aload         8
+       146: invokeinterface #82,  2           // InterfaceMethod net/minecraft/client/renderer/UniformValue.addSize:(Lcom/mojang/blaze3d/buffers/Std140SizeCalculator;)V
+       151: goto          120
+       154: aload         8
+       156: invokevirtual #86                 // Method com/mojang/blaze3d/buffers/Std140SizeCalculator.get:()I
+       159: istore        9
+       161: invokestatic  #90                 // Method org/lwjgl/system/MemoryStack.stackPush:()Lorg/lwjgl/system/MemoryStack;
+       164: astore        10
+       166: aload         10
+       168: iload         9
+       170: invokestatic  #96                 // Method com/mojang/blaze3d/buffers/Std140Builder.onStack:(Lorg/lwjgl/system/MemoryStack;I)Lcom/mojang/blaze3d/buffers/Std140Builder;
+       173: astore        11
+       175: aload         7
+       177: invokeinterface #79,  1           // InterfaceMethod java/util/List.iterator:()Ljava/util/Iterator;
+       182: astore        12
+       184: aload         12
+       186: invokeinterface #56,  1           // InterfaceMethod java/util/Iterator.hasNext:()Z
+       191: ifeq          218
+       194: aload         12
+       196: invokeinterface #62,  1           // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+       201: checkcast     #80                 // class net/minecraft/client/renderer/UniformValue
+       204: astore        13
+       206: aload         13
+       208: aload         11
+       210: invokeinterface #102,  2          // InterfaceMethod net/minecraft/client/renderer/UniformValue.writeTo:(Lcom/mojang/blaze3d/buffers/Std140Builder;)V
+       215: goto          184
+       218: aload_0
+       219: getfield      #10                 // Field customUniforms:Ljava/util/Map;
+       222: aload         6
+       224: invokeinterface #106,  1          // InterfaceMethod java/util/Map$Entry.getKey:()Ljava/lang/Object;
+       229: checkcast     #109                // class java/lang/String
+       232: invokestatic  #111                // Method com/mojang/blaze3d/systems/RenderSystem.getDevice:()Lcom/mojang/blaze3d/systems/GpuDevice;
+       235: aload_0
+       236: aload         6
+       238: invokedynamic #117,  0            // InvokeDynamic #0:get:(Lnet/minecraft/client/renderer/PostPass;Ljava/util/Map$Entry;)Ljava/util/function/Supplier;
+       243: sipush        128
+       246: aload         11
+       248: invokevirtual #122                // Method com/mojang/blaze3d/buffers/Std140Builder.get:()Ljava/nio/ByteBuffer;
+       251: invokevirtual #125                // Method com/mojang/blaze3d/systems/GpuDevice.createBuffer:(Ljava/util/function/Supplier;ILjava/nio/ByteBuffer;)Lcom/mojang/blaze3d/buffers/GpuBuffer;
+       254: invokeinterface #131,  3          // InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+       259: pop
+       260: aload         10
+       262: ifnull        300
+       265: aload         10
+       267: invokevirtual #135                // Method org/lwjgl/system/MemoryStack.close:()V
+       270: goto          300
+       273: astore        11
+       275: aload         10
+       277: ifnull        297
+       280: aload         10
+       282: invokevirtual #135                // Method org/lwjgl/system/MemoryStack.close:()V
+       285: goto          297
+       288: astore        12
+       290: aload         11
+       292: aload         12
+       294: invokevirtual #140                // Method java/lang/Throwable.addSuppressed:(Ljava/lang/Throwable;)V
+       297: aload         11
+       299: athrow
+       300: goto          55
+       303: aload_0
+       304: new           #144                // class net/minecraft/client/renderer/MappableRingBuffer
+       307: dup
+       308: aload_0
+       309: invokedynamic #146,  0            // InvokeDynamic #1:get:(Lnet/minecraft/client/renderer/PostPass;)Ljava/util/function/Supplier;
+       314: sipush        130
+       317: aload         4
+       319: invokeinterface #149,  1          // InterfaceMethod java/util/List.size:()I
 === PostChainConfig$Pass / TextureInput / TargetInput ===
-Error: class not found: net.minecraft.client.renderer.PostChainConfig$Pass
-Error: class not found: net.minecraft.client.renderer.PostChainConfig$TextureInput
-Error: class not found: net.minecraft.client.renderer.PostChainConfig$TargetInput
-Error: class not found: net.minecraft.client.renderer.PostChainConfig$InternalTarget
+Compiled from "PostChainConfig.java"
+public final class net.minecraft.client.renderer.PostChainConfig$Pass extends java.lang.Record {
+  private final net.minecraft.resources.Identifier vertexShaderId;
+  private final net.minecraft.resources.Identifier fragmentShaderId;
+  private final java.util.List<net.minecraft.client.renderer.PostChainConfig$Input> inputs;
+  private final net.minecraft.resources.Identifier outputTarget;
+  private final java.util.Map<java.lang.String, java.util.List<net.minecraft.client.renderer.UniformValue>> uniforms;
+  private static final com.mojang.serialization.Codec<java.util.List<net.minecraft.client.renderer.PostChainConfig$Input>> INPUTS_CODEC;
+  private static final com.mojang.serialization.Codec<java.util.Map<java.lang.String, java.util.List<net.minecraft.client.renderer.UniformValue>>> UNIFORM_BLOCKS_CODEC;
+  public static final com.mojang.serialization.Codec<net.minecraft.client.renderer.PostChainConfig$Pass> CODEC;
+  public net.minecraft.client.renderer.PostChainConfig$Pass(net.minecraft.resources.Identifier, net.minecraft.resources.Identifier, java.util.List<net.minecraft.client.renderer.PostChainConfig$Input>, net.minecraft.resources.Identifier, java.util.Map<java.lang.String, java.util.List<net.minecraft.client.renderer.UniformValue>>);
+  public java.util.stream.Stream<net.minecraft.resources.Identifier> referencedTargets();
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public net.minecraft.resources.Identifier vertexShaderId();
+  public net.minecraft.resources.Identifier fragmentShaderId();
+  public java.util.List<net.minecraft.client.renderer.PostChainConfig$Input> inputs();
+  public net.minecraft.resources.Identifier outputTarget();
+  public java.util.Map<java.lang.String, java.util.List<net.minecraft.client.renderer.UniformValue>> uniforms();
+  private static java.util.stream.Stream lambda$referencedTargets$0(net.minecraft.client.renderer.PostChainConfig$Input);
+  private static com.mojang.datafixers.kinds.App lambda$static$2(com.mojang.serialization.codecs.RecordCodecBuilder$Instance);
+  private static com.mojang.serialization.DataResult lambda$static$0(java.util.List);
+  private static java.lang.String lambda$static$1(net.minecraft.client.renderer.PostChainConfig$Input);
+  static {};
+}
+Compiled from "PostChainConfig.java"
+public final class net.minecraft.client.renderer.PostChainConfig$TextureInput extends java.lang.Record implements net.minecraft.client.renderer.PostChainConfig$Input {
+  private final java.lang.String samplerName;
+  private final net.minecraft.resources.Identifier location;
+  private final int width;
+  private final int height;
+  private final boolean bilinear;
+  public static final com.mojang.serialization.Codec<net.minecraft.client.renderer.PostChainConfig$TextureInput> CODEC;
+  public net.minecraft.client.renderer.PostChainConfig$TextureInput(java.lang.String, net.minecraft.resources.Identifier, int, int, boolean);
+  public java.util.Set<net.minecraft.resources.Identifier> referencedTargets();
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String samplerName();
+  public net.minecraft.resources.Identifier location();
+  public int width();
+  public int height();
+  public boolean bilinear();
+  private static com.mojang.datafixers.kinds.App lambda$static$0(com.mojang.serialization.codecs.RecordCodecBuilder$Instance);
+  static {};
+}
+Compiled from "PostChainConfig.java"
+public final class net.minecraft.client.renderer.PostChainConfig$TargetInput extends java.lang.Record implements net.minecraft.client.renderer.PostChainConfig$Input {
+  private final java.lang.String samplerName;
+  private final net.minecraft.resources.Identifier targetId;
+  private final boolean useDepthBuffer;
+  private final boolean bilinear;
+  public static final com.mojang.serialization.Codec<net.minecraft.client.renderer.PostChainConfig$TargetInput> CODEC;
+  public net.minecraft.client.renderer.PostChainConfig$TargetInput(java.lang.String, net.minecraft.resources.Identifier, boolean, boolean);
+  public java.util.Set<net.minecraft.resources.Identifier> referencedTargets();
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.lang.String samplerName();
+  public net.minecraft.resources.Identifier targetId();
+  public boolean useDepthBuffer();
+  public boolean bilinear();
+  private static com.mojang.datafixers.kinds.App lambda$static$0(com.mojang.serialization.codecs.RecordCodecBuilder$Instance);
+  static {};
+}
+Compiled from "PostChainConfig.java"
+public final class net.minecraft.client.renderer.PostChainConfig$InternalTarget extends java.lang.Record {
+  private final java.util.Optional<java.lang.Integer> width;
+  private final java.util.Optional<java.lang.Integer> height;
+  private final boolean persistent;
+  private final int clearColor;
+  public static final com.mojang.serialization.Codec<net.minecraft.client.renderer.PostChainConfig$InternalTarget> CODEC;
+  public net.minecraft.client.renderer.PostChainConfig$InternalTarget(java.util.Optional<java.lang.Integer>, java.util.Optional<java.lang.Integer>, boolean, int);
+  public final java.lang.String toString();
+  public final int hashCode();
+  public final boolean equals(java.lang.Object);
+  public java.util.Optional<java.lang.Integer> width();
+  public java.util.Optional<java.lang.Integer> height();
+  public boolean persistent();
+  public int clearColor();
+  private static com.mojang.datafixers.kinds.App lambda$static$0(com.mojang.serialization.codecs.RecordCodecBuilder$Instance);
+  static {};
+}
 === blit.fsh ===
+#version 330
+
+uniform sampler2D InSampler;
+
+layout(std140) uniform BlitConfig {
+    vec4 ColorModulate;
+};
+
+in vec2 texCoord;
+
+out vec4 fragColor;
+
+void main(){
+    fragColor = texture(InSampler, texCoord) * ColorModulate;
+}
 === transparency.json (пример цепи с двумя таргетами) ===
+{
+    "targets" : {
+        "final": {}
+    },
+    "passes": [
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/transparency",
+            "inputs": [
+                {
+                    "sampler_name": "Main",
+                    "target": "minecraft:main"
+                },
+                {
+                    "sampler_name": "MainDepth",
+                    "target": "minecraft:main",
+                    "use_depth_buffer": true
+                },
+                {
+                    "sampler_name": "Translucent",
+                    "target": "minecraft:translucent"
+                },
+                {
+                    "sampler_name": "TranslucentDepth",
+                    "target": "minecraft:translucent",
+                    "use_depth_buffer": true
+                },
+                {
+                    "sampler_name": "ItemEntity",
+                    "target": "minecraft:item_entity"
+                },
+                {
+                    "sampler_name": "ItemEntityDepth",
+                    "target": "minecraft:item_entity",
+                    "use_depth_buffer": true
+                },
+                {
+                    "sampler_name": "Particles",
+                    "target": "minecraft:particles"
+                },
+                {
+                    "sampler_name": "ParticlesDepth",
+                    "target": "minecraft:particles",
+                    "use_depth_buffer": true
+                },
+                {
+                    "sampler_name": "Clouds",
+                    "target": "minecraft:clouds"
+                },
+                {
+                    "sampler_name": "CloudsDepth",
+                    "target": "minecraft:clouds",
+                    "use_depth_buffer": true
+                },
+                {
+                    "sampler_name": "Weather",
+                    "target": "minecraft:weather"
+                },
+                {
+                    "sampler_name": "WeatherDepth",
 === кто вызывает checkEntityPostEffect ===
+out/full/net/minecraft/client/renderer/GameRenderer.class
+out/full/net/minecraft/client/Minecraft.class
 === Minecraft.render / LevelRenderEvents порядок ===
 === LevelRenderer: custom geometry ===
+  private final net.minecraft.client.renderer.SubmitNodeStorage submitNodeStorage;
+  private final net.minecraft.gizmos.SimpleGizmoCollector renderThreadGizmos;
+  private void submitFeatures(net.minecraft.client.renderer.state.level.LevelRenderState, net.minecraft.client.renderer.SubmitNodeCollector, boolean);
+  private void submitEntities(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.state.level.LevelRenderState, net.minecraft.client.renderer.SubmitNodeCollector);
+  private void submitBlockEntities(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.state.level.LevelRenderState, net.minecraft.client.renderer.SubmitNodeCollector);
+  private void submitBlockDestroyAnimation(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.SubmitNodeCollector, net.minecraft.client.renderer.state.level.LevelRenderState);
+  private void submitBlockOutline(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.SubmitNodeCollector, net.minecraft.client.renderer.state.level.LevelRenderState);
+  private void submitHitOutline(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.SubmitNodeCollector, net.minecraft.client.renderer.rendertype.RenderType, net.minecraft.client.renderer.state.level.BlockOutlineRenderState, int, float, boolean);
+  public void addMainThreadGizmos(java.util.List<net.minecraft.gizmos.SimpleGizmoCollector$GizmoInstance>);
 === где лежит RenderTypes ===
-find: ‘out/full/net/minecraft/client/renderer’: No such file or directory
-find: ‘out/full/net/minecraft/client/renderer’: No such file or directory
+out/full/net/minecraft/client/renderer/rendertype/RenderTypes.class
+  private static final net.minecraft.client.renderer.rendertype.RenderType TRANSLUCENT_MOVING_BLOCK;
+  private static final java.util.function.Function<net.minecraft.resources.Identifier, net.minecraft.client.renderer.rendertype.RenderType> ARMOR_TRANSLUCENT;
+  private static final java.util.function.Function<net.minecraft.resources.Identifier, net.minecraft.client.renderer.rendertype.RenderType> ENTITY_TRANSLUCENT_CULL_ITEM_TARGET;
+  private static final java.util.function.Function<net.minecraft.resources.Identifier, net.minecraft.client.renderer.rendertype.RenderType> ITEM_TRANSLUCENT;
+  private static final java.util.function.BiFunction<net.minecraft.resources.Identifier, java.lang.Boolean, net.minecraft.client.renderer.rendertype.RenderType> ENTITY_TRANSLUCENT;
+  private static final java.util.function.BiFunction<net.minecraft.resources.Identifier, java.lang.Boolean, net.minecraft.client.renderer.rendertype.RenderType> ENTITY_TRANSLUCENT_EMISSIVE;
+  private static final net.minecraft.client.renderer.rendertype.RenderType GLINT_TRANSLUCENT;
+  public static final net.minecraft.client.renderer.rendertype.RenderType LINES;
+  public static final net.minecraft.client.renderer.rendertype.RenderType LINES_TRANSLUCENT;
+  public static net.minecraft.client.renderer.rendertype.RenderType translucentMovingBlock();
+  public static net.minecraft.client.renderer.rendertype.RenderType armorTranslucent(net.minecraft.resources.Identifier);
+  public static net.minecraft.client.renderer.rendertype.RenderType entityTranslucentCullItemTarget(net.minecraft.resources.Identifier);
+  public static net.minecraft.client.renderer.rendertype.RenderType itemTranslucent(net.minecraft.resources.Identifier);
+  public static net.minecraft.client.renderer.rendertype.RenderType entityTranslucent(net.minecraft.resources.Identifier, boolean);
+  public static net.minecraft.client.renderer.rendertype.RenderType entityTranslucent(net.minecraft.resources.Identifier);
+  public static net.minecraft.client.renderer.rendertype.RenderType entityTranslucentEmissive(net.minecraft.resources.Identifier, boolean);
+  public static net.minecraft.client.renderer.rendertype.RenderType entityTranslucentEmissive(net.minecraft.resources.Identifier);
+  public static net.minecraft.client.renderer.rendertype.RenderType glintTranslucent();
+  public static net.minecraft.client.renderer.rendertype.RenderType lines();
+  public static net.minecraft.client.renderer.rendertype.RenderType linesTranslucent();
 === ScreenEffectRenderer public ===
-Error: class not found: net.minecraft.client.renderer.ScreenEffectRenderer
+Compiled from "ScreenEffectRenderer.java"
+public class net.minecraft.client.renderer.ScreenEffectRenderer {
+  private static final net.minecraft.resources.Identifier UNDERWATER_LOCATION;
+  private final net.minecraft.client.Minecraft minecraft;
+  private final net.minecraft.client.resources.model.sprite.SpriteGetter sprites;
+  public static final int ITEM_ACTIVATION_ANIMATION_LENGTH;
+  private net.minecraft.world.item.ItemStack itemActivationItem;
+  private int itemActivationTicks;
+  private float itemActivationOffX;
+  private float itemActivationOffY;
+  public net.minecraft.client.renderer.ScreenEffectRenderer(net.minecraft.client.Minecraft, net.minecraft.client.resources.model.sprite.SpriteGetter);
+  public void tick();
+  public void submit(boolean, boolean, float, net.minecraft.client.renderer.SubmitNodeCollector, boolean);
+  private void renderItemActivationAnimation(com.mojang.blaze3d.vertex.PoseStack, float, net.minecraft.client.renderer.SubmitNodeCollector);
+  public void resetItemActivation();
+  public void displayItemActivation(net.minecraft.world.item.ItemStack, net.minecraft.util.RandomSource);
+  private static net.minecraft.world.level.block.state.BlockState getViewBlockingState(net.minecraft.world.entity.player.Player);
+  private static void submitBlockSprite(net.minecraft.client.renderer.texture.TextureAtlasSprite, com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.SubmitNodeCollector, int);
+  private static void submitWater(net.minecraft.client.Minecraft, com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.SubmitNodeCollector);
+  private static void submitFire(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.SubmitNodeCollector, net.minecraft.client.renderer.texture.TextureAtlasSprite);
+  private static void buildFireQuad(net.minecraft.client.renderer.texture.TextureAtlasSprite, com.mojang.blaze3d.vertex.VertexConsumer, org.joml.Matrix4f);
+  private static void buildSpriteQuad(com.mojang.blaze3d.vertex.VertexConsumer, org.joml.Matrix4f, net.minecraft.client.renderer.texture.TextureAtlasSprite, float, float, float, float, float, int);
+  private static void buildQuad(com.mojang.blaze3d.vertex.VertexConsumer, org.joml.Matrix4f, float, float, float, float, float, float, float, float, float, int);
+  private static void lambda$submitFire$0(net.minecraft.client.renderer.texture.TextureAtlasSprite, com.mojang.blaze3d.vertex.PoseStack$Pose, com.mojang.blaze3d.vertex.VertexConsumer);
+  private static void lambda$submitWater$0(float, float, int, com.mojang.blaze3d.vertex.PoseStack$Pose, com.mojang.blaze3d.vertex.VertexConsumer);
+  private static void lambda$submitBlockSprite$0(net.minecraft.client.renderer.texture.TextureAtlasSprite, int, com.mojang.blaze3d.vertex.PoseStack$Pose, com.mojang.blaze3d.vertex.VertexConsumer);
+  static {};
+}
 === RenderPass: pass для пост-эффектов/depth ===
 Error: class not found: net.minecraft.client.renderer.RenderPass
 === кто вызывает checkEntityPostEffect (константы классов) ===
 -- Minecraft
+        76: goto          80
+        79: aconst_null
+        80: invokevirtual #3201               // Method net/minecraft/client/renderer/GameRenderer.checkEntityPostEffect:(Lnet/minecraft/world/entity/Entity;)V
+        83: goto          0
+        86: aload_0
+--
+        12: getfield      #1163               // Field gameRenderer:Lnet/minecraft/client/renderer/GameRenderer;
+        15: aload_1
+        16: invokevirtual #3201               // Method net/minecraft/client/renderer/GameRenderer.checkEntityPostEffect:(Lnet/minecraft/world/entity/Entity;)V
+        19: return
+
 -- GameRenderer
+        16: return
+
+  public void checkEntityPostEffect(net.minecraft.world.entity.Entity);
+    Code:
+         0: aload_1
 -- LevelRenderer
 === PostPass: поля и конструктор ===
-Error: class not found: net.minecraft.client.renderer.PostPass
+Compiled from "PostPass.java"
+public class net.minecraft.client.renderer.PostPass implements java.lang.AutoCloseable {
+  private static final int UBO_SIZE_PER_SAMPLER;
+  private final java.lang.String name;
+  private final com.mojang.blaze3d.pipeline.RenderPipeline pipeline;
+  private final net.minecraft.resources.Identifier outputTargetId;
+  private final java.util.Map<java.lang.String, com.mojang.blaze3d.buffers.GpuBuffer> customUniforms;
+  private final net.minecraft.client.renderer.MappableRingBuffer infoUbo;
+  private final java.util.List<net.minecraft.client.renderer.PostPass$Input> inputs;
+  public net.minecraft.client.renderer.PostPass(com.mojang.blaze3d.pipeline.RenderPipeline, net.minecraft.resources.Identifier, java.util.Map<java.lang.String, java.util.List<net.minecraft.client.renderer.UniformValue>>, java.util.List<net.minecraft.client.renderer.PostPass$Input>);
+  public void addToFrame(com.mojang.blaze3d.framegraph.FrameGraphBuilder, java.util.Map<net.minecraft.resources.Identifier, com.mojang.blaze3d.resource.ResourceHandle<com.mojang.blaze3d.pipeline.RenderTarget>>, com.mojang.blaze3d.buffers.GpuBufferSlice);
+  public void close();
+  private void lambda$addToFrame$1(com.mojang.blaze3d.resource.ResourceHandle, com.mojang.blaze3d.buffers.GpuBufferSlice, java.util.Map);
+  private java.lang.String lambda$addToFrame$3();
+  private static net.minecraft.client.renderer.PostPass$InputTexture lambda$addToFrame$2(java.util.Map, com.mojang.blaze3d.systems.SamplerCache, net.minecraft.client.renderer.PostPass$Input);
+  private static com.mojang.blaze3d.resource.ResourceHandle lambda$addToFrame$0(com.mojang.blaze3d.framegraph.FramePass, net.minecraft.resources.Identifier, com.mojang.blaze3d.resource.ResourceHandle);
+  private java.lang.String lambda$new$1();
+  private java.lang.String lambda$new$0(java.util.Map$Entry);
+  static {};
+}
 === PostPass: байткод конструктора (сколько сэмплеров) ===
-Error: class not found: net.minecraft.client.renderer.PostPass
+Compiled from "PostPass.java"
+public class net.minecraft.client.renderer.PostPass implements java.lang.AutoCloseable {
+  private static final int UBO_SIZE_PER_SAMPLER;
+
+  private final java.lang.String name;
+
+  private final com.mojang.blaze3d.pipeline.RenderPipeline pipeline;
+
+  private final net.minecraft.resources.Identifier outputTargetId;
+
+  private final java.util.Map<java.lang.String, com.mojang.blaze3d.buffers.GpuBuffer> customUniforms;
+
+  private final net.minecraft.client.renderer.MappableRingBuffer infoUbo;
+
+  private final java.util.List<net.minecraft.client.renderer.PostPass$Input> inputs;
+
+  public net.minecraft.client.renderer.PostPass(com.mojang.blaze3d.pipeline.RenderPipeline, net.minecraft.resources.Identifier, java.util.Map<java.lang.String, java.util.List<net.minecraft.client.renderer.UniformValue>>, java.util.List<net.minecraft.client.renderer.PostPass$Input>);
+    Code:
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: aload_0
+         5: new           #7                  // class java/util/HashMap
+         8: dup
+         9: invokespecial #9                  // Method java/util/HashMap."<init>":()V
+        12: putfield      #10                 // Field customUniforms:Ljava/util/Map;
+        15: aload_0
+        16: aload_1
+        17: putfield      #16                 // Field pipeline:Lcom/mojang/blaze3d/pipeline/RenderPipeline;
+        20: aload_0
+        21: aload_1
+        22: invokevirtual #20                 // Method com/mojang/blaze3d/pipeline/RenderPipeline.getLocation:()Lnet/minecraft/resources/Identifier;
+        25: invokevirtual #26                 // Method net/minecraft/resources/Identifier.toString:()Ljava/lang/String;
+        28: putfield      #32                 // Field name:Ljava/lang/String;
+        31: aload_0
+        32: aload_2
+        33: putfield      #36                 // Field outputTargetId:Lnet/minecraft/resources/Identifier;
+        36: aload_0
+        37: aload         4
+        39: putfield      #40                 // Field inputs:Ljava/util/List;
+        42: aload_3
+        43: invokeinterface #44,  1           // InterfaceMethod java/util/Map.entrySet:()Ljava/util/Set;
+        48: invokeinterface #50,  1           // InterfaceMethod java/util/Set.iterator:()Ljava/util/Iterator;
+        53: astore        5
+        55: aload         5
+        57: invokeinterface #56,  1           // InterfaceMethod java/util/Iterator.hasNext:()Z
+        62: ifeq          303
+        65: aload         5
+        67: invokeinterface #62,  1           // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+        72: checkcast     #66                 // class java/util/Map$Entry
+        75: astore        6
+        77: aload         6
+        79: invokeinterface #68,  1           // InterfaceMethod java/util/Map$Entry.getValue:()Ljava/lang/Object;
+        84: checkcast     #71                 // class java/util/List
+        87: astore        7
+        89: aload         7
+        91: invokeinterface #73,  1           // InterfaceMethod java/util/List.isEmpty:()Z
+        96: ifeq          102
+        99: goto          55
+       102: new           #76                 // class com/mojang/blaze3d/buffers/Std140SizeCalculator
+       105: dup
+       106: invokespecial #78                 // Method com/mojang/blaze3d/buffers/Std140SizeCalculator."<init>":()V
+       109: astore        8
+       111: aload         7
+       113: invokeinterface #79,  1           // InterfaceMethod java/util/List.iterator:()Ljava/util/Iterator;
+       118: astore        9
+       120: aload         9
+       122: invokeinterface #56,  1           // InterfaceMethod java/util/Iterator.hasNext:()Z
+       127: ifeq          154
+       130: aload         9
+       132: invokeinterface #62,  1           // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+       137: checkcast     #80                 // class net/minecraft/client/renderer/UniformValue
+       140: astore        10
+       142: aload         10
+       144: aload         8
+       146: invokeinterface #82,  2           // InterfaceMethod net/minecraft/client/renderer/UniformValue.addSize:(Lcom/mojang/blaze3d/buffers/Std140SizeCalculator;)V
+       151: goto          120
+       154: aload         8
+       156: invokevirtual #86                 // Method com/mojang/blaze3d/buffers/Std140SizeCalculator.get:()I
+       159: istore        9
+       161: invokestatic  #90                 // Method org/lwjgl/system/MemoryStack.stackPush:()Lorg/lwjgl/system/MemoryStack;
+       164: astore        10
+       166: aload         10
+       168: iload         9
+       170: invokestatic  #96                 // Method com/mojang/blaze3d/buffers/Std140Builder.onStack:(Lorg/lwjgl/system/MemoryStack;I)Lcom/mojang/blaze3d/buffers/Std140Builder;
+       173: astore        11
+       175: aload         7
+       177: invokeinterface #79,  1           // InterfaceMethod java/util/List.iterator:()Ljava/util/Iterator;
+       182: astore        12
+       184: aload         12
+       186: invokeinterface #56,  1           // InterfaceMethod java/util/Iterator.hasNext:()Z
+       191: ifeq          218
+       194: aload         12
+       196: invokeinterface #62,  1           // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+       201: checkcast     #80                 // class net/minecraft/client/renderer/UniformValue
+       204: astore        13
+       206: aload         13
+       208: aload         11
+       210: invokeinterface #102,  2          // InterfaceMethod net/minecraft/client/renderer/UniformValue.writeTo:(Lcom/mojang/blaze3d/buffers/Std140Builder;)V
+       215: goto          184
+       218: aload_0
+       219: getfield      #10                 // Field customUniforms:Ljava/util/Map;
+       222: aload         6
+       224: invokeinterface #106,  1          // InterfaceMethod java/util/Map$Entry.getKey:()Ljava/lang/Object;
+       229: checkcast     #109                // class java/lang/String
+       232: invokestatic  #111                // Method com/mojang/blaze3d/systems/RenderSystem.getDevice:()Lcom/mojang/blaze3d/systems/GpuDevice;
+       235: aload_0
+       236: aload         6
+       238: invokedynamic #117,  0            // InvokeDynamic #0:get:(Lnet/minecraft/client/renderer/PostPass;Ljava/util/Map$Entry;)Ljava/util/function/Supplier;
+       243: sipush        128
+       246: aload         11
+       248: invokevirtual #122                // Method com/mojang/blaze3d/buffers/Std140Builder.get:()Ljava/nio/ByteBuffer;
+       251: invokevirtual #125                // Method com/mojang/blaze3d/systems/GpuDevice.createBuffer:(Ljava/util/function/Supplier;ILjava/nio/ByteBuffer;)Lcom/mojang/blaze3d/buffers/GpuBuffer;
+       254: invokeinterface #131,  3          // InterfaceMethod java/util/Map.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+       259: pop
+       260: aload         10
+       262: ifnull        300
+       265: aload         10
+       267: invokevirtual #135                // Method org/lwjgl/system/MemoryStack.close:()V
+       270: goto          300
+       273: astore        11
 === blit.fsh ===
+#version 330
+
+uniform sampler2D InSampler;
+
+layout(std140) uniform BlitConfig {
+    vec4 ColorModulate;
+};
+
+in vec2 texCoord;
+
+out vec4 fragColor;
+
+void main(){
+    fragColor = texture(InSampler, texCoord) * ColorModulate;
+}
 === screenquad.vsh ===
+#version 330
+
+out vec2 texCoord;
+
+void main() {
+    vec2 uv = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+    vec4 pos = vec4(uv * vec2(2, 2) + vec2(-1, -1), 0, 1);
+
+    gl_Position = pos;
+    texCoord = uv;
+}
 === PostChain ===
-Error: class not found: net.minecraft.client.renderer.PostChain$TargetBundle
+Compiled from "PostChain.java"
+public interface net.minecraft.client.renderer.PostChain$TargetBundle {
+  public static net.minecraft.client.renderer.PostChain$TargetBundle of(net.minecraft.resources.Identifier, com.mojang.blaze3d.resource.ResourceHandle<com.mojang.blaze3d.pipeline.RenderTarget>);
+  public abstract void replace(net.minecraft.resources.Identifier, com.mojang.blaze3d.resource.ResourceHandle<com.mojang.blaze3d.pipeline.RenderTarget>);
+  public abstract com.mojang.blaze3d.resource.ResourceHandle<com.mojang.blaze3d.pipeline.RenderTarget> get(net.minecraft.resources.Identifier);
+  public default com.mojang.blaze3d.resource.ResourceHandle<com.mojang.blaze3d.pipeline.RenderTarget> getOrThrow(net.minecraft.resources.Identifier);
+}
 === PostChain.load байткод (как резолвятся имена таргетов) ===
-Error: class not found: net.minecraft.client.renderer.PostChain
+Compiled from "PostChain.java"
+public class net.minecraft.client.renderer.PostChain implements java.lang.AutoCloseable {
+  public static final net.minecraft.resources.Identifier MAIN_TARGET_ID;
+
+  private final java.util.List<net.minecraft.client.renderer.PostPass> passes;
+
+  private final java.util.Map<net.minecraft.resources.Identifier, net.minecraft.client.renderer.PostChainConfig$InternalTarget> internalTargets;
+
+  private final java.util.Set<net.minecraft.resources.Identifier> externalTargets;
+
+  private final java.util.Map<net.minecraft.resources.Identifier, com.mojang.blaze3d.pipeline.RenderTarget> persistentTargets;
+
+  private final net.minecraft.client.renderer.Projection projection;
+
+  private final net.minecraft.client.renderer.ProjectionMatrixBuffer projectionMatrixBuffer;
+
+  private net.minecraft.client.renderer.PostChain(java.util.List<net.minecraft.client.renderer.PostPass>, java.util.Map<net.minecraft.resources.Identifier, net.minecraft.client.renderer.PostChainConfig$InternalTarget>, java.util.Set<net.minecraft.resources.Identifier>, net.minecraft.client.renderer.Projection, net.minecraft.client.renderer.ProjectionMatrixBuffer);
+    Code:
+         0: aload_0
+         1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+         4: aload_0
+         5: new           #7                  // class java/util/HashMap
+         8: dup
+         9: invokespecial #9                  // Method java/util/HashMap."<init>":()V
+        12: putfield      #10                 // Field persistentTargets:Ljava/util/Map;
+        15: aload_0
+        16: aload_1
+        17: putfield      #16                 // Field passes:Ljava/util/List;
+        20: aload_0
+        21: aload_2
+        22: putfield      #20                 // Field internalTargets:Ljava/util/Map;
+        25: aload_0
+        26: aload_3
+        27: putfield      #23                 // Field externalTargets:Ljava/util/Set;
+        30: aload_0
+        31: aload         4
+        33: putfield      #27                 // Field projection:Lnet/minecraft/client/renderer/Projection;
+        36: aload_0
+        37: aload         5
+        39: putfield      #31                 // Field projectionMatrixBuffer:Lnet/minecraft/client/renderer/ProjectionMatrixBuffer;
+        42: return
+
+  public static net.minecraft.client.renderer.PostChain load(net.minecraft.client.renderer.PostChainConfig, net.minecraft.client.renderer.texture.TextureManager, java.util.Set<net.minecraft.resources.Identifier>, net.minecraft.resources.Identifier, net.minecraft.client.renderer.Projection, net.minecraft.client.renderer.ProjectionMatrixBuffer) throws net.minecraft.client.renderer.ShaderManager$CompilationException;
+    Code:
+         0: aload_0
+         1: invokevirtual #35                 // Method net/minecraft/client/renderer/PostChainConfig.passes:()Ljava/util/List;
+         4: invokeinterface #40,  1           // InterfaceMethod java/util/List.stream:()Ljava/util/stream/Stream;
+         9: invokedynamic #46,  0             // InvokeDynamic #0:apply:()Ljava/util/function/Function;
+        14: invokeinterface #50,  2           // InterfaceMethod java/util/stream/Stream.flatMap:(Ljava/util/function/Function;)Ljava/util/stream/Stream;
+        19: astore        6
+        21: aload         6
+        23: aload_0
+        24: invokedynamic #56,  0             // InvokeDynamic #1:test:(Lnet/minecraft/client/renderer/PostChainConfig;)Ljava/util/function/Predicate;
+        29: invokeinterface #60,  2           // InterfaceMethod java/util/stream/Stream.filter:(Ljava/util/function/Predicate;)Ljava/util/stream/Stream;
+        34: invokestatic  #64                 // Method java/util/stream/Collectors.toSet:()Ljava/util/stream/Collector;
+        37: invokeinterface #70,  2           // InterfaceMethod java/util/stream/Stream.collect:(Ljava/util/stream/Collector;)Ljava/lang/Object;
+        42: checkcast     #74                 // class java/util/Set
+        45: astore        7
+        47: aload         7
+        49: aload_2
+  private net.minecraft.resources.Identifier postEffectId;
+  public void clearPostEffect();
+  public void togglePostEffect();
+  public void checkEntityPostEffect(net.minecraft.world.entity.Entity);
+  private void setPostEffect(net.minecraft.resources.Identifier);
+  public net.minecraft.resources.Identifier currentPostEffect();
