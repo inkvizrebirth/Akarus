@@ -5,6 +5,7 @@ import com.dreamcast.client.module.ModuleCategory;
 import com.dreamcast.client.settings.BooleanSetting;
 import com.dreamcast.client.settings.IntSetting;
 import com.dreamcast.client.settings.ModeSetting;
+import com.dreamcast.client.rotation.RotationManager;
 import com.dreamcast.client.util.BuffPriority;
 import com.dreamcast.client.util.DrinkLogic;
 import com.dreamcast.client.util.KeyOwnership;
@@ -98,6 +99,17 @@ public class AutoBuffModule extends Module {
 			ModeSetting.option("legit", "Легитный"),
 			ModeSetting.option("fast", "Быстрый"));
 
+	/**
+	 * Как опускать взгляд под бросок. «Сайлент» (по умолчанию) — сервер видит
+	 * взгляд вниз, а камера игрока остаётся где была: поворот живёт в слое
+	 * {@link RotationManager} и подменяет только пакет движения. «Видимая» —
+	 * прежнее поведение (камера реально смотрит под ноги и возвращается обратно).
+	 */
+	private final ModeSetting rotation = mode("rotation", "Наводка вниз", "silent",
+			ModeSetting.option("silent", "Сайлент (своя камера)"),
+			ModeSetting.option("visible", "Видимая"),
+			ModeSetting.option("none", "Без наводки"));
+
 	private final BooleanSetting wantSpeed = bool("speed", "Скорость", true);
 	private final BooleanSetting wantStrength = bool("strength", "Сила", true);
 	private final BooleanSetting wantFireRes = bool("fire_res", "Огнестойкость", true);
@@ -174,6 +186,7 @@ public class AutoBuffModule extends Module {
 	/** Полный откат: клавиша, предмет резервного слота, слот, взгляд, состояние. */
 	private void hardInterrupt() {
 		releaseUseKey();
+		RotationManager.release(this);
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client == null ? null : client.player;
 		if (player != null) {
@@ -206,6 +219,8 @@ public class AutoBuffModule extends Module {
 			}
 			if (cameraTouched) {
 				player.setXRot(returnPitch);
+				player.setYRot(returnYaw);
+				cameraTouched = false;
 			}
 		}
 		resetState();
@@ -460,10 +475,13 @@ public class AutoBuffModule extends Module {
 		returnPitch = player.getXRot();
 		long now = net.minecraft.util.Util.getMillis();
 
-		boolean needAim = kind == PotionLogic.Kind.SPLASH
-				|| (kind == PotionLogic.Kind.DRINK && mode.is("legit"));
+		boolean needAim = !rotation.is("none")
+				&& (kind == PotionLogic.Kind.SPLASH
+						|| (kind == PotionLogic.Kind.DRINK && mode.is("legit")));
 		if (needAim) {
-			cameraTouched = true;
+			// Камеру пачкаем только в видимом режиме: в сайленте игрок не заметит
+			// ничего, и «возвращать» её некуда
+			cameraTouched = rotation.is("visible");
 			phase = Phase.AIM_DOWN;
 		} else {
 			phase = Phase.USE_ITEM; // быстрое питьё — без камеры, как раньше
@@ -475,19 +493,35 @@ public class AutoBuffModule extends Module {
 		float aimTarget = kind == PotionLogic.Kind.SPLASH ? SPLASH_PITCH : DRINK_PITCH;
 		boolean fastThrow = kind == PotionLogic.Kind.SPLASH && throwStyle.is("fast");
 		float rate = fastThrow ? 30.0f : 6.0f;
-		float pitch = player.getXRot();
-		float delta = Math.signum(aimTarget - pitch) * Math.min(rate, Math.abs(aimTarget - pitch));
-		player.setXRot(pitch + delta);
-
-		if (Math.abs(player.getXRot() - aimTarget) < 1.0f) {
+		if (!holdAim(player, player.getYRot(), aimTarget, rate)) {
+			return; // слоем владеет более важный модуль — подождём свой тик
+		}
+		if (Math.abs(RotationManager.pitch() - aimTarget) < 1.0f) {
 			phase = kind == PotionLogic.Kind.SPLASH ? Phase.WAIT_ROTATION : Phase.USE_ITEM;
 			phaseSince = net.minecraft.util.Util.getMillis();
 		}
 	}
 
+	/**
+	 * Держим прицел слоя: заявка обновляется каждый тик, иначе слой «протухнет»
+	 * и перестанет подменять поворот в пакетах.
+	 *
+	 * @return false, если в этом тике слоем владеет другой (более важный) модуль
+	 */
+	private boolean holdAim(LocalPlayer player, float wantYaw, float wantPitch, float speed) {
+		RotationManager.Mode wanted = rotation.is("visible")
+				? RotationManager.Mode.VISIBLE
+				: RotationManager.Mode.SILENT;
+		return RotationManager.request(this, RotationManager.PRIORITY_BUFF, wanted,
+				RotationManager.Movement.NONE, speed, false, wantYaw, wantPitch);
+	}
+
 	private void tickWaitRotation(LocalPlayer player) {
 		// Сервер должен получить направленный вниз взгляд ДО пакета
-		// использования: ждём минимум тик (быстрый) или человеческую паузу (легит)
+		// использования: держим прицел и ждём минимум тик (быстрый) или
+		// человеческую паузу (легит)
+		holdAim(player, player.getYRot(),
+				kind == PotionLogic.Kind.SPLASH ? SPLASH_PITCH : DRINK_PITCH, 30.0f);
 		long waitMs = throwStyle.is("legit")
 				? DrinkLogic.humanPause(pauseSeed, 200, 480)
 				: 60L;
@@ -507,6 +541,9 @@ public class AutoBuffModule extends Module {
 			ItemStack held = player.getInventory().getItem(itemSlot);
 			snapshotItem = held.getItem();
 			snapshotCount = held.getCount();
+			// Бросок считается по взгляду: сервер обязан получить «вниз» ДО
+			// пакета использования (иначе снаряд летит по старому углу)
+			RotationManager.syncBeforeAction(player);
 			client.gameMode.useItem(player, net.minecraft.world.InteractionHand.MAIN_HAND);
 			player.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
 		} else {
@@ -617,10 +654,19 @@ public class AutoBuffModule extends Module {
 	}
 
 	private void tickRestoreRotation(LocalPlayer player) {
+		// Слой отпускаем всегда: в сайленте камера и не двигалась, а в видимом
+		// режиме дальше возвращаем угол руками
+		RotationManager.release(this);
+		if (!cameraTouched) {
+			finishAction();
+			return;
+		}
 		boolean instant = restorePlan.isInterrupted() || mode.is("fast")
 				|| (kind == PotionLogic.Kind.SPLASH && throwStyle.is("fast"));
 		if (instant) {
 			player.setXRot(returnPitch);
+			player.setYRot(returnYaw);
+			cameraTouched = false;
 			finishAction();
 			return;
 		}
@@ -629,6 +675,8 @@ public class AutoBuffModule extends Module {
 		player.setXRot(pitch + delta);
 		if (Math.abs(player.getXRot() - returnPitch) < 8.0f) {
 			player.setXRot(returnPitch);
+			player.setYRot(returnYaw);
+			cameraTouched = false;
 			finishAction();
 		}
 	}

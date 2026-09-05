@@ -101,8 +101,10 @@ public final class RotationManager {
 	/** Значения, которые реально ушли на сервер (для {@link #inSync()}). */
 	private static float sentYaw = Float.NaN;
 	private static float sentPitch = Float.NaN;
-	/** Пакет поворота в этом тике отправлен (миксином или вручную). */
+	/** В этом тике пакет поворота уже отправлен (миксином или вручную). */
 	private static boolean synced;
+	/** Сервер хотя бы раз получал наш поворот (то есть «тишина» в пакете — не аргумент). */
+	private static boolean applied;
 	/** Миксин {@code LocalPlayer#sendPosition} хотя бы раз отработал. */
 	private static boolean movementPacketHook;
 
@@ -227,6 +229,7 @@ public final class RotationManager {
 		humanizing = false;
 		staleTicks = 0;
 		synced = false;
+		applied = false;
 		sentYaw = Float.NaN;
 		sentPitch = Float.NaN;
 		trackingUser = false;
@@ -302,9 +305,16 @@ public final class RotationManager {
 		return RotationMath.aimed(yaw, pitch, wantedYaw, wantedPitch, tolerance);
 	}
 
-	/** Сервер уже знает текущий поворот — можно бить/ставить. */
+	/**
+	 * Можно ли действовать: сервер уже получает наши повороты.
+	 *
+	 * Точное совпадение угла с последним отправленным не требуется — перед самим
+	 * действием модуль вызывает {@link #syncBeforeAction(LocalPlayer)}, и там
+	 * недостающий пакет поворота уходит строго перед ударом. Требовать «полный
+	 * sync» здесь означало бы, что по moving-цели аура не бьёт никогда.
+	 */
 	public static boolean inSync() {
-		return owner == null || mode != Mode.SILENT || synced;
+		return owner == null || mode != Mode.SILENT || synced || applied;
 	}
 
 	/** Миксин пакета движения жив (нужен модулям, чтобы не дублировать пакеты). */
@@ -332,6 +342,8 @@ public final class RotationManager {
 		playerPitchBefore = player.getXRot();
 		player.setYRot(yaw);
 		player.setXRot(pitch);
+		// Значения, которые ваниль сейчас отправит, — это наш текущий прицел
+		applied = true;
 	}
 
 	/** Вызывается из миксина после {@code LocalPlayer#sendPosition()}: камеру — обратно. */
@@ -357,8 +369,11 @@ public final class RotationManager {
 	 * либо когда угол сменился уже после отправки пакета.
 	 */
 	public static void syncBeforeAction(LocalPlayer player) {
-		if (player == null || owner == null || mode != Mode.SILENT || synced) {
+		if (player == null || owner == null || mode != Mode.SILENT) {
 			return;
+		}
+		if (synced && Float.compare(sentYaw, yaw) == 0 && Float.compare(sentPitch, pitch) == 0) {
+			return; // сервер уже видит ровно этот угол — лишний пакет не нужен
 		}
 		Minecraft client = Minecraft.getInstance();
 		if (client.getConnection() == null) {
@@ -373,6 +388,7 @@ public final class RotationManager {
 		sentYaw = yaw;
 		sentPitch = pitch;
 		synced = true;
+		applied = true;
 	}
 
 	// ------------------------------------------------------------------
@@ -460,6 +476,5 @@ public final class RotationManager {
 	public static void reset() {
 		forget();
 		activeLevel = null;
-		movementPacketHook = false;
 	}
 }

@@ -104,7 +104,9 @@ public class HitParticlesModule extends Module {
 		}
 
 		Vec3 eye = player.getEyePosition();
-		Vec3 look = player.getViewVector(1.0f);
+		// Точка удара считается по прицелу ауры (слою поворотов), а не по камере:
+		// на «сайте» они разошлись, и волна иначе рисовалась бы мимо цели
+		Vec3 look = com.dreamcast.client.rotation.RotationManager.lookVector();
 		Vec3 end = eye.add(look.scale(6.0));
 		var box = target.getBoundingBox().inflate(0.05);
 		var hit = box.clip(eye, end);

@@ -262,6 +262,27 @@ jobs:
               javap -p -cp "$MC" net.minecraft.world.effect.MobEffect 2>&1 | grep -iE 'screen|overlay|postEffect|attributes' | head -20
               echo; echo "=== DataComponents (список) ==="
               javap -p -cp "$MC" net.minecraft.core.component.DataComponents 2>&1 | grep -iE 'public static final' | head -60
+              echo; echo "=== ScreenEffectRenderer ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.ScreenEffectRenderer 2>&1 | head -30
+              echo; echo "=== CameraType ==="
+              javap -p -cp "$MC" net.minecraft.client.CameraType 2>&1 | head -25
+              echo; echo "=== ClientPacketListener (send/playerinfo) ==="
+              javap -p -cp "$MC" net.minecraft.client.multiplayer.ClientPacketListener 2>&1 | grep -iE 'public (void|.*) (send|getPlayerInfo|disconnect|hasClientLoaded)' | head -20
+              echo; echo "=== Player (abilities) ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | grep -iE 'getAbilities|abilities|isCreative|getMainHandItem|getOffhandItem|getArmorValue|absorb|foodData|getFoodData' | head -20
+              echo; echo "=== PlayerAbilities ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.player.PlayerAbilities 2>&1 | grep -iE 'public' | head -25
+              echo; echo "=== LivingEntity (hurt/armor) ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'hurtTime|maxHurtTime|getArmorValue|getAbsorptionAmount|invulnerable|getLastDamage|isSleeping|getMainHandItem' | head -20
+              echo; echo "=== Entity (level/id/misc) ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'public.*(level\(\)|getId\(\)|getUUID|isRemoved|position\(\)|random|setPos|getPos)' | head -20
+              echo; echo "=== Options camera type get/set ==="
+              javap -p -cp "$MC" net.minecraft.client.Options 2>&1 | grep -iE 'CameraType|setCameraType|toggleCameraType|getSensitivity' | head -10
+              echo; echo "=== ItemCooldowns full ==="
+              javap -p -cp "$MC" net.minecraft.world.item.ItemCooldowns 2>&1 | head -16
+              echo; echo "=== MobEffectInstance ==="
+              javap -p -cp "$MC" net.minecraft.world.effect.MobEffectInstance 2>&1 | grep -iE 'public' | head -20
+            fi
               echo; echo "=== Minecraft (crosshair/misc) ==="
               javap -p -cp "$MC" net.minecraft.client.Minecraft 2>&1 | grep -iE 'crosshairPickEntity|isPaused|getCameraEntity|setCameraEntity|levelRenderer|isLocalServer|getUser|getWindow|getSoundManager|level;|player;|mouseHandler|options|gameMode|hitResult|fps' | head -30
               echo; echo "=== Entity (velocity/util) ==="

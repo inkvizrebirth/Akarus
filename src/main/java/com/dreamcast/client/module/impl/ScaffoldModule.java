@@ -8,6 +8,8 @@ import com.dreamcast.client.settings.IntSetting;
 import com.dreamcast.client.settings.ModeSetting;
 import com.dreamcast.client.util.KeyOwnership;
 import com.dreamcast.client.util.Notifications;
+import com.dreamcast.client.rotation.RotationManager;
+import com.dreamcast.client.rotation.RotationMath;
 import com.dreamcast.client.util.ScaffoldLogic;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -68,6 +70,8 @@ public class ScaffoldModule extends Module {
 	private static final int MAX_RETRIES = 3;
 	/** Антиспам уведомления «нет блоков» (тиков). */
 	private static final int NO_BLOCK_NOTIFY = 100;
+	/** Допуск «навелись ли мы на грань», градусы. */
+	private static final float AIM_TOLERANCE = 3.0F;
 
 	// ---- настройки ----
 
@@ -182,6 +186,7 @@ public class ScaffoldModule extends Module {
 
 	@Override
 	protected void onDisable() {
+		RotationManager.release(this);
 		rollback(Minecraft.getInstance());
 	}
 
@@ -695,6 +700,8 @@ public class ScaffoldModule extends Module {
 				useHand = InteractionHand.MAIN_HAND;
 			}
 		}
+		// Сервер обязан увидеть поворот на грани ДО пакета установки
+		syncRotation(player);
 		client.gameMode.useItemOn(player, useHand, hit);
 		swingHand(client, player, useHand);
 		if (borrowed) {
@@ -737,45 +744,59 @@ public class ScaffoldModule extends Module {
 	// Ротация: visible/silent/none + скорость
 	// =================================================================
 
-	/** Поворот к точке; возвращает true, когда «прицелились» (для Legit). */
+	/**
+	 * Поворот к грани блока — через общий слой {@link RotationManager}.
+	 *
+	 * <p>Раньше «silent» здесь сам слал пакет поворота, каждый тик отсчитывая шаг
+	 * от взгляда игрока: камера не менялась, значит и «шаг» каждый тик начинался
+	 * заново — доводок никогда не доходил до цели (конвергенции не было). Теперь
+	 * состояние прицела живёт в слое, а модуль только говорит, куда он хочет.</p>
+	 *
+	 * @return true, когда прицел на грани (для Legit-тайминга установки)
+	 */
 	private boolean rotateTowards(Minecraft client, LocalPlayer player, Vec3 point) {
-		Vec3 delta = point.subtract(player.getEyePosition());
-		double horiz = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
-		float targetYaw = (float) (Math.toDegrees(Math.atan2(delta.z, delta.x)) - 90.0);
-		float targetPitch = (float) (-Math.toDegrees(Math.atan2(delta.y, horiz)));
-		float maxStep = rotationSpeed.get();
-		float yawDiff = wrapDegrees(targetYaw - player.getYRot());
-		float pitchDiff = targetPitch - player.getXRot();
-		float newYaw = player.getYRot() + Math.max(-maxStep, Math.min(maxStep, yawDiff));
-		float newPitch = Math.max(-90.0F, Math.min(90.0F,
-				player.getXRot() + Math.max(-maxStep, Math.min(maxStep, pitchDiff))));
-		boolean aimed = Math.abs(yawDiff) <= Math.max(1.0F, maxStep)
-				&& Math.abs(pitchDiff) <= Math.max(1.0F, maxStep);
-		if (rotation.is("visible")) {
+		Vec3 eye = player.getEyePosition();
+		float targetYaw = RotationMath.yawTo(eye.x, eye.z, point.x, point.z);
+		float targetPitch = RotationMath.pitchTo(eye.x, eye.y, eye.z, point.x, point.y, point.z);
+
+		RotationManager.Mode wanted = switch (rotation.current().id()) {
+			case "none" -> RotationManager.Mode.NONE;
+			case "silent" -> RotationManager.Mode.SILENT;
+			default -> RotationManager.Mode.VISIBLE;
+		};
+		if (!RotationManager.request(this, RotationManager.PRIORITY_BUILD, wanted,
+				RotationManager.Movement.NONE, rotationSpeed.get(), false, targetYaw, targetPitch)) {
+			// Слоем владеет более важный модуль (аура) — в этом тике не наводимся
+			return false;
+		}
+
+		if (wanted == RotationManager.Mode.VISIBLE) {
 			if (!rotatedVisibly) {
 				rotatedVisibly = true;
 				prevYaw = player.getYRot();
 				prevPitch = player.getXRot();
 			}
-			player.setYRot(newYaw);
-			player.setXRot(newPitch);
-		} else if (rotation.is("silent") && client.getConnection() != null) {
-			client.getConnection().send(new ServerboundMovePlayerPacket.Rot(
-					aimed ? targetYaw : newYaw, aimed ? targetPitch : newPitch,
-					player.onGround(), player.horizontalCollision));
 		}
-		return aimed;
+
+		if (wanted == RotationManager.Mode.NONE) {
+			return RotationMath.aimed(player.getYRot(), player.getXRot(),
+					targetYaw, targetPitch, AIM_TOLERANCE);
+		}
+		return RotationManager.aimed(AIM_TOLERANCE);
+	}
+
+	/**
+	 * Перед самой установкой: убеждаемся, что сервер видит наш прицел на грани
+	 * (иначе «placed block outside view» — типичный флаг на silent-ротациях).
+	 */
+	private void syncRotation(LocalPlayer player) {
+		if (!rotation.is("none")) {
+			RotationManager.syncBeforeAction(player);
+		}
 	}
 
 	private static float wrapDegrees(float degrees) {
-		float wrapped = degrees % 360.0F;
-		if (wrapped >= 180.0F) {
-			wrapped -= 360.0F;
-		}
-		if (wrapped < -180.0F) {
-			wrapped += 360.0F;
-		}
-		return wrapped;
+		return RotationMath.wrap(degrees);
 	}
 
 	/** Возврат видимой ротации при паузе/выключении. */
@@ -877,6 +898,7 @@ public class ScaffoldModule extends Module {
 	// =================================================================
 
 	private void pauseWithRollback(Minecraft client, LocalPlayer player) {
+		RotationManager.release(this);
 		restoreRotation(player);
 		restoreVisibleSlot(player);
 		releaseOwnedKeys(client);
@@ -884,6 +906,7 @@ public class ScaffoldModule extends Module {
 	}
 
 	private void rollback(Minecraft client) {
+		RotationManager.release(this);
 		LocalPlayer player = client == null ? null : client.player;
 		if (player != null) {
 			restoreRotation(player);
