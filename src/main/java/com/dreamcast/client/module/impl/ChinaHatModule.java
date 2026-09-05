@@ -83,15 +83,20 @@ public class ChinaHatModule extends Module {
 			if (target != null) {
 				// Над целью: угол берём её собственный разворот, иначе у моба
 				// шляпа «приклеена» к нашему взгляду и ползёт по голове
-				hats = List.of(hatAt(target.getX(partialTick), target.getY(partialTick),
-						target.getZ(partialTick), target.getYRot()),
-						hatAt(player.getX(partialTick), player.getY(partialTick),
+				hats = List.of(hatAt(target.getX(partialTick), headY(target, partialTick),
+								target.getZ(partialTick), target.getYRot()),
+						hatAt(player.getX(partialTick), headY(player, partialTick),
 								player.getZ(partialTick), viewYaw(player, partialTick)));
 				return;
 			}
 		}
-		hats = List.of(hatAt(player.getX(partialTick), player.getY(partialTick),
+		hats = List.of(hatAt(player.getX(partialTick), headY(player, partialTick),
 				player.getZ(partialTick), viewYaw(player, partialTick)));
+	}
+
+	/** Макушка: именно на неё садится основание конуса. */
+	private static double headY(Entity entity, float partialTick) {
+		return entity.getY(partialTick) + entity.getBbHeight() - 0.02;
 	}
 
 	private Hat hatAt(double x, double y, double z, float yaw) {
@@ -159,7 +164,10 @@ public class ChinaHatModule extends Module {
 	/** Насколько шляпа провернулась сама (градусы; 0 — только за взглядом). */
 	public float spinDegrees(long nowMs) {
 		int perSecond = spin.get();
-		return perSecond <= 0 ? 0.0F : (nowMs % 3600000L) / 1000.0F * perSecond;
+		// считаем в double и только потом берём остаток от 360°: в float 2.5e6
+		// градусов уже не хранят дробную часть, и вращение «прыгало» бы
+		return perSecond <= 0 ? 0.0F
+				: (float) (((nowMs % 3600000L) / 1000.0 * perSecond) % 360.0);
 	}
 
 	public boolean shadesFaces() {

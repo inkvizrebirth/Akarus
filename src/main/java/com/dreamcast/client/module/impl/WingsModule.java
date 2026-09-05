@@ -82,13 +82,12 @@ public class WingsModule extends Module {
 	private static final WingPose POSE_WALKING = new WingPose(0.32F, 0.03F, 26.0F, 6.0F,
 			6.0F, 10.0F, 0.09F, 1.0F, 0.12F);
 
-	private final ModeSetting when = mode("when", "Показывать",
+	private final ModeSetting when = mode("when", "Показывать", "always",
 			ModeSetting.option("always", "Всегда"),
 			ModeSetting.option("moving", "В движении"),
 			ModeSetting.option("air", "В воздухе и в полёте"));
 	private final BooleanSetting self = bool("self", "На себе", true);
 	private final BooleanSetting players = bool("players", "На игроках", false);
-	private final BooleanSetting seeThrough = bool("see_through", "Сквозь стены", false);
 	private final BooleanSetting outline = bool("outline", "Обводка и рёбра", true);
 	private final IntSetting size = intSetting("size", "Размер (%)", 100, 70, 140);
 	private final IntSetting flapSpeed = intSetting("flap_speed", "Частота взмахов (%)", 100, 20, 300);
@@ -214,10 +213,6 @@ public class WingsModule extends Module {
 
 	public boolean drawsOutline() {
 		return outline.isEnabled();
-	}
-
-	public boolean seeThroughWalls() {
-		return seeThrough.isEnabled();
 	}
 
 	public float opacityScale() {

@@ -61,7 +61,7 @@ public final class TargetEspRenderer {
 			case TargetEspModule.STYLE_MARKER -> drawMarker(module, pose, buffer, centerX, centerY,
 					centerZ, alpha, size, frame, spin, unitsPerPixel, now);
 			default -> drawElements(module, pose, buffer, camX, camY, camZ, centerX, centerY, centerZ,
-					alpha, size, frame, unitsPerPixel, now);
+					alpha, size, frame, unitsPerPixel, now, partialTick);
 		}
 	}
 
@@ -160,7 +160,7 @@ public final class TargetEspRenderer {
 	                                  double camX, double camY, double camZ,
 	                                  float centerX, float centerY, float centerZ,
 	                                  float alpha, float size, TargetEspModule.Frame frame,
-	                                  float unitsPerPixel, long now) {
+	                                  float unitsPerPixel, long now, float partialTick) {
 		List<TargetEspModule.Element> elements = frame.elements();
 		List<TargetEspModule.Trail> trails = frame.trails();
 		boolean crystals = frame.style().equals(TargetEspModule.STYLE_CRYSTALS);
@@ -170,9 +170,11 @@ public final class TargetEspRenderer {
 			TargetEspModule.Element e = elements.get(i);
 			int color = module.effectColor(e.hue(), now);
 			float elementSize = 0.13F * size * e.scale();
-			float ex = e.x() - (float) camX;
-			float ey = e.y() - (float) camY;
-			float ez = e.z() - (float) camZ;
+			// элемент живёт между тиками так же, как центр кольца: prev→cur по
+			// partialTick, иначе орбы на 300 fps шли бы «ступеньками» по 20 Гц
+			float ex = Mth.lerp(partialTick, e.prevX(), e.x()) - (float) camX;
+			float ey = Mth.lerp(partialTick, e.prevY(), e.y()) - (float) camY;
+			float ez = Mth.lerp(partialTick, e.prevZ(), e.z()) - (float) camZ;
 
 			if (crystals) {
 				drawCrystal(pose, buffer, ex, ey, ez, e, elementSize, color, alpha);

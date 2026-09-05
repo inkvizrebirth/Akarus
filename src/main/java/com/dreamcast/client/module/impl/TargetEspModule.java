@@ -79,14 +79,14 @@ public class TargetEspModule extends Module {
 	                     float orbitRadius, List<Element> elements, List<Trail> trails) {
 	}
 
-	private final ModeSetting style = mode("style", "Стиль",
+	private final ModeSetting style = mode("style", "Стиль", STYLE_ORBS,
 			ModeSetting.option("orbs", "Орбы"),
 			ModeSetting.option("comets", "Кометы"),
 			ModeSetting.option("crystals", "Кристаллы"),
 			ModeSetting.option("ghosts", "Рой точек"),
 			ModeSetting.option("circle", "Кольцо"),
 			ModeSetting.option("marker", "Маркер"));
-	private final ModeSetting animation = mode("animation", "Анимация",
+	private final ModeSetting animation = mode("animation", "Анимация", "in",
 			ModeSetting.option("in", "Расти"),
 			ModeSetting.option("out", "Угасать"),
 			ModeSetting.option("none", "Нет"));

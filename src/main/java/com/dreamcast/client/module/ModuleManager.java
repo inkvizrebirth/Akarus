@@ -6,6 +6,10 @@ import com.dreamcast.client.module.impl.AutoMineModule;
 import com.dreamcast.client.module.impl.AutoTotemModule;
 import com.dreamcast.client.module.impl.AutoWalkModule;
 import com.dreamcast.client.module.impl.BlockEspModule;
+import com.dreamcast.client.module.impl.ChinaHatModule;
+import com.dreamcast.client.module.impl.MotionBlurModule;
+import com.dreamcast.client.module.impl.TargetEspModule;
+import com.dreamcast.client.module.impl.WingsModule;
 import com.dreamcast.client.module.impl.SpiderModule;
 import com.dreamcast.client.module.impl.ClickGuiModule;
 import com.dreamcast.client.module.impl.EspModule;
@@ -78,6 +82,10 @@ public final class ModuleManager {
 		register(new MacroModule());
 		register(new HitSoundsModule());
 		register(new HitParticlesModule());
+		register(new ChinaHatModule());
+		register(new WingsModule());
+		register(new TargetEspModule());
+		register(new MotionBlurModule());
 	}
 
 	public static void register(Module module) {

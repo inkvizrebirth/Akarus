@@ -2,6 +2,9 @@ package com.dreamcast.client.render;
 
 import com.dreamcast.client.module.ModuleManager;
 import com.dreamcast.client.module.impl.EspModule;
+import com.dreamcast.client.module.impl.WingsModule;
+import com.dreamcast.client.module.impl.ChinaHatModule;
+import com.dreamcast.client.module.impl.TargetEspModule;
 import com.dreamcast.client.module.impl.TrailsModule;
 import com.dreamcast.client.util.RenderUtils;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -58,6 +61,31 @@ public final class WorldRenderHook {
 					ModuleManager.find(com.dreamcast.client.module.impl.ScaffoldModule.class);
 			scaffoldPreview = scaffold != null ? scaffold.previewPos() : null;
 
+			// ChinaHat / Wings / TargetESP: их снапшоты не зависят от ESP, поэтому
+			// собираются ДО раннего возврата «боксов рисовать нечего»
+			Minecraft extractClient = Minecraft.getInstance();
+			float partialTick = extractClient == null ? 1.0F
+					: extractClient.getDeltaTracker().getGameTimeDeltaPartialTick(true);
+
+			ChinaHatModule hat = ModuleManager.find(ChinaHatModule.class);
+			if (hat != null && hat.isEnabled()) {
+				hat.collect(partialTick);
+				hats = hat.hats();
+			} else {
+				hats = List.of();
+			}
+
+			WingsModule wingsModule = ModuleManager.find(WingsModule.class);
+			if (wingsModule != null && wingsModule.isEnabled()) {
+				wingsModule.collect(partialTick);
+				wings = wingsModule.rigs();
+			} else {
+				wings = List.of();
+			}
+
+			TargetEspModule targetEsp = ModuleManager.find(TargetEspModule.class);
+			targetFrame = targetEsp != null && targetEsp.wantsEffect() ? targetEsp.frame() : null;
+
 			EspModule esp = ModuleManager.find(EspModule.class);
 			if (esp == null || !esp.wantsBoxes()) {
 				espBoxes = List.of();
@@ -86,6 +114,9 @@ public final class WorldRenderHook {
 			espBoxes = List.of();
 			targetBar = null;
 			blockBoxes = List.of();
+			hats = List.of();
+			wings = List.of();
+			targetFrame = null;
 		}
 	}
 
@@ -101,6 +132,15 @@ public final class WorldRenderHook {
 	/** Превью установки Scaffold. */
 	private static volatile net.minecraft.core.BlockPos scaffoldPreview;
 
+	/** Шляпы ChinaHat (основания уже на уровне макушки). */
+	private static volatile List<ChinaHatModule.Hat> hats = List.of();
+
+	/** Крылья: готовые позы на кадр. */
+	private static volatile List<WingsModule.Rig> wings = List.of();
+
+	/** Кадр TargetESP: публикуется модулем в тике, здесь только читается. */
+	private static volatile TargetEspModule.Frame targetFrame;
+
 	private static void render(LevelRenderContext context) {
 		try {
 			TrailsModule trails = ModuleManager.find(TrailsModule.class);
@@ -110,6 +150,12 @@ public final class WorldRenderHook {
 					ModuleManager.find(com.dreamcast.client.module.impl.HitParticlesModule.class);
 			com.dreamcast.client.module.impl.NametagsModule nametags =
 					ModuleManager.find(com.dreamcast.client.module.impl.NametagsModule.class);
+			ChinaHatModule hatModule = ModuleManager.find(ChinaHatModule.class);
+			WingsModule wingsModule = ModuleManager.find(WingsModule.class);
+			TargetEspModule targetEspModule = ModuleManager.find(TargetEspModule.class);
+			List<ChinaHatModule.Hat> hatList = hats;
+			List<WingsModule.Rig> wingRigs = wings;
+			TargetEspModule.Frame frame = targetFrame;
 			List<EspModule.EspBox> boxes = espBoxes;
 			boolean hasTrail = trails != null && trails.wantsLine();
 			boolean hasRings = jumpEffect != null && jumpEffect.wantsRings();
@@ -117,7 +163,8 @@ public final class WorldRenderHook {
 			boolean hasTags = nametags != null && nametags.wantsTags();
 			net.minecraft.core.BlockPos preview = scaffoldPreview;
 			if (!hasTrail && boxes.isEmpty() && !hasRings && !hasHits && !hasTags
-					&& targetBar == null && blockBoxes.isEmpty() && preview == null) {
+					&& targetBar == null && blockBoxes.isEmpty() && preview == null
+					&& hatList.isEmpty() && wingRigs.isEmpty() && frame == null) {
 				return;
 			}
 
@@ -160,6 +207,18 @@ public final class WorldRenderHook {
 						}
 						if (hasHits) {
 							drawHitWaves(hitParticles, pose, buffer, camX, camY, camZ, unitsPerPixel, now);
+						}
+						if (hatModule != null && !hatList.isEmpty()) {
+							ChinaHatRenderer.draw(hatModule, hatList, pose, buffer,
+									camX, camY, camZ, unitsPerPixel, now);
+						}
+						if (wingsModule != null && !wingRigs.isEmpty()) {
+							WingsRenderer.draw(wingsModule, wingRigs, pose, buffer,
+									camX, camY, camZ, unitsPerPixel, now);
+						}
+						if (targetEspModule != null && frame != null) {
+							TargetEspRenderer.draw(targetEspModule, frame, pose, buffer,
+									camX, camY, camZ, unitsPerPixel, now, partialTick);
 						}
 					});
 					// Nametags: текстовые биллборды — той же трубой, что ванильные ники
