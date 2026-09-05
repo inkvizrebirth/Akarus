@@ -130,5 +130,19 @@ echo "--- ItemRenderer / модели предметов (для превью в
 javap -p -cp "$JAR" net.minecraft.client.renderer.item.ItemRenderer 2>/dev/null | grep -iE "public" | head -20 >> "$OUT"
 
 echo "=== спрайты GUI (что переокрасить под своё стекло) ===" >> "$OUT"
-unzip -l "$JAR" 2>/dev/null | grep -E "textures/gui/(sprites|container)/" | awk '{print "  png: " $4}' | head -180 >> "$OUT"
-unzip -l "$JAR" 2>/dev/null | grep -E "textures/gui/(sprites|container)/" | wc -l | sed 's/^/  всего спрайтов: /' >> "$OUT"
+unzip -Z1 "$JAR" 2>/dev/null | grep -E "^assets/minecraft/textures/gui/" | sort > /tmp/gui.txt
+echo "  всего файлов gui: $(wc -l < /tmp/gui.txt)" >> "$OUT"
+grep -E "sprites/widget|sprites/container|sprites/narrator|sprites/slot|sprites/chat|sprites/pickler|sprites/book|sprites/recipe" /tmp/gui.txt | sed 's/^/  png: /' | head -120 >> "$OUT"
+echo "  --- все директории ---" >> "$OUT"
+sed -E 's#(assets/minecraft/textures/gui/[a-z_]*)/.*#\1#' /tmp/gui.txt | sort -u | head -30 >> "$OUT"
+echo "=== виджеты: что можно переопределить миксином ===" >> "$OUT"
+for c in net.minecraft.client.gui.components.AbstractWidget net.minecraft.client.gui.components.Button \
+         net.minecraft.client.gui.components.Slider net.minecraft.client.gui.components.EditBox \
+         net.minecraft.client.gui.components.CycleButton net.minecraft.client.gui.components.BooleanWidget \
+         net.minecraft.client.gui.components.events.AbstractContainerEventHandler; do
+  echo "--- $c ---" >> "$OUT"
+  javap -p -cp "$JAR" "$c" 2>/dev/null | grep -vE "^Compiled|^}" | head -34 >> "$OUT"
+done
+echo "--- GuiSprite/GuiAtlas ---" >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.gui.GuiSprite 2>/dev/null | grep -iE "public" | head -18 >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.gui.components.WidgetSprites 2>/dev/null | head -14 >> "$OUT"
