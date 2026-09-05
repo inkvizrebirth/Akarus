@@ -72,8 +72,11 @@ jobs:
           cat "$D/assets/minecraft/shaders/post/blit.fsh" 2>/dev/null
           echo "=== screenquad.vsh ==="
           cat "$D/assets/minecraft/shaders/core/screenquad.vsh" 2>/dev/null
-          echo "=== MotionBlur: есть ли у ShaderManager проверка неизвестных uniform ==="
-          javap -p -cp "$D" net.minecraft.client.renderer.PostChain\$TargetBundle 2>&1
+          echo "=== PostChain$TargetBundle ==="
+          javap -p -cp "$D" 'net.minecraft.client.renderer.PostChain$TargetBundle' 2>&1
+          echo "=== PostChain.load байткод (как резолвятся имена таргетов) ==="
+          javap -p -c -cp "$D" net.minecraft.client.renderer.PostChain 2>&1 | sed -n '1,60p'
+          exit 0
       - name: Закоммитить результат
         run: |
           set +e
@@ -86,3 +89,4 @@ jobs:
           git add -f api-audit-result.txt
           git commit -m "ci: результат аудита API 26.2" || true
           git push origin HEAD:refs/heads/arena/01a0709d-dreamcast || true
+          exit 0
