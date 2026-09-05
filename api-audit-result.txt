@@ -23,12 +23,12 @@
 MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 === классы мобов/врагов/манекенов ===
-        0  2026-09-05 08:18   assets/minecraft/textures/entity/armorstand/
+        0  2026-09-05 08:24   assets/minecraft/textures/entity/armorstand/
       809  1980-02-01 00:00   assets/minecraft/textures/entity/armorstand/armorstand.png
-        0  2026-09-05 08:18   net/minecraft/client/model/object/armorstand/
+        0  2026-09-05 08:24   net/minecraft/client/model/object/armorstand/
      6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
-     5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
       320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
+     5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
     11516  1980-02-01 00:00   net/minecraft/client/renderer/entity/ArmorStandRenderer.class
      1224  1980-02-01 00:00   net/minecraft/client/renderer/entity/state/ArmorStandRenderState.class
      2859  1980-02-01 00:00   net/minecraft/util/datafix/fixes/EntityArmorStandSilentFix.class
@@ -474,8 +474,8 @@ public class net.minecraft.world.item.BucketItem extends net.minecraft.world.ite
   public void handleSlotStateChanged(int, int, boolean);
 
 === классы оверлеев ===
-     3595  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay$1.class
      7316  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay.class
+     3595  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay$1.class
      3361  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay$1.class
      4652  1980-02-01 00:00   net/minecraft/client/gui/components/IMEPreeditOverlay.class
     21742  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay.class
@@ -485,16 +485,16 @@ public class net.minecraft.world.item.BucketItem extends net.minecraft.world.ite
      5001  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$Subtitle.class
      7576  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay.class
     21670  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay.class
-     2687  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay$LogoTexture.class
      8761  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay.class
       632  1980-02-01 00:00   net/minecraft/client/gui/screens/Overlay.class
+     2687  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay$LogoTexture.class
      1522  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayScreen$1.class
      4421  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayTabButton.class
     22448  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayScreen.class
      6490  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayCraftingRecipeButton.class
      3112  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayRecipeButton$Pos.class
-     3959  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlaySmeltingRecipeButton.class
      4694  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayRecipeButton.class
+     3959  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlaySmeltingRecipeButton.class
      7848  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent.class
      2000  1980-02-01 00:00   net/minecraft/client/particle/FireworkParticles$OverlayParticle.class
      2221  1980-02-01 00:00   net/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay.class
@@ -588,16 +588,16 @@ public final class net.minecraft.world.inventory.ContainerInput extends java.lan
   public static final net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> DARKNESS;
 
 === fog environments ===
-        0  2026-09-05 08:18   net/minecraft/client/renderer/fog/environment/
-     7163  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/AtmosphericFogEnvironment.class
+        0  2026-09-05 08:24   net/minecraft/client/renderer/fog/environment/
      2722  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/BlindnessFogEnvironment.class
      2698  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/DarknessFogEnvironment.class
+     7163  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/AtmosphericFogEnvironment.class
      1723  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/FogEnvironment.class
-     1494  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/MobEffectFogEnvironment.class
      2599  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/LavaFogEnvironment.class
-     3052  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/WaterFogEnvironment.class
-     2290  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/PowderedSnowFogEnvironment.class
+     1494  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/MobEffectFogEnvironment.class
       321  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/package-info.class
+     2290  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/PowderedSnowFogEnvironment.class
+     3052  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/WaterFogEnvironment.class
 
 === gui layers/overlays ===
      2196  1980-02-01 00:00   net/minecraft/client/gui/Hud$1DisplayEntry.class
@@ -931,11 +931,11 @@ public abstract class net.minecraft.network.protocol.game.ServerboundMovePlayerP
 }
 
 === ServerboundMovePlayerPacket inner ===
+     3910  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundMovePlayerPacket$Pos.class
      4203  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundMovePlayerPacket$PosRot.class
      3584  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundMovePlayerPacket$Rot.class
-     3627  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundMovePlayerPacket.class
-     3910  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundMovePlayerPacket$Pos.class
      3406  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundMovePlayerPacket$StatusOnly.class
+     3627  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundMovePlayerPacket.class
 --- $Rot ---
 Compiled from "ServerboundMovePlayerPacket.java"
 public class net.minecraft.network.protocol.game.ServerboundMovePlayerPacket$Rot extends net.minecraft.network.protocol.game.ServerboundMovePlayerPacket {
@@ -1223,9 +1223,9 @@ grep: write error: Broken pipe
 grep: write error: Broken pipe
 
 === PlayerRenderer / render state ===
-        0  2026-09-05 08:18   net/minecraft/client/renderer/entity/player/
-    24446  1980-02-01 00:00   net/minecraft/client/renderer/entity/player/AvatarRenderer.class
+        0  2026-09-05 08:24   net/minecraft/client/renderer/entity/player/
       319  1980-02-01 00:00   net/minecraft/client/renderer/entity/player/package-info.class
+    24446  1980-02-01 00:00   net/minecraft/client/renderer/entity/player/AvatarRenderer.class
 
 === AbstractClientPlayer ===
 Compiled from "AbstractClientPlayer.java"
@@ -1580,6 +1580,195 @@ public final class net.minecraft.client.CameraType extends java.lang.Enum<net.mi
   public static net.minecraft.world.phys.Vec3 directionFromRotation(float, float);
   public net.minecraft.world.phys.Vec3 addLocalCoordinates(net.minecraft.world.phys.Vec3);
 
+=== GameRenderer (постэффекты) ===
+  private final net.minecraft.client.renderer.ScreenEffectRenderer screenEffectRenderer;
+  private float spinningEffectTime;
+  private float spinningEffectSpeed;
+  private float bossOverlayWorldDarkening;
+  private float bossOverlayWorldDarkeningO;
+  private final net.minecraft.client.renderer.texture.OverlayTexture overlayTexture;
+  private net.minecraft.resources.Identifier postEffectId;
+  private boolean effectActive;
+  public void clearPostEffect();
+  public void togglePostEffect();
+  public void checkEntityPostEffect(net.minecraft.world.entity.Entity);
+  private void setPostEffect(net.minecraft.resources.Identifier);
+  public void processBlurEffect();
+  public net.minecraft.resources.Identifier currentPostEffect();
+  public float bossOverlayWorldDarkening(float);
+  public net.minecraft.client.renderer.texture.OverlayTexture overlayTexture();
+
+=== Minecraft (постэффекты/камера) ===
+  private final net.minecraft.client.renderer.entity.EntityRenderDispatcher entityRenderDispatcher;
+  private final net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher blockEntityRenderDispatcher;
+  public net.minecraft.client.multiplayer.ClientLevel level;
+  public net.minecraft.world.entity.Entity getCameraEntity();
+  public net.minecraft.client.renderer.entity.EntityRenderDispatcher getEntityRenderDispatcher();
+  public net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher getBlockEntityRenderDispatcher();
+
+=== строки-идентификаторы постэффектов в GameRenderer ===
+
+=== ассеты шейдеров ===
+      201  1980-02-01 00:00   assets/minecraft/shaders/core/rendertype_water_mask.vsh
+      131  1980-02-01 00:00   assets/minecraft/shaders/core/rendertype_water_mask.fsh
+
+=== Hud полный список методов ===
+  private static final net.minecraft.resources.Identifier CROSSHAIR_SPRITE;
+  private static final net.minecraft.resources.Identifier CROSSHAIR_ATTACK_INDICATOR_FULL_SPRITE;
+  private static final net.minecraft.resources.Identifier CROSSHAIR_ATTACK_INDICATOR_BACKGROUND_SPRITE;
+  private static final net.minecraft.resources.Identifier CROSSHAIR_ATTACK_INDICATOR_PROGRESS_SPRITE;
+  private static final net.minecraft.resources.Identifier EFFECT_BACKGROUND_AMBIENT_SPRITE;
+  private static final net.minecraft.resources.Identifier EFFECT_BACKGROUND_SPRITE;
+  private static final net.minecraft.resources.Identifier HOTBAR_SPRITE;
+  private static final net.minecraft.resources.Identifier HOTBAR_SELECTION_SPRITE;
+  private static final net.minecraft.resources.Identifier HOTBAR_OFFHAND_LEFT_SPRITE;
+  private static final net.minecraft.resources.Identifier HOTBAR_OFFHAND_RIGHT_SPRITE;
+  private static final net.minecraft.resources.Identifier HOTBAR_ATTACK_INDICATOR_BACKGROUND_SPRITE;
+  private static final net.minecraft.resources.Identifier HOTBAR_ATTACK_INDICATOR_PROGRESS_SPRITE;
+  private static final net.minecraft.resources.Identifier ARMOR_EMPTY_SPRITE;
+  private static final net.minecraft.resources.Identifier ARMOR_HALF_SPRITE;
+  private static final net.minecraft.resources.Identifier ARMOR_FULL_SPRITE;
+  private static final net.minecraft.resources.Identifier FOOD_EMPTY_HUNGER_SPRITE;
+  private static final net.minecraft.resources.Identifier FOOD_HALF_HUNGER_SPRITE;
+  private static final net.minecraft.resources.Identifier FOOD_FULL_HUNGER_SPRITE;
+  private static final net.minecraft.resources.Identifier FOOD_EMPTY_SPRITE;
+  private static final net.minecraft.resources.Identifier FOOD_HALF_SPRITE;
+  private static final net.minecraft.resources.Identifier FOOD_FULL_SPRITE;
+  private static final net.minecraft.resources.Identifier AIR_SPRITE;
+  private static final net.minecraft.resources.Identifier AIR_POPPING_SPRITE;
+  private static final net.minecraft.resources.Identifier AIR_EMPTY_SPRITE;
+  private static final net.minecraft.resources.Identifier HEART_VEHICLE_CONTAINER_SPRITE;
+  private static final net.minecraft.resources.Identifier HEART_VEHICLE_FULL_SPRITE;
+  private static final net.minecraft.resources.Identifier HEART_VEHICLE_HALF_SPRITE;
+  private static final net.minecraft.resources.Identifier VIGNETTE_LOCATION;
+  public static final net.minecraft.resources.Identifier NAUSEA_LOCATION;
+  private static final net.minecraft.resources.Identifier SPYGLASS_SCOPE_LOCATION;
+  private static final net.minecraft.resources.Identifier POWDER_SNOW_OUTLINE_LOCATION;
+  private static final java.util.Comparator<net.minecraft.world.scores.PlayerScoreEntry> SCORE_DISPLAY_ORDER;
+  private static final net.minecraft.network.chat.Component DEMO_EXPIRED_TEXT;
+  private static final net.minecraft.network.chat.Component SAVING_TEXT;
+  private static final float MIN_CROSSHAIR_ATTACK_SPEED;
+  private static final int EXPERIENCE_BAR_DISPLAY_TICKS;
+  private static final int NUM_HEARTS_PER_ROW;
+  private static final int LINE_HEIGHT;
+  private static final java.lang.String SPACER;
+  private static final float PORTAL_OVERLAY_ALPHA_MIN;
+  private static final int HEART_SIZE;
+  private static final int HEART_SEPARATION;
+  private static final int NUM_AIR_BUBBLES;
+  private static final int AIR_BUBBLE_SIZE;
+  private static final int AIR_BUBBLE_SEPERATION;
+  private static final int AIR_BUBBLE_POPPING_DURATION;
+  private static final int EMPTY_AIR_BUBBLE_DELAY_DURATION;
+  private static final float AIR_BUBBLE_POP_SOUND_VOLUME_BASE;
+  private static final float AIR_BUBBLE_POP_SOUND_VOLUME_INCREMENT;
+  private static final float AIR_BUBBLE_POP_SOUND_PITCH_BASE;
+  private static final float AIR_BUBBLE_POP_SOUND_PITCH_INCREMENT;
+  private static final int NUM_AIR_BUBBLE_POPPED_BEFORE_SOUND_VOLUME_INCREASE;
+  private static final int NUM_AIR_BUBBLE_POPPED_BEFORE_SOUND_PITCH_INCREASE;
+  private static final float AUTOSAVE_FADE_SPEED_FACTOR;
+  private static final int SAVING_INDICATOR_WIDTH_PADDING_RIGHT;
+  private static final int SAVING_INDICATOR_HEIGHT_PADDING_BOTTOM;
+  private final net.minecraft.util.RandomSource random;
+  private final net.minecraft.client.Minecraft minecraft;
+  private final net.minecraft.client.gui.components.ChatComponent chat;
+  private final net.minecraft.client.resources.WaypointStyleManager waypointStyles;
+grep: write error: Broken pipe
+
+=== Hud константы-строки ===
+String textures/misc/powder_snow_outline.png
+String textures/misc/vignette.png
+
+=== Entity fire ===
+  public static final java.lang.String TAG_FIRE;
+  private int remainingFireTicks;
+  protected static final int FLAG_ONFIRE;
+  private boolean hasVisualFire;
+  public void setSharedFlagOnFire(boolean);
+  public void setRemainingFireTicks(int);
+  public int getRemainingFireTicks();
+  public void clearFire();
+  protected void playEntityOnFireExtinguishedSound();
+  public void extinguishFire();
+  public boolean fireImmune();
+  public boolean isOnFire();
+  public boolean displayFireAnimation();
+  protected int getFireImmuneTicks();
+
+=== FlameOverlay/классы ===
+     2221  1980-02-01 00:00   net/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay.class
+     2219  1980-02-01 00:00   net/minecraft/client/renderer/texture/OverlayTexture.class
+
+=== ScreenEffect / camera overlay компонент ===
+  private final java.util.Map<net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute>, net.minecraft.world.effect.MobEffect$AttributeTemplate> attributeModifiers;
+  public net.minecraft.world.effect.MobEffect addAttributeModifier(net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute>, net.minecraft.resources.Identifier, double, net.minecraft.world.entity.ai.attributes.AttributeModifier$Operation);
+  public void createModifiers(int, java.util.function.BiConsumer<net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute>, net.minecraft.world.entity.ai.attributes.AttributeModifier>);
+  public void removeAttributeModifiers(net.minecraft.world.entity.ai.attributes.AttributeMap);
+  public void addAttributeModifiers(net.minecraft.world.entity.ai.attributes.AttributeMap, int);
+
+=== DataComponents (список) ===
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.CustomData> CUSTOM_DATA;
+  public static final net.minecraft.core.component.DataComponentType<java.lang.Integer> MAX_STACK_SIZE;
+  public static final net.minecraft.core.component.DataComponentType<java.lang.Integer> MAX_DAMAGE;
+  public static final net.minecraft.core.component.DataComponentType<java.lang.Integer> DAMAGE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.util.Unit> UNBREAKABLE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.UseEffects> USE_EFFECTS;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.network.chat.Component> CUSTOM_NAME;
+  public static final net.minecraft.core.component.DataComponentType<java.lang.Float> MINIMUM_ATTACK_CHARGE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.core.Holder<net.minecraft.world.damagesource.DamageType>> DAMAGE_TYPE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.network.chat.Component> ITEM_NAME;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.resources.Identifier> ITEM_MODEL;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.ItemLore> LORE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.Rarity> RARITY;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.enchantment.ItemEnchantments> ENCHANTMENTS;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.AdventureModePredicate> CAN_PLACE_ON;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.AdventureModePredicate> CAN_BREAK;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.ItemAttributeModifiers> ATTRIBUTE_MODIFIERS;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.CustomModelData> CUSTOM_MODEL_DATA;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.TooltipDisplay> TOOLTIP_DISPLAY;
+  public static final net.minecraft.core.component.DataComponentType<java.lang.Integer> REPAIR_COST;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.util.Unit> CREATIVE_SLOT_LOCK;
+  public static final net.minecraft.core.component.DataComponentType<java.lang.Boolean> ENCHANTMENT_GLINT_OVERRIDE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.util.Unit> INTANGIBLE_PROJECTILE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.food.FoodProperties> FOOD;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.Consumable> CONSUMABLE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.UseRemainder> USE_REMAINDER;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.UseCooldown> USE_COOLDOWN;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.DamageResistant> DAMAGE_RESISTANT;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.Tool> TOOL;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.Weapon> WEAPON;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.AttackRange> ATTACK_RANGE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.enchantment.Enchantable> ENCHANTABLE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.equipment.Equippable> EQUIPPABLE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.enchantment.Repairable> REPAIRABLE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.util.Unit> GLIDER;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.resources.Identifier> TOOLTIP_STYLE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.DeathProtection> DEATH_PROTECTION;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.BlocksAttacks> BLOCKS_ATTACKS;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.PiercingWeapon> PIERCING_WEAPON;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.KineticWeapon> KINETIC_WEAPON;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.SwingAnimation> SWING_ANIMATION;
+  public static final net.minecraft.core.component.DataComponentType<java.lang.Integer> ADDITIONAL_TRADE_COST;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.enchantment.ItemEnchantments> STORED_ENCHANTMENTS;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.DyeColor> DYE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.DyedItemColor> DYED_COLOR;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.MapItemColor> MAP_COLOR;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.level.saveddata.maps.MapId> MAP_ID;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.MapDecorations> MAP_DECORATIONS;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.MapPostProcessing> MAP_POST_PROCESSING;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.ChargedProjectiles> CHARGED_PROJECTILES;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.BundleContents> BUNDLE_CONTENTS;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.alchemy.PotionContents> POTION_CONTENTS;
+  public static final net.minecraft.core.component.DataComponentType<java.lang.Float> POTION_DURATION_SCALE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.SuspiciousStewEffects> SUSPICIOUS_STEW_EFFECTS;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.WritableBookContent> WRITABLE_BOOK_CONTENT;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.WrittenBookContent> WRITTEN_BOOK_CONTENT;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.equipment.trim.ArmorTrim> TRIM;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.DebugStickState> DEBUG_STICK_STATE;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.TypedEntityData<net.minecraft.world.entity.EntityType<?>>> ENTITY_DATA;
+  public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.CustomData> BUCKET_ENTITY_DATA;
+grep: write error: Broken pipe
+
 === Minecraft (crosshair/misc) ===
   public final net.minecraft.client.renderer.LevelRenderer levelRenderer;
   public final net.minecraft.client.Options options;
@@ -1718,10 +1907,10 @@ grep: write error: Broken pipe
 
 === ServerboundPlayerInputPacket? ===
      5443  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundInteractPacket.class
+     1874  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerCommandPacket$Action.class
      4644  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerCommandPacket.class
      4009  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerInputPacket.class
      3509  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundSetCarriedItemPacket.class
-     1874  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerCommandPacket$Action.class
      3618  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundSwingPacket.class
      4306  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundUseItemOnPacket.class
 
