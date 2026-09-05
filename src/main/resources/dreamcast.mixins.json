@@ -15,6 +15,7 @@
     "KeyMappingAccessor",
     "MinecraftMixin",
     "MouseHandlerMixin",
+    "ScreenEffectRendererMixin",
     "SubmitNodeCollectionMixin",
     "LocalPlayerMixin",
     "MultiPlayerGameModeMixin"

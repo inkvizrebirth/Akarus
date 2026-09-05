@@ -584,17 +584,18 @@ public class DreamcastServersScreen extends DreamcastScreen {
 		if (data == null) {
 			return;
 		}
+		int serverIndex = selected;
 		ServerData editing = new ServerData(data.name, data.ip, ServerData.Type.OTHER);
 		editing.copyFrom(data);
 		this.minecraft.gui.setScreen(new ManageServerScreen(this, Component.literal("Изменить сервер"),
 				result -> {
 					if (result) {
-						data.name = editing.name;
-						data.ip = editing.ip;
-						data.copyFrom(editing);
 						ServerList servers = new ServerList(this.minecraft);
 						servers.load();
-						servers.save();
+						if (serverIndex >= 0 && serverIndex < servers.size()) {
+							servers.replace(serverIndex, editing);
+							servers.save();
+						}
 					}
 					reopen();
 				}, editing));
@@ -606,10 +607,13 @@ public class DreamcastServersScreen extends DreamcastScreen {
 			return;
 		}
 		ServerData victim = rows.get(selected).data;
+		int serverIndex = selected;
 		ServerList servers = new ServerList(this.minecraft);
 		servers.load();
-		servers.remove(victim);
-		servers.save();
+		if (serverIndex >= 0 && serverIndex < servers.size()) {
+			servers.remove(servers.get(serverIndex));
+			servers.save();
+		}
 		confirmDelete = false;
 		Notifications.info("Серверы", "Сервер удалён: " + victim.name);
 		reopen();
