@@ -22,17 +22,24 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
+      - name: Разобрать Minecraft (loom-кэш)
+        run: |
+          set +e
+          chmod +x ./gradlew
+          ./gradlew :compileJava --stacktrace -q > resolve.log 2>&1 || tail -5 resolve.log
+          find ~/.gradle/caches/fabric-loom -name '*.jar' 2>/dev/null | head -20
+          exit 0
       - name: Разобрать кэш и достать классы
         run: |
           set +e
           mkdir -p out
-          find .gradle-cache ~/.gradle/caches -name "*.jar" 2>/dev/null | while read -r j; do
+          find ~/.gradle/caches/fabric-loom .gradle-cache ~/.gradle/caches -name "*.jar" 2>/dev/null | grep -v sources | while read -r j; do
             if unzip -l "$j" 2>/dev/null | grep -q "net/minecraft/client/renderer/GameRenderer.class"; then echo "$j"; fi
           done > out/cands.txt
           FULL=$(head -1 out/cands.txt)
           echo "Полный jar: $FULL"
           unzip -o -q "$FULL" -d out/full
-          COMMON=$(find .gradle-cache ~/.gradle/caches -name "*-client-common-*.jar" 2>/dev/null | head -1)
+          COMMON=$(find ~/.gradle/caches/fabric-loom .gradle-cache ~/.gradle/caches -name "*-client-common-*.jar" 2>/dev/null | head -1)
           if [ -n "$COMMON" ]; then unzip -o -q "$COMMON" -d out/common; fi
           echo "COMMON=$COMMON"
           { echo "FULL=$FULL"; echo "COMMON=$COMMON"; } >> "$GITHUB_ENV"
