@@ -263,7 +263,7 @@ public final class WorldRenderHook {
 					});
 					// Nametags: текстовые биллборды — той же трубой, что ванильные ники
 					if (hasTags) {
-						drawNametags(context, nametags, camX, camY, camZ);
+						drawNametags(context, nametags, camX, camY, camZ, unitsPerPixel);
 					}
 		} catch (Exception ignored) {
 			// Рендер не должен падать: любая ошибка в наших линиях — просто пропуск кадра
@@ -371,22 +371,48 @@ public final class WorldRenderHook {
 			int colorTop = esp.boxColor(box.entityId(), maxY, minY, maxY);
 			int alpha = 0xE6;
 
+			// Тёмная подложка на 2.4px шире основной линии. Это единственный приём,
+			// который честно решает «ESP не видно на снегу/небе/лаве»: контур остаётся
+			// читаемым на любом фоне, потому что контраст рисуется самим контуром, а не
+			// цветом. Рисуем её первой, сверху — цветной.
+			int underlay = RenderUtils.withAlpha(0xFF000000, 0.62F);
 			if (corners) {
+				drawCornerBrackets(pose, buffer, minX, minY, minZ, maxX, maxY, maxZ,
+						underlay, underlay, width + 2.4F, unitsPerPixel);
 				drawCornerBrackets(pose, buffer, minX, minY, minZ, maxX, maxY, maxZ,
 						withAlpha(colorTop, alpha), withAlpha(colorBottom, alpha), width, unitsPerPixel);
 			} else {
-				for (int[] edge : BOX_EDGES) {
-					double x0 = edge[0] == 0 ? minX : maxX;
-					double y0 = edge[1] == 0 ? minY : maxY;
-					double z0 = edge[2] == 0 ? minZ : maxZ;
-					double x1 = edge[3] == 0 ? minX : maxX;
-					double y1 = edge[4] == 0 ? minY : maxY;
-					double z1 = edge[5] == 0 ? minZ : maxZ;
+				for (int pass = 0; pass < 2; pass++) {
+					boolean back = pass == 0;
+					float passWidth = back ? width + 2.4F : width;
+					for (int[] edge : BOX_EDGES) {
+						double x0 = edge[0] == 0 ? minX : maxX;
+						double y0 = edge[1] == 0 ? minY : maxY;
+						double z0 = edge[2] == 0 ? minZ : maxZ;
+						double x1 = edge[3] == 0 ? minX : maxX;
+						double y1 = edge[4] == 0 ? minY : maxY;
+						double z1 = edge[5] == 0 ? minZ : maxZ;
 
-					int c0 = withAlpha(edge[1] == 0 ? colorBottom : colorTop, alpha);
-					int c1 = withAlpha(edge[4] == 0 ? colorBottom : colorTop, alpha);
-					WorldGeometryRenderer.line(buffer, pose, x0, y0, z0, c0, x1, y1, z1, c1, width, unitsPerPixel);
+						int c0 = back ? underlay : withAlpha(edge[1] == 0 ? colorBottom : colorTop, alpha);
+						int c1 = back ? underlay : withAlpha(edge[4] == 0 ? colorBottom : colorTop, alpha);
+						WorldGeometryRenderer.line(buffer, pose, x0, y0, z0, c0, x1, y1, z1, c1,
+								passWidth, unitsPerPixel);
+					}
 				}
+			}
+
+			// Колонка здоровья справа от бокса: видно «сколько осталось», не глядя на HP
+			float health = box.health();
+			if (health > 0.0F) {
+				double columnX = maxX + 0.16;
+				double columnBottom = minY + 0.05;
+				double columnTop = maxY - 0.05;
+				double filled = columnBottom + (columnTop - columnBottom) * health;
+				int hpColor = health < 0.3F ? 0xFFFF5C7A : health < 0.6F ? 0xFFFFC66C : 0xFF7CE58C;
+				WorldGeometryRenderer.line(buffer, pose, columnX, columnBottom, maxZ, underlay,
+						columnX, columnTop, maxZ, underlay, width + 3.2F, unitsPerPixel);
+				WorldGeometryRenderer.line(buffer, pose, columnX, columnBottom, maxZ, hpColor,
+						columnX, filled, maxZ, hpColor, width + 0.6F, unitsPerPixel);
 			}
 		}
 	}
@@ -631,10 +657,35 @@ public final class WorldRenderHook {
 	 */
 	private static void drawNametags(LevelRenderContext context,
 	                                 com.dreamcast.client.module.impl.NametagsModule nametags,
-	                                 double camX, double camY, double camZ) {
+	                                 double camX, double camY, double camZ, float unitsPerPixel) {
 		var collector = context.submitNodeCollector();
 		var camera = context.levelState().cameraRenderState;
 		PoseStack poseStack = context.poseStack();
+
+		// Подложка рисуется нашим же примитивом, тремя концентрическими биллбордами:
+		// три слоя с падающей альфой дают мягкий край (тот же эффект, что у blur-спрайта),
+		// и текст перестаёт теряться на светлых блоках. Размер считаем по длине строки.
+		List<com.dreamcast.client.module.impl.NametagsModule.TagEntry> entries = nametags.entries();
+		collector.submitCustomGeometry(poseStack, WorldGeometryRenderer.type(), (pose, buffer) -> {
+			for (com.dreamcast.client.module.impl.NametagsModule.TagEntry tag : entries) {
+				double ax = tag.x() - camX;
+				double ay = tag.y() - camY;
+				double az = tag.z() - camZ;
+				int chars = 0;
+				for (net.minecraft.network.chat.Component text : tag.lines()) {
+					chars = Math.max(chars, text.getString().length());
+				}
+				double half = Math.max(0.34, 0.062 * chars + 0.2) + tag.lines().size() * 0.06;
+				double rise = Math.max(0.18, unitsPerPixel * 3.2);
+				for (int layer = 2; layer >= 0; layer--) {
+					double size = half * (1.0 + layer * 0.42);
+					int alpha = layer == 0 ? 0x8C : (layer == 1 ? 0x4A : 0x24);
+					WorldGeometryRenderer.billboard(buffer, pose, ax, ay + rise * 0.35, az, size,
+							RenderUtils.withAlpha(0xFF06060A, alpha / 255.0F));
+				}
+			}
+		});
+
 		for (com.dreamcast.client.module.impl.NametagsModule.TagEntry tag : nametags.entries()) {
 			double ax = tag.x() - camX;
 			double ay = tag.y() - camY;
