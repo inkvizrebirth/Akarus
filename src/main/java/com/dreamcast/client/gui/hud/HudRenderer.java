@@ -1,6 +1,7 @@
 package com.dreamcast.client.gui.hud;
 
 import com.dreamcast.client.DreamcastClient;
+import com.dreamcast.client.gui.UiKit;
 import com.dreamcast.client.gui.theme.ClientTheme;
 import com.dreamcast.client.module.Module;
 import com.dreamcast.client.module.ModuleManager;
@@ -235,12 +236,11 @@ public final class HudRenderer {
 	 * сводка (ник · пинг · FPS · часы). Всё рисуется примитивами и одной
 	 * текстурой, поэтому не зависит от шрифтов и модификаций интерфейса.
 	 */
-	private static void drawWatermark(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
+		private static void drawWatermark(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
 		Font font = client.font;
 		String brand = DreamcastClient.MOD_NAME.toUpperCase(java.util.Locale.ROOT);
 		String version = "v" + DreamcastClient.MOD_VERSION;
 
-		// Хвост со сводкой: только то, что точно есть, иначе в HUD пусто не выглядит
 		List<String> facts = new ArrayList<>();
 		if (client.getUser() != null) {
 			facts.add(client.getUser().getName());
@@ -250,103 +250,82 @@ public final class HudRenderer {
 		}
 		facts.add(client.getFps() + " FPS");
 		facts.add(java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")));
-		String tail = " · " + String.join(" · ", facts);
 
-		int iconSize = 12;
-		int brandWidth = RenderUtils.width(font, brand);
-		int tailWidth = RenderUtils.width(font, tail);
-		int pillW = 8 + iconSize + 5 + brandWidth + 3 + RenderUtils.width(font, version) + tailWidth + 8;
-		int pillH = Math.max(font.lineHeight + 8, iconSize + 6);
+		int iconSize = 13;
+		int brandWidth = RenderUtils.width(font, brand) + brand.length();
+		int versionWidth = RenderUtils.width(font, version);
+		int factsWidth = RenderUtils.width(font, String.join("   ", facts));
+		int width = Math.round((9 + iconSize + 5 + brandWidth + 4 + versionWidth + 16 + factsWidth + 9) * 1.0F);
+		int height = Math.max(font.lineHeight + 12, iconSize + 9);
 
 		int[] position = HudLayout.position(HudInfoModule.ELEMENT_WATERMARK, MARGIN, MARGIN);
 		int x = position[0];
 		int y = position[1];
+		float appear = UiKit.appear("watermark", now, 420);
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_WATERMARK, x, y, width, height);
+
+		float pulse = 0.5F + 0.5F * (float) Math.sin(now / 1100.0);
+		UiKit.panel(graphics, x, y, width, height, 6.5F, alpha * appear, 0.35F + 0.25F * pulse, now);
+
+		int plate = height - 8;
 		int accent = ClientTheme.accent(now);
+		RenderUtils.fillRounded(graphics, x + 4, y + 4, plate, plate, 4.5F,
+				RenderUtils.withAlpha(accent, (0.22F + 0.12F * pulse) * alpha));
+		graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, EMBLEM,
+				x + 6, y + 6, 0.0F, 0.0F, plate - 4, plate - 4, 64, 64, 64, 64,
+				RenderUtils.withAlpha(0xFFFFFFFF, 0.95F * alpha));
 
-		RenderUtils.drawSoftShadow(graphics, x, y, pillW, pillH, 5, 3);
-		RenderUtils.fillRoundedBorder(graphics, x, y, pillW, pillH, 5,
-				RenderUtils.withAlpha(PANEL_BORDER, 0.9f * alpha), RenderUtils.withAlpha(0xE6070708, alpha));
+		int cursor = x + 4 + plate + 6;
+		int textY = y + (height - font.lineHeight) / 2;
+		UiKit.tracked(graphics, font, brand, cursor, textY, alpha * appear, 1);
+		cursor += brandWidth + 4;
+		RenderUtils.textFlat(graphics, font, version, cursor, textY,
+				RenderUtils.withAlpha(0xFF8F93A6, (0.65F + 0.35F * pulse) * alpha * appear));
+		cursor += versionWidth + 8;
 
-		// Полоска темы сверху и снизу пилюли — «текущий» цвет перелива
-		for (int i = 0; i < pillW - 10; i++) {
-			float grad = i / (float) Math.max(1, pillW - 10);
-			int color = RenderUtils.withAlpha(ClientTheme.gradientAt(grad, now), 0.85f * alpha);
-			graphics.fill(x + 5 + i, y, x + 6 + i, y + 1, color);
-			graphics.fill(x + 5 + i, y + pillH - 1, x + 6 + i, y + pillH,
-					RenderUtils.withAlpha(ClientTheme.gradientAt(1.0f - grad, now), 0.45f * alpha));
+		graphics.fill(cursor, y + 6, cursor + 1, y + height - 6, RenderUtils.withAlpha(0x3AFFFFFF, alpha));
+		cursor += 8;
+		for (int i = 0; i < facts.size(); i++) {
+			int factColor = i == facts.size() - 1 ? ClientTheme.gradientAt(1.0F, now) : 0xFFCBD0E2;
+			RenderUtils.textFlat(graphics, font, facts.get(i), cursor, textY,
+					RenderUtils.withAlpha(factColor, (i == 0 ? 0.95F : 0.78F) * alpha * appear));
+			cursor += RenderUtils.width(font, facts.get(i)) + 3;
+			if (i < facts.size() - 1) {
+				UiKit.dot(graphics, cursor, textY + font.lineHeight / 2, 0.5F * alpha * appear, now);
+				cursor += 5;
+			}
 		}
-
-		// Эмблема: своё цвета (тинт белый), вокруг — мягкое свечение текущим акцентом
-		int iconY = y + (pillH - iconSize) / 2;
-		RenderUtils.fillCircle(graphics, x + 8 + iconSize / 2, y + pillH / 2, iconSize,
-				RenderUtils.withAlpha(accent, 0.16f * alpha));
-		graphics.blit(RenderPipelines.GUI_TEXTURED, EMBLEM, x + 8, iconY, 0.0F, 0.0F,
-				iconSize, iconSize, 64, 64, 64, 64, RenderUtils.withAlpha(0xFFFFFFFF, alpha));
-
-		float pulse = 0.4f + 0.6f * (float) Math.abs(Math.sin(now / 900.0));
-		int cursor = x + 8 + iconSize + 5;
-		int textY = y + (pillH - font.lineHeight) / 2 + 1;
-
-		// Имя — перелив темы по символам
-		for (int i = 0; i < brand.length(); i++) {
-			String symbol = String.valueOf(brand.charAt(i));
-			int color = ClientTheme.gradientAt(i / (float) brand.length(), now);
-			RenderUtils.textFlat(graphics, font, symbol, cursor, textY, RenderUtils.withAlpha(color, alpha));
-			cursor += RenderUtils.width(font, symbol);
-		}
-		RenderUtils.textFlat(graphics, font, version, cursor + 3, textY,
-				RenderUtils.withAlpha(TEXT_SECONDARY, (0.6f + 0.4f * pulse) * alpha));
-		cursor += 3 + RenderUtils.width(font, version);
-		RenderUtils.textFlat(graphics, font, tail, cursor, textY, RenderUtils.withAlpha(TEXT_COLOR, alpha));
-
-		HudLayout.publishBounds(HudInfoModule.ELEMENT_WATERMARK, x, y, pillW, pillH);
 	}
 
 	// ------------------------------------------------------------------
 	// Элемент: инфопанель (FPS · XYZ · направление · пинг)
 	// ------------------------------------------------------------------
 
-	private static void drawInfo(GuiGraphicsExtractor graphics, Minecraft client, float alpha) {
+		private static void drawInfo(GuiGraphicsExtractor graphics, Minecraft client, float alpha) {
 		LocalPlayer player = client.player;
 		Font font = client.font;
 		long now = Util.getMillis();
 
-		List<String> lines = new ArrayList<>();
-		lines.add("FPS: " + client.getFps());
-		if (player != null) {
-			BlockPos pos = player.blockPosition();
-			lines.add("XYZ: " + pos.getX() + " " + pos.getY() + " " + pos.getZ());
-			lines.add("Направление: " + directionName(player.getDirection()));
-			lines.add("Пинг: " + getPing(client) + " мс");
-		}
-
-		int width = 0;
-		for (String line : lines) {
-			width = Math.max(width, RenderUtils.width(font, line));
-		}
-		width += PADDING * 2 + 9;
-		int height = lines.size() * (font.lineHeight + LINE_GAP) - LINE_GAP + PADDING * 2;
-
+		int width = 132;
+		int rows = player == null ? 1 : 3;
+		int height = 20 + rows * (font.lineHeight + 4) + 5;
 		int[] position = HudLayout.position(HudInfoModule.ELEMENT_INFO, MARGIN, MARGIN + font.lineHeight + 14);
 		int x = position[0];
 		int y = position[1];
-
-		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 4, 3);
-		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 4,
-				RenderUtils.withAlpha(PANEL_BORDER, 0.9f * alpha), RenderUtils.withAlpha(PANEL_BACKGROUND, alpha));
-		// Акцентная полоса слева — текущий цвет перелива
-		graphics.fillGradient(x + 1, y + 3, x + 3, y + height - 3,
-				RenderUtils.withAlpha(ClientTheme.gradientAt(0.0f, now), alpha),
-				RenderUtils.withAlpha(ClientTheme.gradientAt(1.0f, now), alpha));
-
-		int textY = y + PADDING;
-		for (String line : lines) {
-			RenderUtils.text(graphics, font, line, x + PADDING + 6, textY,
-					RenderUtils.withAlpha(TEXT_COLOR, alpha));
-			textY += font.lineHeight + LINE_GAP;
-		}
-
 		HudLayout.publishBounds(HudInfoModule.ELEMENT_INFO, x, y, width, height);
+
+		UiKit.panel(graphics, x, y, width, height, 6.0F, alpha, 0.06F, now);
+		UiKit.header(graphics, font, "Сводка", "hud_info", x + 8, y + 6,
+				width - 16, alpha, now);
+		int cursor = y + 20 + font.lineHeight - 2;
+		cursor = UiKit.row(graphics, font, "FPS", String.valueOf(client.getFps()), x + 8, cursor,
+				width - 16, alpha);
+		if (player != null) {
+			cursor = UiKit.row(graphics, font, "Пинг", getPing(client) + " мс",
+					x + 8, cursor, width - 16, alpha);
+			UiKit.row(graphics, font, "Сторона",
+					directionName(player.getDirection()), x + 8, cursor, width - 16, alpha);
+		}
 	}
 
 	// ------------------------------------------------------------------
@@ -573,59 +552,148 @@ public final class HudRenderer {
 	// Элемент: Target HUD
 	// ------------------------------------------------------------------
 
+		private static String lastTargetName;
+	private static String lastTargetWeapon;
+	private static float lastTargetHealth = 14.0F;
+	private static float lastTargetAbsorption;
+	private static float lastTargetMax = 20.0F;
+	private static int lastTargetArmor;
+	private static double lastTargetDistance;
+	private static int lastTargetId = Integer.MIN_VALUE;
+	private static long targetSwapAt;
+
+	/**
+	 * Target HUD. Держим последние значения цели, когда цели уже нет: карточка
+	 * плавно гаснет, а не исчезает в тот же кадр (резкое мигание — половина
+	 * «убогости» таких элементов).
+	 */
 	private static void drawTarget(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
 		KillAuraModule aura = ModuleManager.find(KillAuraModule.class);
 		Entity raw = aura == null ? null : aura.currentTarget();
 		LivingEntity target = raw instanceof LivingEntity living && living.isAlive() ? living : null;
-		if (target == null && alpha >= 1.0f) {
+		float presence = UiKit.tween("target.presence", target == null ? 0.0F : 1.0F, 0.2F, now);
+		if (presence < 0.02F && alpha >= 1.0F) {
 			return;
 		}
+		if (target != null) {
+			if (lastTargetId != target.getId()) {
+				lastTargetId = target.getId();
+				targetSwapAt = now;
+			}
+			lastTargetName = target.getName().getString();
+			lastTargetHealth = Math.max(0.0F, target.getHealth());
+			lastTargetAbsorption = Math.max(0.0F, target.getAbsorptionAmount());
+			lastTargetMax = Math.max(1.0F, target.getMaxHealth());
+			lastTargetArmor = target.getArmorValue();
+			lastTargetDistance = client.player == null ? 0.0 : client.player.distanceTo(target);
+			lastTargetWeapon = target.getMainHandItem().isEmpty()
+					? null : target.getMainHandItem().getHoverName().getString();
+		}
+		String name = lastTargetName == null ? "Цель" : lastTargetName;
+		float health = lastTargetHealth;
+		float absorption = lastTargetAbsorption;
+		float maximum = lastTargetMax;
+		int armor = lastTargetArmor;
+		double distance = lastTargetDistance;
+		String weapon = lastTargetWeapon;
 
 		Font font = client.font;
-		int width = Math.min(176, client.getWindow().getGuiScaledWidth() - 12);
-		int height = 48;
+		int width = Math.min(196, client.getWindow().getGuiScaledWidth() - 12);
+		int height = 62;
 		int defaultX = (client.getWindow().getGuiScaledWidth() - width) / 2;
-		int defaultY = client.getWindow().getGuiScaledHeight() - height - 42;
+		int defaultY = client.getWindow().getGuiScaledHeight() - height - 40;
 		int[] position = HudLayout.position(HudInfoModule.ELEMENT_TARGET, defaultX, defaultY);
 		int x = position[0];
 		int y = position[1];
 		HudLayout.publishBounds(HudInfoModule.ELEMENT_TARGET, x, y, width, height);
 
-		String name = target == null ? "Текущая цель" : target.getName().getString();
-		float health = target == null ? 14.0f : Math.max(0.0f, target.getHealth());
-		float absorption = target == null ? 2.0f : Math.max(0.0f, target.getAbsorptionAmount());
-		float maximum = target == null ? 20.0f : Math.max(1.0f, target.getMaxHealth());
-		float progress = Math.min(1.0f, (health + absorption) / maximum);
-		int armor = target == null ? 12 : target.getArmorValue();
-		double distance = target == null || client.player == null ? 3.4 : client.player.distanceTo(target);
+		float element = Math.min(1.0F, alpha) * (0.4F + 0.6F * presence);
+		int accent = ClientTheme.gradientAt(0.2F, now);
+		float progress = Math.max(0.0F, Math.min(1.0F, (health + absorption) / maximum));
+		float animated = UiKit.tween("target.hp", progress, 0.16F, now);
+		int healthColor = animated < 0.25F ? 0xFFFF667D : animated < 0.55F ? 0xFFFFC66C : accent;
 
-		int accent = ClientTheme.gradientAt(0.25f, now);
-		int healthColor = progress < 0.25f ? 0xFFFF667D : progress < 0.55f ? 0xFFFFC66C : accent;
-		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 7, 4);
-		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 7,
-				RenderUtils.withAlpha(accent, 0.48f * alpha), RenderUtils.withAlpha(0xE609090C, alpha));
+		UiKit.panel(graphics, x, y, width, height, 8.0F, element, 0.42F, now);
 
-		// Абстрактный аватар остаётся читаемым и для мобов, и для игроков.
-		RenderUtils.fillCircle(graphics, x + 20, y + 20, 12, RenderUtils.withAlpha(0xFF16161D, alpha));
-		RenderUtils.fillCircle(graphics, x + 20, y + 20, 10, RenderUtils.withAlpha(accent, 0.30f * alpha));
+		int plate = 34;
+		int plateX = x + 8;
+		int plateY = y + (height - plate) / 2;
+		RenderUtils.fillRounded(graphics, plateX, plateY, plate, plate, 7.0F,
+				RenderUtils.mix(0xFF141419, healthColor, 0.22F));
+		RenderUtils.fillRounded(graphics, plateX, plateY, plate, plate, 7.0F,
+				RenderUtils.withAlpha(healthColor, 0.55F * element), RenderUtils.withAlpha(0x00000000, 0.0F));
 		String initial = name.isBlank() ? "?" : name.substring(0, 1).toUpperCase(java.util.Locale.ROOT);
-		RenderUtils.textCentered(graphics, font, initial, x + 20, y + 15,
-				RenderUtils.withAlpha(TEXT_COLOR, alpha), false);
+		RenderUtils.textBold(graphics, font, initial, plateX + plate / 2 - RenderUtils.width(font, initial) / 2,
+				plateY + 10, RenderUtils.withAlpha(0xFFF6F8FF, element));
+		int ticks = 34;
+		double cx = plateX + plate / 2.0;
+		double cy = plateY + plate / 2.0;
+		for (int i = 0; i < ticks; i++) {
+			float f = i / (float) ticks;
+			if (f > animated) {
+				continue;
+			}
+			double angle = f * Math.PI * 2.0 - Math.PI / 2.0;
+			int tx = (int) Math.round(cx + Math.cos(angle) * plate * 0.68);
+			int ty = (int) Math.round(cy + Math.sin(angle) * plate * 0.68);
+			graphics.fill(tx, ty, tx + 1, ty + 1,
+					RenderUtils.withAlpha(healthColor, (0.4F + 0.6F * f) * element));
+		}
 
-		String shownName = RenderUtils.clamp(font, name, width - 74);
-		RenderUtils.textBold(graphics, font, shownName, x + 38, y + 7, RenderUtils.withAlpha(TEXT_COLOR, alpha));
-		String meta = String.format(java.util.Locale.ROOT, "%.1f HP  ·  %.1f m  ·  %d armor",
-				health + absorption, distance, armor);
-		RenderUtils.textFlat(graphics, font, meta, x + 38, y + 7 + font.lineHeight + 2,
-				RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
+		int textX = plateX + plate + 9;
+		int right = x + width - 8;
+		RenderUtils.textBold(graphics, font, RenderUtils.clamp(font, name, right - textX - 30), textX, y + 7,
+				RenderUtils.withAlpha(0xFFF6F8FF, element));
+		String side = String.format(java.util.Locale.ROOT, "%.1f \u0431\u043b.", distance);
+		RenderUtils.textFlat(graphics, font, side, right - RenderUtils.width(font, side), y + 9,
+				RenderUtils.withAlpha(0xFF9A9DAE, element));
 
-		int barX = x + 8;
-		int barY = y + height - 8;
-		int barW = width - 16;
-		RenderUtils.fillRounded(graphics, barX, barY, barW, 3, 2, RenderUtils.withAlpha(0xFF25252D, alpha));
-		if (progress > 0.0f) {
-			RenderUtils.fillRounded(graphics, barX, barY, Math.max(2, Math.round(barW * progress)), 3, 2,
-					RenderUtils.withAlpha(healthColor, alpha));
+		String hp = String.format(java.util.Locale.ROOT, "%.1f", health + absorption);
+		RenderUtils.textBold(graphics, font, hp, textX, y + 21, RenderUtils.withAlpha(healthColor, element));
+		String ofMax = String.format(java.util.Locale.ROOT, " / %.0f", maximum);
+		int afterHp = textX + RenderUtils.width(font, hp) + 1;
+		RenderUtils.textFlat(graphics, font, ofMax, afterHp, y + 21,
+				RenderUtils.withAlpha(0xFF8F93A6, 0.9F * element));
+		if (weapon != null && !weapon.isBlank()) {
+			int gunWidth = RenderUtils.width(font, weapon);
+			if (right - gunWidth > afterHp + RenderUtils.width(font, ofMax) + 6) {
+				RenderUtils.textFlat(graphics, font, RenderUtils.clamp(font, weapon, right - afterHp - 6),
+						right - gunWidth, y + 21, RenderUtils.withAlpha(0xFFB9BFD4, element));
+			}
+		}
+
+		int barX = textX;
+		int barW = right - barX;
+		int barY = y + 34;
+		UiKit.bar(graphics, barX, barY, barW, 5, animated, now, element);
+		if (absorption > 0.0F) {
+			int shieldX = barX + Math.round(barW * animated);
+			int shieldW = Math.max(2, Math.round(barW * (progress - animated)));
+			RenderUtils.fillRounded(graphics, shieldX, barY, Math.min(shieldW, right - shieldX), 5, 2.5F,
+					RenderUtils.withAlpha(0xFFFFD98A, 0.85F * element));
+		}
+
+		int pips = 10;
+		int pipY = y + 45;
+		int pipWidth = Math.max(5, Math.min(9, (barW - (pips - 1) * 2) / pips));
+		for (int i = 0; i < pips; i++) {
+			int px = barX + i * (pipWidth + 2);
+			boolean on = armor >= (i + 1) * 2 || (armor % 2 == 1 && armor / 2 == i);
+			RenderUtils.fillRounded(graphics, px, pipY, pipWidth, 6, 2.0F,
+					RenderUtils.withAlpha(on ? 0xFFC9D6FF : 0x2AFFFFFF, element));
+			if (on) {
+				graphics.fill(px + 1, pipY + 1, px + pipWidth - 1, pipY + 2,
+						RenderUtils.withAlpha(0xFFFFFFFF, 0.45F * element));
+			}
+		}
+		String ping = getPing(client) + " мс";
+		RenderUtils.textFlat(graphics, font, ping, right - RenderUtils.width(font, ping), pipY,
+				RenderUtils.withAlpha(0xFF8F93A6, element));
+
+		float flash = 1.0F - Math.min(1.0F, (now - targetSwapAt) / 320.0F);
+		if (flash > 0.01F) {
+			RenderUtils.fillRounded(graphics, x - 1, y - 1, width + 2, height + 2, 9.0F,
+					RenderUtils.withAlpha(accent, flash * 0.85F * presence));
 		}
 	}
 
@@ -654,9 +722,7 @@ public final class HudRenderer {
 		int y = position[1];
 		HudLayout.publishBounds(HudInfoModule.ELEMENT_EFFECTS, x, y, width, height);
 
-		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 3);
-		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6,
-				RenderUtils.withAlpha(PANEL_BORDER, alpha), RenderUtils.withAlpha(PANEL_BACKGROUND, alpha));
+		UiKit.panel(graphics, x, y, width, height, 6.0F, alpha, 0.1F, now);
 		RenderUtils.textBold(graphics, font, "ЭФФЕКТЫ", x + 8, y + 6,
 				RenderUtils.withAlpha(ClientTheme.accent(now), alpha));
 
@@ -805,45 +871,35 @@ public final class HudRenderer {
 		}
 
 		Font font = client.font;
-		int width = 128;
-		int height = 54;
+		int width = 132;
+		int height = 62;
 		int[] position = HudLayout.position(HudInfoModule.ELEMENT_SPEED, MARGIN, 172);
 		int x = position[0];
 		int y = position[1];
 		HudLayout.publishBounds(HudInfoModule.ELEMENT_SPEED, x, y, width, height);
 
 		int accent = ClientTheme.accent(now);
-		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 3);
-		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6,
-				RenderUtils.withAlpha(PANEL_BORDER, alpha), RenderUtils.withAlpha(PANEL_BACKGROUND, alpha));
+		UiKit.panel(graphics, x, y, width, height, 6.0F, alpha, 0.1F, now);
 
+		UiKit.tracked(graphics, font, "\u0421\u041a\u041e\u0420\u041e\u0421\u0422\u042c", x + 8, y + 6, alpha, 1);
 		// Число крупно, единица — рядом мелко
 		String value = String.format(java.util.Locale.ROOT, "%.1f", bps);
-		RenderUtils.textBold(graphics, font, value, x + 8, y + 6, RenderUtils.withAlpha(TEXT_COLOR, alpha));
-		RenderUtils.textFlat(graphics, font, "б/с", x + 10 + RenderUtils.width(font, value), y + 8,
+		RenderUtils.textBold(graphics, font, value, x + 8, y + 16,
+				RenderUtils.withAlpha(0xFFF6F8FF, alpha));
+		RenderUtils.textFlat(graphics, font, "\u0431/\u0441", x + 10 + RenderUtils.width(font, value), y + 18,
 				RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
 
 		// Короткий бар: доля от авто-масштаба
 		int barX = x + 8;
 		int barW = width - 16;
-		int barY = y + 21;
+		int barY = y + 32;
 		float fraction = Math.min(1.0F, Math.max(0.0F, bps / Math.max(0.001F, speedScale)));
-		RenderUtils.fillRounded(graphics, barX, barY, barW, 3, 1, RenderUtils.withAlpha(0x33FFFFFF, alpha));
-		if (fraction > 0.001F) {
-			int filled = Math.max(2, Math.round(barW * fraction));
-			graphics.fillGradient(barX, barY, barX + filled, barY + 3,
-					RenderUtils.withAlpha(ClientTheme.gradientAt(0.0F, now), alpha),
-					RenderUtils.withAlpha(ClientTheme.gradientAt(1.0F, now), alpha));
-			// блик на конце бара — «текущее» положение читается сразу
-			graphics.fill(barX + filled - 1, barY - 1, barX + filled, barY + 4,
-					RenderUtils.withAlpha(0xFFFFFFFF, 0.75F * alpha));
-		}
-
+		UiKit.bar(graphics, barX, barY, barW, 3, fraction, now, alpha);
 		// График: ломаная по кольцевому буферу (старое слева, свежее справа)
 		int graphX = x + 8;
 		int graphW = width - 16;
-		int graphTop = y + 29;
-		int graphBottom = y + height - 6;
+		int graphTop = y + 40;
+		int graphBottom = y + height - 5;
 		int graphH = Math.max(6, graphBottom - graphTop);
 		graphics.fill(graphX, graphBottom, graphX + graphW, graphBottom + 1,
 				RenderUtils.withAlpha(0x22FFFFFF, alpha));
@@ -887,17 +943,15 @@ public final class HudRenderer {
 		int[] position = HudLayout.position(HudInfoModule.ELEMENT_COORDS, MARGIN, 232);
 		int x = position[0];
 		int y = position[1];
-		int width = 128;
-		int height = 44;
+		int width = 140;
+		int height = 52;
 		HudLayout.publishBounds(HudInfoModule.ELEMENT_COORDS, x, y, width, height);
 
-		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 3);
-		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6,
-				RenderUtils.withAlpha(PANEL_BORDER, alpha), RenderUtils.withAlpha(PANEL_BACKGROUND, alpha));
-		RenderUtils.textBold(graphics, font, "КООРДИНАТЫ", x + 8, y + 5,
-				RenderUtils.withAlpha(ClientTheme.accent(Util.getMillis()), alpha));
+		UiKit.panel(graphics, x, y, width, height, 6.0F, alpha, 0.1F, now);
+		UiKit.header(graphics, font, "\u041a\u043e\u043e\u0440\u0434\u0438\u043d\u0430\u0442\u044b", "auto_walk",
+				x + 8, y + 6, width - 16, alpha, Util.getMillis());
 		if (player == null) {
-			RenderUtils.textFlat(graphics, font, "нет мира", x + 8, y + 20,
+			RenderUtils.textFlat(graphics, font, "\u043d\u0435\u0442 \u043c\u0438\u0440\u0430", x + 8, y + 24,
 					RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
 			return;
 		}
@@ -905,12 +959,12 @@ public final class HudRenderer {
 		BlockPos pos = player.blockPosition();
 		RenderUtils.textFlat(graphics, font,
 				String.format(java.util.Locale.ROOT, "%.1f  %.1f  %.1f", eyes.x, eyes.y, eyes.z),
-				x + 8, y + 17, RenderUtils.withAlpha(TEXT_COLOR, alpha));
+				x + 8, y + 24, RenderUtils.withAlpha(0xFFF6F8FF, alpha));
 		RenderUtils.textFlat(graphics, font,
 				String.format(java.util.Locale.ROOT, "блок %d %d %d · чанк %d:%d · %s",
 						pos.getX(), pos.getY(), pos.getZ(), pos.getX() >> 4, pos.getZ() >> 4,
 						directionName(player.getDirection())),
-				x + 8, y + 28, RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
+				x + 8, y + 37, RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
 	}
 
 	private static String formatDurationTicks(int ticks) {
