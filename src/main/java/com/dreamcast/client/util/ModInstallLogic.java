@@ -14,7 +14,7 @@ import java.util.Locale;
  */
 public final class ModInstallLogic {
 
-\t/** Что решили по итогам проверки. */
+	/** Что решили по итогам проверки. */
 	public enum Decision {
 		/** Мод уже загружен в игру — ничего делать не надо. */
 		LOADED,

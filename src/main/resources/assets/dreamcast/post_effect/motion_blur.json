@@ -27,7 +27,17 @@
                     {
                         "name": "BlendFactor",
                         "type": "float",
-                        "value": 0.5
+                        "value": 0.45
+                    },
+                    {
+                        "name": "SampleRadius",
+                        "type": "float",
+                        "value": 1.4
+                    },
+                    {
+                        "name": "BlurAlgorithm",
+                        "type": "int",
+                        "value": 0
                     }
                 ]
             }
