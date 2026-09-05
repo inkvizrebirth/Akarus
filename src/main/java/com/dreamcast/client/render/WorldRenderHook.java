@@ -38,6 +38,7 @@ public final class WorldRenderHook {
 
 	/** Боксы ESP, собранные на извлечении; атомарно меняются целиком. */
 	private static volatile List<EspModule.EspBox> espBoxes = List.of();
+	private static volatile List<com.dreamcast.client.module.impl.CosmosModule.Target> cosmosTargets = List.of();
 
 	private WorldRenderHook() {
 	}
@@ -81,6 +82,16 @@ public final class WorldRenderHook {
 				wings = wingsModule.rigs();
 			} else {
 				wings = List.of();
+			}
+
+			CosmosModule cosmos = ModuleManager.find(CosmosModule.class);
+			if (cosmos != null && cosmos.isEnabled()) {
+				var cosmosCamera = context.camera().position();
+				cosmos.collect(context.level().entitiesForRendering(),
+						cosmosCamera.x, cosmosCamera.y, cosmosCamera.z, net.minecraft.util.Util.getMillis());
+				cosmosTargets = cosmos.targets();
+			} else {
+				cosmosTargets = List.of();
 			}
 
 			TargetEspModule targetEsp = ModuleManager.find(TargetEspModule.class);
@@ -163,6 +174,10 @@ public final class WorldRenderHook {
 			com.dreamcast.client.module.impl.RainModule rain =
 					ModuleManager.find(com.dreamcast.client.module.impl.RainModule.class);
 			boolean hasRain = rain != null && rain.isEnabled();
+			com.dreamcast.client.module.impl.CosmosModule cosmos =
+					ModuleManager.find(com.dreamcast.client.module.impl.CosmosModule.class);
+			List<com.dreamcast.client.module.impl.CosmosModule.Target> cosmosList = cosmosTargets;
+			boolean hasCosmos = cosmos != null && cosmos.wantsCosmos() && !cosmosList.isEmpty();
 			List<ChinaHatModule.Hat> hatList = hats;
 			List<WingsModule.Rig> wingRigs = wings;
 			TargetEspModule.Frame frame = targetFrame;
@@ -174,7 +189,8 @@ public final class WorldRenderHook {
 			net.minecraft.core.BlockPos preview = scaffoldPreview;
 			if (!hasTrail && boxes.isEmpty() && !hasRings && !hasHits && !hasTags
 					&& targetBar == null && blockBoxes.isEmpty() && preview == null
-					&& hatList.isEmpty() && wingRigs.isEmpty() && frame == null && !hasRain) {
+					&& hatList.isEmpty() && wingRigs.isEmpty() && frame == null && !hasRain
+					&& !hasCosmos) {
 				return;
 			}
 
@@ -233,6 +249,16 @@ public final class WorldRenderHook {
 						if (hasRain) {
 							RainRenderer.render(rain, pose, buffer, camX, camY, camZ,
 									unitsPerPixel, now);
+						}
+						if (hasCosmos) {
+							CosmosRenderer.render(cosmos, cosmosList, pose, buffer,
+									camX, camY, camZ, unitsPerPixel, now);
+						}
+						// Эффекты смерти живут и без включённого космоса: цель могла
+						// умереть в тот кадр, когда обёртку уже некому рисовать.
+						else if (cosmos != null && cosmos.isEnabled()) {
+							CosmosRenderer.render(cosmos, List.of(), pose, buffer,
+									camX, camY, camZ, unitsPerPixel, now);
 						}
 					});
 					// Nametags: текстовые биллборды — той же трубой, что ванильные ники
