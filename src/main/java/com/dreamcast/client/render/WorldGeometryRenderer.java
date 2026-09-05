@@ -125,6 +125,149 @@ public final class WorldGeometryRenderer {
 		vertex(buffer, pose, ax1, ay1, az1, left1, nx1, ny1, nz1);
 	}
 
+	// ------------------------------------------------------------------
+	// Полигоны и биллборды (шляпа, крылья, кристаллы, «свечение»)
+	// ------------------------------------------------------------------
+
+	/**
+	 * Один залитый треугольник в том же пространстве, что и {@link #quad}:
+	 * координаты уже относительно камеры, нормаль считается сама.
+	 *
+	 * Из треугольников собирается всё «объёмное»: конус шляпы (веер от вершины к
+	 * окружности основания), полигоны крыла (веер от anchor к контуру), грани
+	 * кристалла (две пирамиды).
+	 */
+	public static void triangle(VertexConsumer buffer, PoseStack.Pose pose,
+	                           double ax, double ay, double az, int colorA,
+	                           double bx, double by, double bz, int colorB,
+	                           double cx, double cy, double cz, int colorC) {
+		// Нормаль — по векторному произведению рёбер, развёрнутая «на камеру»
+		// (камера у нас в нуле, поэтому «на камеру» = против вектора к точке)
+		double ux = bx - ax, uy = by - ay, uz = bz - az;
+		double vx = cx - ax, vy = cy - ay, vz = cz - az;
+		double nx = uy * vz - uz * vy;
+		double ny = uz * vx - ux * vz;
+		double nz = ux * vy - uy * vx;
+		double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+		if (len < 1.0e-6) {
+			return;
+		}
+		nx /= len;
+		ny /= len;
+		nz /= len;
+		double gx = (ax + bx + cx) / 3.0, gy = (ay + by + cy) / 3.0, gz = (az + bz + cz) / 3.0;
+		// Вырожденный треугольник всё равно нарисуется (cull у нас выключен), но
+		// нормаль, обращённая к камере, держит стабильный оттенок на гранях
+		if (nx * gx + ny * gy + nz * gz > 0.0) {
+			nx = -nx;
+			ny = -ny;
+			nz = -nz;
+		}
+		vertex(buffer, pose, ax, ay, az, colorA, (float) nx, (float) ny, (float) nz);
+		vertex(buffer, pose, bx, by, bz, colorB, (float) nx, (float) ny, (float) nz);
+		vertex(buffer, pose, cx, cy, cz, colorC, (float) nx, (float) ny, (float) nz);
+	}
+
+	/**
+	 * Квад, всегда повёрнутый лицом к камере (бильборд), вокруг точки (x,y,z).
+	 *
+	 * Оси считаются из направления «камера → точка»: right = view × up,
+	 * up' = right × view. При взгляде строго вверх/вниз up вырождается — там
+	 * берём мировую ось Z, иначе у «свечения» начал бы заваливаться размер.
+	 */
+	public static void billboard(VertexConsumer buffer, PoseStack.Pose pose,
+	                             double x, double y, double z, double halfSize, int color) {
+		double dist = Math.sqrt(x * x + y * y + z * z);
+		if (dist < 1.0e-4 || halfSize <= 0.0) {
+			return;
+		}
+		double vx = x / dist, vy = y / dist, vz = z / dist;
+		// right = normalize(view × worldUp) = normalize(-vz, 0, vx)
+		double rx = -vz;
+		double ry = 0.0;
+		double rz = vx;
+		double rlen = Math.sqrt(rx * rx + ry * ry + rz * rz);
+		if (rlen < 1.0e-4) {
+			rx = 0.0;
+			ry = 0.0;
+			rz = -1.0;
+			rlen = 1.0;
+		}
+		rx /= rlen;
+		ry /= rlen;
+		rz /= rlen;
+		// up = normalize(right × view)
+		double ux = ry * vz - rz * vy;
+		double uy = rz * vx - rx * vz;
+		double uz = rx * vy - ry * vx;
+		double ulen = Math.sqrt(ux * ux + uy * uy + uz * uz);
+		if (ulen < 1.0e-4) {
+			return;
+		}
+		ux /= ulen;
+		uy /= ulen;
+		uz /= ulen;
+
+		double h = halfSize;
+		// a = -r-h, -u-h ; b = +r-h... обход против часовой, два треугольника
+		double axX = x - rx * h - ux * h, axY = y - ry * h - uy * h, axZ = z - rz * h - uz * h;
+		double bxX = x + rx * h - ux * h, bxY = y + ry * h - uy * h, bxZ = z + rz * h - uz * h;
+		double cxX = x + rx * h + ux * h, cxY = y + ry * h + uy * h, cxZ = z + rz * h + uz * h;
+		double dxX = x - rx * h + ux * h, dxY = y - ry * h + uy * h, dxZ = z - rz * h + uz * h;
+		float fnx = (float) -vx, fny = (float) -vy, fnz = (float) -vz;
+		vertex(buffer, pose, axX, axY, axZ, color, fnx, fny, fnz);
+		vertex(buffer, pose, bxX, bxY, bxZ, color, fnx, fny, fnz);
+		vertex(buffer, pose, cxX, cxY, cxZ, color, fnx, fny, fnz);
+		vertex(buffer, pose, axX, axY, axZ, color, fnx, fny, fnz);
+		vertex(buffer, pose, cxX, cxY, cxZ, color, fnx, fny, fnz);
+		vertex(buffer, pose, dxX, dxY, dxZ, color, fnx, fny, fnz);
+	}
+
+	/**
+	 * Мягкое «свечение» без текстуры: несколько концентрических бильбордов,
+	 * каждый шире и прозрачнее предыдущего. Так выглядит glow-спрайт, если
+	 * рисовать его процедурно — и не требует ни PNG, ни своего пайплайна.
+	 *
+	 * @param layers количество слоёв (3 — как в референсе, где ядро/среда/ореол)
+	 */
+	public static void glow(VertexConsumer buffer, PoseStack.Pose pose,
+	                        double x, double y, double z, double radius, int color, int layers) {
+		if (radius <= 0.002 || layers <= 0) {
+			return;
+		}
+		int n = Math.min(6, Math.max(1, layers));
+		int alpha = color >>> 24;
+		for (int i = n - 1; i >= 0; i--) {
+			// i = n-1 — самый широкий и тусклый слой, i = 0 — яркое ядро
+			float t = n == 1 ? 1.0F : i / (float) (n - 1);
+			double size = radius * (1.0 + t * 2.4);
+			float fade = 1.0F - t * 0.86F;
+			int a = (int) (alpha * fade * fade);
+			if (a <= 1) {
+				continue;
+			}
+			billboard(buffer, pose, x, y, z, size, RenderUtils.withAlpha(color, a / 255.0F));
+		}
+	}
+
+	/** Окружность в горизонтальной плоскости (кольцо под целью, «пятак» шляпы). */
+	public static void ring(VertexConsumer buffer, PoseStack.Pose pose,
+	                        double x, double y, double z, double radius,
+	                        double widthPx, int segments, int color, float unitsPerPixel) {
+		if (radius < 0.02 || segments < 3) {
+			return;
+		}
+		int n = Math.min(128, segments);
+		for (int i = 0; i < n; i++) {
+			double a0 = i / (double) n * Math.PI * 2.0;
+			double a1 = (i + 1) / (double) n * Math.PI * 2.0;
+			line(buffer, pose,
+					x + Math.cos(a0) * radius, y, z + Math.sin(a0) * radius, color,
+					x + Math.cos(a1) * radius, y, z + Math.sin(a1) * radius, color,
+					widthPx, unitsPerPixel);
+		}
+	}
+
 	private static void vertex(VertexConsumer buffer, PoseStack.Pose pose, double x, double y, double z,
 	                           int color, float nx, float ny, float nz) {
 		buffer.addVertex(pose, (float) x, (float) y, (float) z)

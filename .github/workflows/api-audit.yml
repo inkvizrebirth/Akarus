@@ -379,6 +379,28 @@ jobs:
               javap -p -cp "$MC" net.minecraft.client.renderer.RenderPipelines 2>&1 | grep -E 'public static final' | head -60 || true
               echo; echo "=== setPostEffect вызовы (checkEntityPostEffect) ==="
               javap -c -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | grep -iE 'postEffect|PostChain|blur' | head -40 || true
+              echo; echo "=== список assets/minecraft/post_effect ==="
+              unzip -l "$MC" | awk '{print $NF}' | grep -E 'post_effect' | head -20 || true
+              echo; echo "=== blur.json (полный пример) ==="
+              unzip -p "$MC" assets/minecraft/post_effect/blur.json 2>/dev/null | head -80 || true
+              echo; echo "=== invert.json ==="
+              unzip -p "$MC" assets/minecraft/post_effect/invert.json 2>/dev/null | head -40 || true
+              echo; echo "=== invert.fsh ==="
+              unzip -p "$MC" assets/minecraft/shaders/post/invert.fsh 2>/dev/null | head -30 || true
+              echo; echo "=== box_blur.fsh ==="
+              unzip -p "$MC" assets/minecraft/shaders/post/box_blur.fsh 2>/dev/null | head -40 || true
+              echo; echo "=== rotscale.vsh ==="
+              unzip -p "$MC" assets/minecraft/shaders/post/rotscale.vsh 2>/dev/null | head -40 || true
+              echo; echo "=== RenderTypes: варианты ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.RenderTypes 2>&1 | grep -iE 'emissive|depth|translucent|lines|outline' | head -40 || true
+              echo; echo "=== UniformValue + реализации ==="
+              unzip -l "$MC" | awk '{print $NF}' | grep -E 'renderer/Uniform|renderer/PostChainConfig' | head -20 || true
+              echo; echo "=== ShaderManager public ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.ShaderManager 2>&1 | grep -E 'public' | head -30 || true
+              echo; echo "=== GameRenderer setPostEffect/clearPostEffect байткод ==="
+              javap -c -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | sed -n '/setPostEffect/,/^$/p' | head -60 || true
+              echo; echo "=== FrameGraph/RenderTarget size ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.MainTarget 2>&1 | head -25 || true
             fi
 
           } > api-audit-result.txt 2>&1

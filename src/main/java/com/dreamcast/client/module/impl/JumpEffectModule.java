@@ -129,8 +129,8 @@ public class JumpEffectModule extends Module {
 	 */
 	public int ringColor(float t, float phase, long timeMillis) {
 		if (rainbow.isEnabled()) {
-			float speed = rainbowSpeed.get() / 2000.0F;
-			return RenderUtils.hsb(timeMillis * speed + t * 0.35F + phase * 0.12F, 0.75F, 1.0F, 0xFF);
+			return RenderUtils.hsb(RenderUtils.rainbowPhase(timeMillis, rainbowSpeed.get())
+					+ t * 0.35F + phase * 0.12F, 0.75F, 1.0F, 0xFF);
 		}
 		return RenderUtils.mix(color.get(), secondColor.get(), t);
 	}

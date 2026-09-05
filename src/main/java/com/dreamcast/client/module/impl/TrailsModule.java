@@ -207,8 +207,8 @@ public class TrailsModule extends Module {
 
 	public int trailColor(float t, long timeMillis) {
 		if (rainbow.isEnabled()) {
-			float speed = rainbowSpeed.get() / 2000.0F;
-			return RenderUtils.hsb(timeMillis * speed + t * 0.45F, 0.75F, 1.0F, 0xFF);
+			return RenderUtils.hsb(RenderUtils.rainbowPhase(timeMillis, rainbowSpeed.get())
+					+ t * 0.45F, 0.75F, 1.0F, 0xFF);
 		}
 		if (gradient.isEnabled()) {
 			return RenderUtils.mix(color.get(), secondColor.get(), t);

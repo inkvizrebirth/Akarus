@@ -178,7 +178,7 @@ public class EspModule extends Module {
 	public int boxColor(int entityId, double y, double minY, double maxY) {
 		int base = entityColorById(entityId);
 		if (gradient.isEnabled()) {
-			return WorldGeometry_verticalColor(base, secondColor.get(), y, minY, maxY);
+			return verticalColor(base, secondColor.get(), y, minY, maxY);
 		}
 		return base;
 	}
@@ -212,14 +212,14 @@ public class EspModule extends Module {
 
 	private int entityColorById(int entityId) {
 		if (rainbow.isEnabled()) {
-			float speed = rainbowSpeed.get() / 2000.0F;
 			float offset = (entityId % 16) / 16.0F;
-			return RenderUtils.hsb(System.currentTimeMillis() * speed + offset, 0.75F, 1.0F, 0xFF);
+			return RenderUtils.hsb(RenderUtils.rainbowPhase(
+					System.currentTimeMillis(), rainbowSpeed.get()) + offset, 0.75F, 1.0F, 0xFF);
 		}
 		return color.get();
 	}
 
-	private static int WorldGeometry_verticalColor(int top, int bottom, double y, double minY, double maxY) {
+	private static int verticalColor(int top, int bottom, double y, double minY, double maxY) {
 		double span = maxY - minY;
 		float t = span <= 1.0e-4 ? 0.0f : (float) ((y - minY) / span);
 		return RenderUtils.mix(top, bottom, t);

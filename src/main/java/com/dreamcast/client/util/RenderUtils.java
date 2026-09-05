@@ -329,6 +329,19 @@ public final class RenderUtils {
 	}
 
 	/** Радужный цвет, плавно меняющийся со временем. */
+	/**
+	 * Фаза радуги 0..1 по времени и «скорости» (1..10).
+	 *
+	 * Порядок вычисления важен: время надо брать по модулю ПЕРЕВ превращением в
+	 * float. {@code currentTimeMillis() * (speed / 2000f)} даёт ~3e9 — у float там
+	 * мантиссы не хватает на долю цикла, hue квантуется в целое, и «радуга»
+	 * замирает на одном цвете.
+	 */
+	public static float rainbowPhase(long timeMillis, int speed) {
+		long period = Math.max(200L, 20000L / Math.max(1, speed));
+		return (timeMillis % period) / (float) period;
+	}
+
 	public static int rainbow(long timeMillis, float offset) {
 		return hsb(((timeMillis % 4000L) / 4000.0f) + offset, 0.72f, 1.0f, 0xFF);
 	}
