@@ -232,8 +232,34 @@ jobs:
               javap -cp "$MC" net.minecraft.world.item.ItemStack 2>&1 | grep -iE 'use|count|getMaxDamage|isEmpty|copy' | head -20 || true
               echo; echo "=== EntityAttributeInstance? Attributes ==="
               javap -cp "$MC" net.minecraft.world.entity.ai.attributes.Attributes 2>&1 | grep -iE 'MOVEMENT_SPEED|ATTACK_DAMAGE|ATTACK_SPEED|SNEAKING' | head -10 || true
-              echo; echo "=== PlayerModel/EntityRenderStateSet? skip ==="
+              echo; echo "=== Hud extractCameraOverlays (байткод) ==="
+              javap -p -c -cp "$MC" net.minecraft.client.gui.Hud 2>&1 | sed -n '/private void extractCameraOverlays/,/^$/p' | grep -E 'invoke|getstatic|// ' | sed -n '1,90p'
+              echo; echo "=== Hud extractTextureOverlay + camera fields ==="
+              javap -p -cp "$MC" net.minecraft.client.gui.Hud 2>&1 | grep -iE 'private net|public net|isInWall|camera' | head -20
+              echo; echo "=== Options cameraType/perspective ==="
+              javap -p -cp "$MC" net.minecraft.client.Options 2>&1 | grep -iE 'cameraType|Perspective|getSensitivity|textBackgroundOpacity' | head -10
+              echo; echo "=== CameraType ==="
+              javap -p -cp "$MC" net.minecraft.client.CameraType 2>&1 | head -25
+              echo; echo "=== Vec3 (helpers) ==="
+              javap -p -cp "$MC" net.minecraft.world.phys.Vec3 2>&1 | grep -iE 'directionFromRotation|rotate|length|normalize|distanceTo|add|scale|lerp' | head -25
+              echo; echo "=== Minecraft (crosshair/misc) ==="
+              javap -p -cp "$MC" net.minecraft.client.Minecraft 2>&1 | grep -iE 'crosshairPickEntity|isPaused|getCameraEntity|setCameraEntity|levelRenderer|isLocalServer|getUser|getWindow|getSoundManager|level;|player;|mouseHandler|options|gameMode|hitResult|fps' | head -30
+              echo; echo "=== Entity (velocity/util) ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'getDeltaMovement|setDeltaMovement|getPos|position|lastPos|setPos|teleport|merge' | head -20
+              echo; echo "=== Entity (rotation full) ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'rot|look|Head|Body' | head -40
+              echo; echo "=== LivingEntity (fields) ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'public (float|double|int|boolean) ' | head -40
+              echo; echo "=== ServerboundPlayerInputPacket? ==="
+              unzip -l "$MC" | grep -iE 'ServerboundPlayerInputPacket|ServerboundSetCarriedItemPacket|ServerboundPlayerCommandPacket|ServerboundSwingPacket|ServerboundUseItemOnPacket|ServerboundInteractPacket' | head -10
+              echo; echo "=== ClientLevel (entities by class) ==="
+              javap -p -cp "$MC" net.minecraft.client.multiplayer.ClientLevel 2>&1 | grep -iE 'getEntities|entitiesForRendering|getNonNullEntities|getPlayerByUUID' | head -12
+              echo; echo "=== ItemCooldowns full ==="
+              javap -p -cp "$MC" net.minecraft.world.item.ItemCooldowns 2>&1 | head -14
+              echo; echo "=== GameRenderer (camera/fov) ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | grep -iE 'camera|fov|bob|viewOffset|renderItemOverlay|bobHurt|tiltView' | head -30
             fi
+
           } > api-audit-result.txt 2>&1
           cat api-audit-result.txt
 
