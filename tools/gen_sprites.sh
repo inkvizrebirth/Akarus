@@ -185,5 +185,32 @@ convert -size 12x15 xc:none -fill "#9A5CFFCC" -draw "roundrectangle 1,1 11,14 4,
 convert -size 12x15 xc:none -fill "#3A3744A6" -draw "roundrectangle 1,1 11,14 4,4" \
   "$KI/scroller_disabled.png"
 
+
+# --- листы фонов окон: только те, где в ваниле нет полезных глифов ---
+# (generic_54 = сундуки/бочки/раздатчики-без-стрелок, inventory, shulker_box).
+# Панель всегда начинается с (0,0) и имеет ширину 176, поэтому кромки рисуем
+# по x=0/x=175 и y=0 — они совпадают для любой высоты окна.
+S=$D/container
+mkdir -p "$S"
+sheet() { # sheet <файл>
+  local out=$1
+  # структурный дизер 4x4 вместо шума: выглядит так же, но сжимается в байты
+  convert -size 4x4 xc:"#0E0D13" \
+    -fill "#151221" -draw "point 0,0" -draw "point 2,2" -draw "point 1,3" -draw "point 3,1" \
+    -fill "#0A090F" -draw "point 1,1" -draw "point 3,3" -draw "point 0,2" -draw "point 2,0" \
+    /tmp/dc_tile.png
+  convert -size 256x256 tile:/tmp/dc_tile.png \
+    \( -size 256x48 gradient:"#1A1824"-"#0E0D12" \) -gravity North \
+    -compose Blend -define compose:args=70 -composite -gravity NorthWest \
+    -fill "#FFFFFF12" -draw "rectangle 0,0 175,0" -draw "rectangle 0,0 0,255" \
+    -fill "#00000059" -draw "rectangle 175,0 175,255" -draw "rectangle 176,0 176,255" \
+    -fill "#FFFFFF08" -draw "rectangle 1,1 174,1" \
+    \( -size 256x256 xc:white -channel A -evaluate multiply 0.92 +channel \) -compose CopyOpacity -composite \
+    "$out"
+}
+for name in generic_54 inventory shulker_box; do
+  sheet "$S/$name.png"
+done
+
 identify "$W"/*.png "$C/slot.png" "$C/slot_highlight_back.png" "$C/slot_highlight_front.png" \
   "$D/options_background.png" | awk '{print $1, $3, $7, $8}'
