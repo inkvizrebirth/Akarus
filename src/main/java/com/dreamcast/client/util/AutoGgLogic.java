@@ -50,7 +50,8 @@ public final class AutoGgLogic {
 	 *
 	 * <p>Переводы строк вырезаются намеренно: текст настройки приходит из меню,
 	 * а сообщение с {@code \n} в чат-пакете — это уже попытка отправить две
-	 * строки (или команду), что серверы считают спамом/инъекцией.</p>
+	 * строки (или команду), что серверы считают спамом/инъекцией. Идущие подряд
+	 * пробелы сворачиваются в один: перевод строки не должен оставлять дыру.</p>
 	 */
 	public static String format(String template, String name) {
 		String text = template == null ? "" : template;
@@ -59,6 +60,11 @@ public final class AutoGgLogic {
 			text = text.replace(token, who);
 		}
 		text = text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ');
+		// «a\n\tb» не должно превращаться в «a   b»: в чате такие дырки выглядят
+		// как случайный пробел, а в начале строки ещё и режутся серверами
+		while (text.contains("  ")) {
+			text = text.replace("  ", " ");
+		}
 		text = text.trim();
 		if (text.length() > MAX_MESSAGE_LENGTH) {
 			text = text.substring(0, MAX_MESSAGE_LENGTH);
