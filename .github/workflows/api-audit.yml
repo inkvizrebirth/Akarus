@@ -178,6 +178,61 @@ jobs:
               javap -p -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'getViewYRot|getViewXRot|view'
               echo; echo "=== KeyMapping ==="
               javap -cp "$MC" net.minecraft.client.KeyMapping 2>&1 | grep -iE 'setKey|resetMapping|consumeClick|isDown|setDown'
+
+              # --- ротации: единый RotationManager (аудит 2026-09-05) ---
+              echo; echo "=== LocalPlayer (полный) ==="
+              javap -p -cp "$MC" net.minecraft.client.player.LocalPlayer 2>&1 | head -80 || true
+              echo; echo "=== LocalPlayer (send/rotation) ==="
+              javap -p -cp "$MC" net.minecraft.client.player.LocalPlayer 2>&1 | grep -iE 'send|rot|yaw|pitch|head|body|jump|slow|sneak' || true
+              echo; echo "=== Entity (поля поворота) ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'yRot|xRot|yHeadRot|yBodyRot|deltaMovement|tickCount|getLook|getViewVector' || true
+              echo; echo "=== LivingEntity (body/head rot) ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'yBodyRot|yHeadRot|xRotO|headRot|bodyRot|attackStrength|tick' || true
+              echo; echo "=== ServerboundMovePlayerPacket ==="
+              javap -p -cp "$MC" net.minecraft.network.protocol.game.ServerboundMovePlayerPacket 2>&1 || true
+              echo; echo "=== ServerboundMovePlayerPacket inner ==="
+              unzip -l "$MC" | grep -E 'ServerboundMovePlayerPacket' || true
+              for c in Rot Pos PosRot StatusOnly StatusRotOnly; do
+                echo "--- \$$c ---"
+                javap -p -cp "$MC" "net.minecraft.network.protocol.game.ServerboundMovePlayerPacket\$$c" 2>&1 | head -12 || true
+              done
+              echo; echo "=== ClientPacketListener (send) ==="
+              javap -p -cp "$MC" net.minecraft.client.multiplayer.ClientPacketListener 2>&1 | grep -iE 'public.*(send|tick)\(' | head -30 || true
+              echo; echo "=== MultiPlayerGameMode (полный) ==="
+              javap -p -cp "$MC" net.minecraft.client.multiplayer.MultiPlayerGameMode 2>&1 | grep -iE 'public' | head -40 || true
+              echo; echo "=== Minecraft (hitResult/camera) ==="
+              javap -p -cp "$MC" net.minecraft.client.Minecraft 2>&1 | grep -iE 'hitResult|camera|getCameraEntity|setScreen|tick|pause|levelRenderer|getUser' | head -30 || true
+              echo; echo "=== Camera (полный) ==="
+              javap -p -cp "$MC" net.minecraft.client.Camera 2>&1 || true
+              echo; echo "=== Options (полный, кратко) ==="
+              javap -p -cp "$MC" net.minecraft.client.Options 2>&1 | grep -iE 'key|sensitivity|fov|getSensitivity' | head -40 || true
+              echo; echo "=== Hud (все методы overlay/fire) ==="
+              javap -p -cp "$MC" net.minecraft.client.gui.Hud 2>&1 | grep -iE 'fire|camer|texture|vignette|extract' | head -30 || true
+              echo; echo "=== PlayerRenderer / render state ==="
+              unzip -l "$MC" | grep -iE 'renderer/entity/(state/)?(player|Player)' | head -20 || true
+              echo; echo "=== AbstractClientPlayer ==="
+              javap -p -cp "$MC" net.minecraft.client.player.AbstractClientPlayer 2>&1 | head -40 || true
+              echo; echo "=== Player (attack/rotation) ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.player.Player 2>&1 | grep -iE 'attack|swing|rot|item|container|sleep' | head -40 || true
+              echo; echo "=== Input record ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.player.Input 2>&1 | head -30 || true
+              echo; echo "=== ClientInput ==="
+              javap -p -cp "$MC" net.minecraft.client.player.ClientInput 2>&1 | head -30 || true
+              echo; echo "=== KeyboardInput ==="
+              javap -p -cp "$MC" net.minecraft.client.player.KeyboardInput 2>&1 | head -20 || true
+              echo; echo "=== EntityDimensions ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.EntityDimensions 2>&1 | head -20 || true
+              echo; echo "=== Mob (isAggressive/target) ==="
+              javap -cp "$MC" net.minecraft.world.entity.Mob 2>&1 | grep -iE 'aggress|target|leash|banne|sleep|invulnerable' | head -20 || true
+              echo; echo "=== PathfinderMob? Mob 2 ==="
+              javap -cp "$MC" net.minecraft.world.entity.LivingEntity 2>&1 | grep -iE 'isBaby|getMaxHealth|getHealth|getAbsorb|hasEffect|getBlockSpeed|getAttribute|activeEffects' | head -20 || true
+              echo; echo "=== Entity (name/team) ==="
+              javap -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'getName|getDisplayName|getTeam|getTags|position|blockPosition|getBoundingBox|getBb|isRemoved|validat' | head -30 || true
+              echo; echo "=== ItemStack (use/cooldown) ==="
+              javap -cp "$MC" net.minecraft.world.item.ItemStack 2>&1 | grep -iE 'use|count|getMaxDamage|isEmpty|copy' | head -20 || true
+              echo; echo "=== EntityAttributeInstance? Attributes ==="
+              javap -cp "$MC" net.minecraft.world.entity.ai.attributes.Attributes 2>&1 | grep -iE 'MOVEMENT_SPEED|ATTACK_DAMAGE|ATTACK_SPEED|SNEAKING' | head -10 || true
+              echo; echo "=== PlayerModel/EntityRenderStateSet? skip ==="
             fi
           } > api-audit-result.txt 2>&1
           cat api-audit-result.txt
