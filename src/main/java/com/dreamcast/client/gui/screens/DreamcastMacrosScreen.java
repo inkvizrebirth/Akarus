@@ -69,9 +69,44 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 		rows.clear();
 		selected = -1;
 		scroll = 0;
+		rebuild();
+	}
+
+	/** Тот же список, но прокрутка и выделение остаются там же. */
+	private void reloadKeepingPlace() {
+		int keepSelected = selected;
+		int keepScroll = scroll;
+		rows.clear();
+		rebuild();
+		selected = keepSelected;
+		scroll = keepScroll;
+	}
+
+	private void rebuild() {
 		for (MacroModule.Macro macro : module.macros()) {
 			rows.add(new Row(macro.command(), macro.key()));
 		}
+	}
+
+	/**
+	 * Индекс строки под курсором в видимой области, или -1. Общая логика для
+	 * левого и правого клика — иначе легко разойтись с тем, что реально нарисовано.
+	 */
+	private int rowAtPointer(double mx, double my) {
+		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
+		int panelWidth = Math.min(PANEL_WIDTH, width - 24);
+		int panelX = width / 2 - panelWidth / 2;
+		int firstRowY = 46 + 8;
+		if (mx < panelX + 8 || mx >= panelX + panelWidth - 8
+				|| my < firstRowY || my >= 46 + listHeight - 4) {
+			return -1;
+		}
+		int relativeY = (int) my - firstRowY;
+		if (relativeY % (ROW_HEIGHT + ROW_GAP) >= ROW_HEIGHT) {
+			return -1; // зазор между строками
+		}
+		int index = scroll + relativeY / (ROW_HEIGHT + ROW_GAP);
+		return index >= 0 && index < visible + scroll && index < rows.size() ? index : -1;
 	}
 
 	@Override
@@ -122,7 +157,8 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 		Chip reset = chip("Сбросить бинд", () -> {
 			if (selected >= 0) {
 				module.setKey(selected, -1);
-				reload();
+				reloadKeepingPlace();
+				Notifications.ok("Макросы", "Клавиша снята");
 			}
 		});
 		reset.enabled = selected >= 0;
@@ -130,7 +166,10 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 		chips.add(chip("Удалить", () -> {
 			if (selected >= 0) {
 				module.remove(selected);
-				reload();
+				// После удаления строки список короче: прокрутку и выделение
+				// подгоняем, иначе курсор остаётся в «пустоте» за концом.
+				selected = Math.min(selected, rows.size() - 2);
+				reloadKeepingPlace();
 			}
 		}, true));
 		chips.add(chip("Готово", this::onClose));
@@ -158,14 +197,21 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 		RenderUtils.fillRoundedBorder(graphics, x, y, w, ROW_HEIGHT, 6,
 				RenderUtils.withAlpha(border, row.appear), RenderUtils.withAlpha(background, row.appear));
 
-		String command = RenderUtils.clamp(font, row.command, w - 96);
+		String command = RenderUtils.clamp(font, row.command, w - 110);
 		RenderUtils.textFlat(graphics, font, command, x + 8, y + (ROW_HEIGHT - font.lineHeight) / 2,
 				RenderUtils.withAlpha(0xFFE8E8F0, row.appear));
 
-		// Бинд справа: [клавиша] или «клик — задать»
-		String bindLabel = row.key < 0 ? "не задан" : keyName(row.key);
+		// Правая часть строки — и есть кнопка бинда: подпись прямо говорит,
+		// что от пользователя хотят (раньше там было молчаливое «не задан»,
+		// и догадаться о клике можно было только случайно).
+		String bindLabel = waiting ? "нажми клавишу…"
+				: row.key < 0 ? "клик — задать клавишу" : keyName(row.key);
 		String shown = RenderUtils.clamp(font, bindLabel, 86);
-		int bindColor = waiting ? 0xFFFF5C7A : row.key < 0 ? 0xFF6B6B78 : RenderUtils.withAlpha(ACCENT, 0.95f);
+		int bindColor = waiting ? 0xFFFF5C7A : row.key < 0 ? 0xFF9A9AA8 : RenderUtils.withAlpha(ACCENT, 0.95f);
+		String hint = waiting ? "Esc — отмена"
+				: row.key < 0 ? "или правый клик — очистить" : "клик — сменить · правый — убрать";
+		RenderUtils.textFlat(graphics, font, RenderUtils.clamp(font, hint, w - 100 - RenderUtils.width(font, shown)),
+				x + 8, y + ROW_HEIGHT - 10, RenderUtils.withAlpha(0xFF6B6B78, row.appear));
 		RenderUtils.textFlat(graphics, font, shown,
 				x + w - 8 - RenderUtils.width(font, shown), y + (ROW_HEIGHT - font.lineHeight) / 2,
 				RenderUtils.withAlpha(bindColor, row.appear));
@@ -230,22 +276,28 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 			return true;
 		}
 
-		int visible = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
-		int panelWidth = Math.min(PANEL_WIDTH, width - 24);
-		int panelX = width / 2 - panelWidth / 2;
-		int firstRowY = 46 + 8;
-		if (mx >= panelX + 8 && mx < panelX + panelWidth - 8 && my >= firstRowY && my < 46 + listHeight - 4) {
-			int relativeY = (int) my - firstRowY;
-			int index = scroll + relativeY / (ROW_HEIGHT + ROW_GAP);
-			// Промежуток между строками — не часть ни одной из них: иначе клик
-			// по зазору случайно назначал бинд соседнему макросу.
-			if (relativeY % (ROW_HEIGHT + ROW_GAP) < ROW_HEIGHT
-					&& index >= scroll && index < Math.min(rows.size(), scroll + visible)) {
-				selected = index;
-				awaitingKey = index; // клик по строке — сразу ждём клавишу
-				playClick();
+		// Правый клик по строке снимает клавишу — быстрый путь без кнопки внизу.
+		if (event.button() == 1) {
+			int rowAt = rowAtPointer(mx, my);
+			if (rowAt >= 0) {
+				if (rows.get(rowAt).key >= 0) {
+					module.setKey(rowAt, -1);
+					selected = rowAt;
+					Notifications.ok("Макросы", "Клавиша снята");
+					reloadKeepingPlace();
+				}
 				return true;
 			}
+		}
+
+		// Левый клик по строке = «ждём клавишу». Зазор между строками не входит
+		// ни в одну из них: иначе клик по зазору молча назначал бинд соседу.
+		int index = rowAtPointer(mx, my);
+		if (index >= 0) {
+			selected = index;
+			awaitingKey = index;
+			playClick();
+			return true;
 		}
 		return super.mouseClicked(event, doubleClick);
 	}
@@ -262,10 +314,26 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 	public boolean keyPressed(KeyEvent event) {
 		if (awaitingKey >= 0) {
 			int key = event.key();
-			if (key != GLFW.GLFW_KEY_ESCAPE) {
-				module.setKey(awaitingKey, key);
+			if (key == GLFW.GLFW_KEY_ESCAPE) {
+				awaitingKey = -1;
+				Notifications.info("Макросы", "Бинд отменён");
+				return true;
 			}
+			int index = awaitingKey;
+			module.setKey(index, key);
 			awaitingKey = -1;
+			// Одна клавиша на две команды — не ошибка пользователя, а ловушка:
+			// отдаём клавишу новой строке и говорим, у кого её забрали.
+			for (int i = 0; i < rows.size(); i++) {
+				if (i != index && rows.get(i).key == key) {
+					module.setKey(i, -1);
+					Notifications.warn("Макросы", "Клавиша " + keyName(key)
+							+ " уже стояла на «" + rows.get(i).command + "» — снял с неё");
+					break;
+				}
+			}
+			Notifications.ok("Макросы", "Бинд: " + keyName(key));
+			reloadKeepingPlace();
 			return true;
 		}
 		if (commandField.focused) {
@@ -287,6 +355,9 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 
 	@Override
 	public boolean charTyped(CharacterEvent event) {
+		if (awaitingKey >= 0) {
+			return true; // клавиша ушла в бинд — в поле ей не место
+		}
 		if (commandField.focused) {
 			if (event.isAllowedChatCharacter() && commandField.value.length() < commandField.maxLength) {
 				commandField.value += event.codepointAsString();
@@ -307,7 +378,12 @@ public class DreamcastMacrosScreen extends DreamcastScreen {
 		}
 		module.add(command);
 		commandField.value = "";
+		// Сразу подводим список к новой строке: дальше один клик по ней — и бинд готов.
 		reload();
+		rebuild();
+		selected = rows.size() - 1;
+		int visibleRows = Math.max(1, (listHeight - 16) / (ROW_HEIGHT + ROW_GAP));
+		scroll = Math.max(0, rows.size() - visibleRows);
 		Notifications.ok("Макросы", "Добавлено; кликни строку, чтобы задать клавишу");
 	}
 

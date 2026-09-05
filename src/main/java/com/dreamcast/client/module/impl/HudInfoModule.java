@@ -32,12 +32,13 @@ public class HudInfoModule extends Module {
 	public static final String ELEMENT_EFFECTS = "effects";
 	public static final String ELEMENT_ARMOR = "armor";
 	public static final String ELEMENT_KEYSTROKES = "keystrokes";
-	public static final String ELEMENT_SESSION = "session";
+	public static final String ELEMENT_SPEED = "speed";
+	public static final String ELEMENT_COORDS = "coords";
 
 	private final ElementListSetting elements = new ElementListSetting("elements", "Элементы HUD",
 			List.of(
 					new ElementListSetting.Element(ELEMENT_WATERMARK, "Водяной знак"),
-					new ElementListSetting.Element(ELEMENT_INFO, "FPS · координаты · пинг"),
+					new ElementListSetting.Element(ELEMENT_INFO, "FPS · пинг · задержка"),
 					new ElementListSetting.Element(ELEMENT_MODULE_LIST, "Список модулей"),
 						new ElementListSetting.Element(ELEMENT_KEYBINDS, "Бинды"),
 						new ElementListSetting.Element(ELEMENT_MEDIA, "Медиаплеер"),
@@ -46,10 +47,11 @@ public class HudInfoModule extends Module {
 						new ElementListSetting.Element(ELEMENT_EFFECTS, "Активные эффекты"),
 						new ElementListSetting.Element(ELEMENT_ARMOR, "Броня и оффхенд"),
 						new ElementListSetting.Element(ELEMENT_KEYSTROKES, "Keystrokes и CPS"),
-						new ElementListSetting.Element(ELEMENT_SESSION, "Статистика сессии")),
+						new ElementListSetting.Element(ELEMENT_SPEED, "Скорость: бар + график"),
+					new ElementListSetting.Element(ELEMENT_COORDS, "Координаты и чанк")),
 				ELEMENT_WATERMARK, ELEMENT_INFO, ELEMENT_MODULE_LIST, ELEMENT_KEYBINDS,
 				ELEMENT_MEDIA, ELEMENT_NOTIFICATIONS, ELEMENT_TARGET, ELEMENT_EFFECTS,
-				ELEMENT_ARMOR, ELEMENT_KEYSTROKES, ELEMENT_SESSION);
+				ELEMENT_ARMOR, ELEMENT_KEYSTROKES, ELEMENT_SPEED, ELEMENT_COORDS);
 
 	public HudInfoModule() {
 		super("hud_info", "HUD", "Элементы на экране: выбери, что показывать, и расставь их",

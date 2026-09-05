@@ -23,10 +23,12 @@ import java.util.List;
 /**
  * Macros — свои команды на горячих клавишах.
  *
- * <p>Число команд не ограничено. У каждой своя клавиша (GLFW-код);
- * нажатие мгновенно отправляет команду в чат сервера (или в клиент, если
- * начинается с {@code /}). Работает и в GUI (кроме чата и наших экранов
- * ввода), и в игре.</p>
+ * <p>Число команд не ограничено. У каждой своя клавиша (GLFW-код); нажатие
+ * мгновенно отправляет команду в чат сервера (или командой, если начинается
+ * с {@code /}). Клавиши читаем напрямую из GLFW, поэтому макросы работают и
+ * с открытым инвентарём или сундуком — но не там, где печатают текст: в чате
+ * и на экранах клиента (бинд, поиск, аккаунты), чтобы набор букв не превращался
+ * в команды. Зажатая клавиша повторяется не чаще раза в 500 мс.</p>
  *
  * <p>Список хранится отдельно от общего конфига — {@code config/dreamcast-macros.json},
  * чтобы кнопка «редактировать» не мешала остальным настройкам.</p>
@@ -178,8 +180,9 @@ public class MacroModule extends Module {
 		if (client == null || client.player == null || client.getConnection() == null) {
 			return;
 		}
-		// В чате и на экранах ввода клавиши принадлежат полю, не макросам
-		if (client.gui.screen() != null) {
+		// Поле ввода перехватывает клавиши: в чате и на наших экранах
+		// макросы молчат, в контейнере (инвентарь, сундук) — работают.
+		if (!acceptsHotkeys(client.gui.screen())) {
 			return;
 		}
 
@@ -197,6 +200,15 @@ public class MacroModule extends Module {
 			run(client, macro.command());
 			touch(macro.command(), now);
 		}
+	}
+
+	/**
+	 * Можно ли в этом экране слушать горячие клавиши. Пустой экран и любой
+	 * контейнер — можно; чат и экраны клиента (где есть поле ввода) — нет.
+	 */
+	public static boolean acceptsHotkeys(net.minecraft.client.gui.screens.Screen screen) {
+		return screen == null
+				|| screen instanceof net.minecraft.client.gui.screens.inventory.HandledScreen;
 	}
 
 	private long lastFired(String command) {

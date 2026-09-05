@@ -17,6 +17,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.PlayerInfo;
@@ -73,11 +74,13 @@ public final class HudRenderer {
 	private static final Deque<Long> RIGHT_CLICKS = new ArrayDeque<>();
 	private static boolean leftWasDown;
 	private static boolean rightWasDown;
-	private static UUID sessionPlayer;
-	private static Object sessionLevel;
-	private static long sessionStarted;
-	private static Vec3 sessionLastPosition;
-	private static double sessionDistance;
+	// История скорости для элемента HUD: кольцевой буфер отсчётов, шаг 50 мс.
+	// Считаем не по кадру, а по времени, чтобы график не «плыл» на 300 FPS.
+	private static final int SPEED_SAMPLES = 72;
+	private static final float[] speedHistory = new float[SPEED_SAMPLES];
+	private static int speedHead;
+	private static long speedLastSample;
+	private static float speedScale = 6.0F; // авто-масштаб графика (сглаженный максимум)
 
 	private HudRenderer() {
 	}
@@ -111,7 +114,8 @@ public final class HudRenderer {
 				case HudInfoModule.ELEMENT_EFFECTS -> "Активные эффекты";
 				case HudInfoModule.ELEMENT_ARMOR -> "Броня и оффхенд";
 				case HudInfoModule.ELEMENT_KEYSTROKES -> "Keystrokes и CPS";
-				case HudInfoModule.ELEMENT_SESSION -> "Статистика сессии";
+								case HudInfoModule.ELEMENT_SPEED -> "Скорость (бар + график)";
+				case HudInfoModule.ELEMENT_COORDS -> "Координаты";
 			default -> elementId;
 		};
 	}
@@ -175,7 +179,8 @@ public final class HudRenderer {
 		boolean effects = hud.shows(HudInfoModule.ELEMENT_EFFECTS);
 		boolean armor = hud.shows(HudInfoModule.ELEMENT_ARMOR);
 		boolean keystrokes = hud.shows(HudInfoModule.ELEMENT_KEYSTROKES);
-		boolean session = hud.shows(HudInfoModule.ELEMENT_SESSION);
+		boolean speed = hud.shows(HudInfoModule.ELEMENT_SPEED);
+		boolean coords = hud.shows(HudInfoModule.ELEMENT_COORDS);
 
 		if (watermark || editorMode) {
 			drawWatermark(graphics, client, watermark ? 1.0f : 0.35f, now);
@@ -207,8 +212,11 @@ public final class HudRenderer {
 		if (keystrokes || editorMode) {
 			drawKeystrokes(graphics, client, keystrokes ? 1.0f : 0.35f, now);
 		}
-		if (session || editorMode) {
-			drawSession(graphics, client, session ? 1.0f : 0.35f, now);
+		if (speed || editorMode) {
+			drawSpeed(graphics, client, speed ? 1.0f : 0.35f, now);
+		}
+		if (coords || editorMode) {
+			drawCoords(graphics, client, coords ? 1.0f : 0.35f);
 		}
 	}
 
@@ -218,41 +226,80 @@ public final class HudRenderer {
 	// Элемент: водяной знак
 	// ------------------------------------------------------------------
 
+	private static final Identifier EMBLEM =
+			net.minecraft.resources.Identifier.fromNamespaceAndPath(DreamcastClient.MOD_ID,
+					"textures/gui/icons/emblem.png");
+
+	/**
+	 * Водяной знак: эмблема, имя клиента с переливом по буквам и короткая
+	 * сводка (ник · пинг · FPS · часы). Всё рисуется примитивами и одной
+	 * текстурой, поэтому не зависит от шрифтов и модификаций интерфейса.
+	 */
 	private static void drawWatermark(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
 		Font font = client.font;
-		String brand = DreamcastClient.MOD_NAME + " " + DreamcastClient.MOD_VERSION;
+		String brand = DreamcastClient.MOD_NAME.toUpperCase(java.util.Locale.ROOT);
+		String version = "v" + DreamcastClient.MOD_VERSION;
+
+		// Хвост со сводкой: только то, что точно есть, иначе в HUD пусто не выглядит
+		List<String> facts = new ArrayList<>();
+		if (client.getUser() != null) {
+			facts.add(client.getUser().getName());
+		}
+		if (client.player != null) {
+			facts.add(getPing(client) + " мс");
+		}
+		facts.add(client.getFps() + " FPS");
+		facts.add(java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")));
+		String tail = " · " + String.join(" · ", facts);
+
+		int iconSize = 12;
+		int brandWidth = RenderUtils.width(font, brand);
+		int tailWidth = RenderUtils.width(font, tail);
+		int pillW = 8 + iconSize + 5 + brandWidth + 3 + RenderUtils.width(font, version) + tailWidth + 8;
+		int pillH = Math.max(font.lineHeight + 8, iconSize + 6);
 
 		int[] position = HudLayout.position(HudInfoModule.ELEMENT_WATERMARK, MARGIN, MARGIN);
-		int pillW = RenderUtils.width(font, brand) + 28;
-		int pillH = font.lineHeight + 8;
-
+		int x = position[0];
+		int y = position[1];
 		int accent = ClientTheme.accent(now);
-		RenderUtils.drawSoftShadow(graphics, position[0], position[1], pillW, pillH, 5, 3);
-		RenderUtils.fillRoundedBorder(graphics, position[0], position[1], pillW, pillH, 5,
-				RenderUtils.withAlpha(PANEL_BORDER, 0.9f * alpha), RenderUtils.withAlpha(0xE0070708, alpha));
 
-		// Полоска темы сверху пилюли — «текущий» цвет перелива
+		RenderUtils.drawSoftShadow(graphics, x, y, pillW, pillH, 5, 3);
+		RenderUtils.fillRoundedBorder(graphics, x, y, pillW, pillH, 5,
+				RenderUtils.withAlpha(PANEL_BORDER, 0.9f * alpha), RenderUtils.withAlpha(0xE6070708, alpha));
+
+		// Полоска темы сверху и снизу пилюли — «текущий» цвет перелива
 		for (int i = 0; i < pillW - 10; i++) {
-			float t = i / (float) (pillW - 10);
-			graphics.fill(position[0] + 5 + i, position[1], position[0] + 6 + i, position[1] + 1,
-					RenderUtils.withAlpha(ClientTheme.gradientAt(t, now), 0.85f * alpha));
+			float grad = i / (float) Math.max(1, pillW - 10);
+			int color = RenderUtils.withAlpha(ClientTheme.gradientAt(grad, now), 0.85f * alpha);
+			graphics.fill(x + 5 + i, y, x + 6 + i, y + 1, color);
+			graphics.fill(x + 5 + i, y + pillH - 1, x + 6 + i, y + pillH,
+					RenderUtils.withAlpha(ClientTheme.gradientAt(1.0f - grad, now), 0.45f * alpha));
 		}
 
-		float pulse = 0.4f + 0.6f * (float) Math.abs(Math.sin(now / 900.0));
-		graphics.fill(position[0] + 6, position[1] + pillH / 2 - 2, position[0] + 10, position[1] + pillH / 2 + 2,
-				RenderUtils.withAlpha(accent, pulse * alpha));
+		// Эмблема: своё цвета (тинт белый), вокруг — мягкое свечение текущим акцентом
+		int iconY = y + (pillH - iconSize) / 2;
+		RenderUtils.fillCircle(graphics, x + 8 + iconSize / 2, y + pillH / 2, iconSize,
+				RenderUtils.withAlpha(accent, 0.16f * alpha));
+		graphics.blit(RenderPipelines.GUI_TEXTURED, EMBLEM, x + 8, iconY, 0.0F, 0.0F,
+				iconSize, iconSize, 64, 64, 64, 64, RenderUtils.withAlpha(0xFFFFFFFF, alpha));
 
-		// Текст — перелив темы по символам
-		int cursor = position[0] + 15;
+		float pulse = 0.4f + 0.6f * (float) Math.abs(Math.sin(now / 900.0));
+		int cursor = x + 8 + iconSize + 5;
+		int textY = y + (pillH - font.lineHeight) / 2 + 1;
+
+		// Имя — перелив темы по символам
 		for (int i = 0; i < brand.length(); i++) {
 			String symbol = String.valueOf(brand.charAt(i));
 			int color = ClientTheme.gradientAt(i / (float) brand.length(), now);
-			RenderUtils.textFlat(graphics, font, symbol, cursor, position[1] + 4,
-					RenderUtils.withAlpha(color, alpha));
+			RenderUtils.textFlat(graphics, font, symbol, cursor, textY, RenderUtils.withAlpha(color, alpha));
 			cursor += RenderUtils.width(font, symbol);
 		}
+		RenderUtils.textFlat(graphics, font, version, cursor + 3, textY,
+				RenderUtils.withAlpha(TEXT_SECONDARY, (0.6f + 0.4f * pulse) * alpha));
+		cursor += 3 + RenderUtils.width(font, version);
+		RenderUtils.textFlat(graphics, font, tail, cursor, textY, RenderUtils.withAlpha(TEXT_COLOR, alpha));
 
-		HudLayout.publishBounds(HudInfoModule.ELEMENT_WATERMARK, position[0], position[1], pillW, pillH);
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_WATERMARK, x, y, pillW, pillH);
 	}
 
 	// ------------------------------------------------------------------
@@ -725,60 +772,149 @@ public final class HudRenderer {
 	}
 
 	// ------------------------------------------------------------------
-	// Элемент: статистика текущей сессии
+	// Элемент: скорость — число, короткий бар и линейный график
 	// ------------------------------------------------------------------
 
-	private static void drawSession(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
+	/**
+	 * Горизонтальная скорость игрока в блоках/с + график за последние ~3.6 с.
+	 *
+	 * <p>Бар нормируется по авто-масштабу (сглаженный максимум окна), а не по
+	 * константе: на лошадии и на элитрах шкала остаётся читаемой. Масштаб
+	 * растёт мгновенно и падает медленно — иначе график «прыгал» бы на каждом
+	 * ускорении.</p>
+	 */
+	private static void drawSpeed(GuiGraphicsExtractor graphics, Minecraft client, float alpha, long now) {
 		LocalPlayer player = client.player;
-		if (player != null && (sessionPlayer == null || !sessionPlayer.equals(player.getUUID())
-				|| sessionLevel != client.level)) {
-			sessionPlayer = player.getUUID();
-			sessionLevel = client.level;
-			sessionStarted = now;
-			sessionLastPosition = player.position();
-			sessionDistance = 0.0;
+		float bps = 0.0F;
+		if (player != null) {
+			Vec3 motion = player.getDeltaMovement();
+			bps = (float) Math.sqrt(motion.x * motion.x + motion.z * motion.z) * 20.0F;
 		}
-		if (player != null && sessionLastPosition != null) {
-			double moved = player.position().distanceTo(sessionLastPosition);
-			if (moved < 16.0) {
-				sessionDistance += moved;
+		// Отсчёт раз в 50 мс: на 400 FPS история забивалась бы одним и тем же
+		// значением, и график превратился бы в прямую.
+		if (now - speedLastSample >= 50L) {
+			speedLastSample = now;
+			speedHistory[speedHead] = bps;
+			speedHead = (speedHead + 1) % SPEED_SAMPLES;
+			float peak = bps;
+			for (float sample : speedHistory) {
+				peak = Math.max(peak, sample);
 			}
-			sessionLastPosition = player.position();
+			float target = Math.max(3.0F, peak * 1.15F);
+			speedScale = target > speedScale ? target : speedScale + (target - speedScale) * 0.06F;
 		}
+
 		Font font = client.font;
-		int width = 132;
-		int height = 52;
-		int[] position = HudLayout.position(HudInfoModule.ELEMENT_SESSION, MARGIN, 172);
+		int width = 128;
+		int height = 54;
+		int[] position = HudLayout.position(HudInfoModule.ELEMENT_SPEED, MARGIN, 172);
 		int x = position[0];
 		int y = position[1];
-		HudLayout.publishBounds(HudInfoModule.ELEMENT_SESSION, x, y, width, height);
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_SPEED, x, y, width, height);
+
+		int accent = ClientTheme.accent(now);
+		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 3);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6,
+				RenderUtils.withAlpha(PANEL_BORDER, alpha), RenderUtils.withAlpha(PANEL_BACKGROUND, alpha));
+
+		// Число крупно, единица — рядом мелко
+		String value = String.format(java.util.Locale.ROOT, "%.1f", bps);
+		RenderUtils.textBold(graphics, font, value, x + 8, y + 6, RenderUtils.withAlpha(TEXT_COLOR, alpha));
+		RenderUtils.textFlat(graphics, font, "б/с", x + 10 + RenderUtils.width(font, value), y + 8,
+				RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
+
+		// Короткий бар: доля от авто-масштаба
+		int barX = x + 8;
+		int barW = width - 16;
+		int barY = y + 21;
+		float fraction = RenderUtils.clamp(bps / Math.max(0.001F, speedScale), 0.0F, 1.0F);
+		RenderUtils.fillRounded(graphics, barX, barY, barW, 3, 1, RenderUtils.withAlpha(0x33FFFFFF, alpha));
+		if (fraction > 0.001F) {
+			int filled = Math.max(2, Math.round(barW * fraction));
+			graphics.fillGradient(barX, barY, barX + filled, barY + 3,
+					RenderUtils.withAlpha(ClientTheme.gradientAt(0.0F, now), alpha),
+					RenderUtils.withAlpha(ClientTheme.gradientAt(1.0F, now), alpha));
+			// блик на конце бара — «текущее» положение читается сразу
+			graphics.fill(barX + filled - 1, barY - 1, barX + filled, barY + 4,
+					RenderUtils.withAlpha(0xFFFFFFFF, 0.75F * alpha));
+		}
+
+		// График: ломаная по кольцевому буферу (старое слева, свежее справа)
+		int graphX = x + 8;
+		int graphW = width - 16;
+		int graphTop = y + 29;
+		int graphBottom = y + height - 6;
+		int graphH = Math.max(6, graphBottom - graphTop);
+		graphics.fill(graphX, graphBottom, graphX + graphW, graphBottom + 1,
+				RenderUtils.withAlpha(0x22FFFFFF, alpha));
+		int step = Math.max(1, graphW / SPEED_SAMPLES);
+		int used = Math.min(SPEED_SAMPLES, Math.max(2, graphW / step));
+		int prevY = -1;
+		for (int i = 0; i < used; i++) {
+			float sample = speedHistory[(speedHead - used + i + SPEED_SAMPLES * 2) % SPEED_SAMPLES];
+			int columnX = graphX + i * step;
+			int valueH = Math.round(RenderUtils.clamp(sample / Math.max(0.001F, speedScale), 0.0F, 1.0F) * (graphH - 1));
+			int sampleY = graphBottom - Math.max(1, valueH);
+			if (prevY >= 0) {
+				// вертикальный отрезок между соседними точками = звено ломаной
+				int top = Math.min(prevY, sampleY);
+				int bottom = Math.max(prevY, sampleY) + 1;
+				graphics.fill(columnX - step, top, columnX, bottom,
+						RenderUtils.withAlpha(accent, 0.55F * alpha));
+			}
+			graphics.fill(columnX - step, sampleY, columnX, sampleY + 1,
+					RenderUtils.withAlpha(accent, 0.95F * alpha));
+			// лёгкая «подложка» под линией — график читается и на светлом фоне
+			graphics.fill(columnX - step, sampleY + 1, columnX, graphBottom,
+					RenderUtils.withAlpha(accent, 0.12F * alpha));
+			prevY = sampleY;
+		}
+		// Последняя точка — яркая точка-маркер
+		if (prevY >= 0) {
+			graphics.fill(graphX + (used - 1) * step - 1, prevY - 1,
+					graphX + (used - 1) * step + 2, prevY + 2, RenderUtils.withAlpha(0xFFFFFFFF, 0.9F * alpha));
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// Элемент: координаты
+	// ------------------------------------------------------------------
+
+	private static void drawCoords(GuiGraphicsExtractor graphics, Minecraft client, float alpha) {
+		LocalPlayer player = client.player;
+		Font font = client.font;
+		int[] position = HudLayout.position(HudInfoModule.ELEMENT_COORDS, MARGIN, 232);
+		int x = position[0];
+		int y = position[1];
+		int width = 128;
+		int height = 44;
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_COORDS, x, y, width, height);
 
 		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 3);
 		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6,
 				RenderUtils.withAlpha(PANEL_BORDER, alpha), RenderUtils.withAlpha(PANEL_BACKGROUND, alpha));
-		RenderUtils.textBold(graphics, font, "СЕССИЯ", x + 8, y + 6,
-				RenderUtils.withAlpha(ClientTheme.accent(now), alpha));
-		long elapsed = sessionStarted == 0 ? 0 : now - sessionStarted;
-		double bps = player == null ? 0.0 : Math.sqrt(
-				player.getDeltaMovement().x * player.getDeltaMovement().x
-						+ player.getDeltaMovement().z * player.getDeltaMovement().z) * 20.0;
-		RenderUtils.textFlat(graphics, font, "Время  " + formatLongTime(elapsed), x + 8, y + 19,
-				RenderUtils.withAlpha(TEXT_COLOR, alpha));
-		RenderUtils.textFlat(graphics, font, String.format(java.util.Locale.ROOT, "Путь   %.0f m", sessionDistance),
-				x + 8, y + 30, RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
-		RenderUtils.textFlat(graphics, font, String.format(java.util.Locale.ROOT, "Скорость  %.1f BPS", bps),
-				x + 8, y + 41, RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
+		RenderUtils.textBold(graphics, font, "КООРДИНАТЫ", x + 8, y + 5,
+				RenderUtils.withAlpha(ClientTheme.accent(Util.getMillis()), alpha));
+		if (player == null) {
+			RenderUtils.textFlat(graphics, font, "нет мира", x + 8, y + 20,
+					RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
+			return;
+		}
+		Vec3 eyes = player.getEyePosition();
+		BlockPos pos = player.blockPosition();
+		RenderUtils.textFlat(graphics, font,
+				String.format(java.util.Locale.ROOT, "%.1f  %.1f  %.1f", eyes.x, eyes.y, eyes.z),
+				x + 8, y + 17, RenderUtils.withAlpha(TEXT_COLOR, alpha));
+		RenderUtils.textFlat(graphics, font,
+				String.format(java.util.Locale.ROOT, "блок %d %d %d · чанк %d:%d · %s",
+						pos.getX(), pos.getY(), pos.getZ(), pos.getX() >> 4, pos.getZ() >> 4,
+						directionName(player.getDirection())),
+				x + 8, y + 28, RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
 	}
 
 	private static String formatDurationTicks(int ticks) {
 		long seconds = Math.max(0, ticks / 20L);
 		return String.format(java.util.Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60);
-	}
-
-	private static String formatLongTime(long millis) {
-		long seconds = Math.max(0, millis / 1000L);
-		return String.format(java.util.Locale.ROOT, "%02d:%02d:%02d",
-				seconds / 3600, seconds / 60 % 60, seconds % 60);
 	}
 
 	private static String roman(int value) {
