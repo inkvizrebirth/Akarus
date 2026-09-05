@@ -6,8 +6,8 @@ set +e
 OUT=api-notes.txt
 : > "$OUT"
 if [ -z "$JAR" ]; then echo "MC jar не найден" >> "$OUT"; exit 0; fi
-J() { echo "=== $1 ===" >> "$OUT"; javap -p -cp "$JAR" "$1" 2>&1 >> "$OUT"; }
-JC() { echo "=== $1 (байткод) ===" >> "$OUT"; javap -p -c -cp "$JAR" "$1" 2>&1 >> "$OUT"; }
+J() { echo "=== $1 ===" >> "$OUT"; javap -p -cp "$JAR" "$1" >> "$OUT" 2>&1; }
+JC() { echo "=== $1 (байткод) ===" >> "$OUT"; javap -p -c -cp "$JAR" "$1" >> "$OUT" 2>&1; }
 
 J net.minecraft.client.renderer.ShaderManager
 JC net.minecraft.client.renderer.ShaderManager
@@ -40,6 +40,19 @@ J com.mojang.blaze3d.buffers.GpuBuffer
 J com.mojang.blaze3d.buffers.BufferUsage
 J net.minecraft.client.renderer.PostChain
 J 'net.minecraft.client.renderer.PostChain$TargetBundle'
+
+echo "=== классы рендера рук (куда переехал ItemInHandRenderer) ===" >> "$OUT"
+for cls in $(unzip -l "$JAR" 2>/dev/null | grep -E "client/renderer/[A-Za-z/]*(Hand|FirstPerson|ItemInHand)[A-Za-z]*\.class" \
+             | awk '{print $4}' | sed 's|/|.|g; s|\.class$||' | grep -v '\$' | head -10); do
+  echo "=== $cls ===" >> "$OUT"
+  javap -p -cp "$JAR" "$cls" >> "$OUT" 2>&1
+done
+echo "=== методы с hand/arm/item у GameRenderer/LevelRenderer ===" >> "$OUT"
+for cls in net.minecraft.client.renderer.GameRenderer net.minecraft.client.renderer.LevelRenderer \
+           net.minecraft.client.renderer.entity.AvatarRenderer; do
+  echo "--- $cls ---" >> "$OUT"
+  javap -p -cp "$JAR" "$cls" 2>/dev/null | grep -iE "hand|arm|item" | head -14 >> "$OUT"
+done
 
 echo "=== ресурсы шейдеров в jar ===" >> "$OUT"
 unzip -l "$JAR" 2>/dev/null | grep -E "shaders/(core|post)/|\.glsl$" | awk '{print $4}' | head -60 >> "$OUT"
