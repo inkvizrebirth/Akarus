@@ -6,7 +6,7 @@
 
 [![Minecraft](https://img.shields.io/badge/Minecraft-26.2-71b722?logo=minecraft&logoColor=white)](https://www.minecraft.net/)
 [![Java](https://img.shields.io/badge/Java-25-orange?logo=openjdk&logoColor=white)](https://adoptium.net/)
-[![Version](https://img.shields.io/badge/version-1.1.2-7C6CFF)](https://github.com/inkvizrebirth/Dreamcast/releases)
+[![Version](https://img.shields.io/badge/version-1.1.3-7C6CFF)](https://github.com/inkvizrebirth/Dreamcast/releases)
 [![Build](https://github.com/inkvizrebirth/Dreamcast/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/inkvizrebirth/Dreamcast/actions/workflows/build.yml)
 
 </div>
@@ -26,7 +26,7 @@
 ## Установка
 
 1. Установи Fabric Loader для **Minecraft 26.2** и Fabric API `0.159+`.
-2. Скачай `dreamcast-1.1.2.jar` из [Releases](https://github.com/inkvizrebirth/Dreamcast/releases) и положи в `.minecraft/mods`.
+2. Скачай `dreamcast-1.1.3.jar` из [Releases](https://github.com/inkvizrebirth/Dreamcast/releases) и положи в `.minecraft/mods`.
 3. Запусти игру на Java 25.
 
 ## Управление

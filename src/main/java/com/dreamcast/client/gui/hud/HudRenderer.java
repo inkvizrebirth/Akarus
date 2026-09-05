@@ -375,58 +375,67 @@ public final class HudRenderer {
 		long now = Util.getMillis();
 
 		List<Module> bound = ModuleManager.getAll().stream()
-				.filter(module -> !"unknown".equals(module.getBindName()))
+				// Скрываем действительно пустые бинды. Проверка строки имени была
+				// ненадёжной: Minecraft хранит пустую клавишу как key.keyboard.unknown.
+				.filter(Module::hasBind)
 				.sorted(Comparator.comparing(Module::getName))
 				.toList();
 		if (bound.isEmpty()) {
 			return;
 		}
 
-		int rowHeight = font.lineHeight + 3;
+		int rowHeight = font.lineHeight + 5;
 		int width = 0;
 		for (Module module : bound) {
-			width = Math.max(width, RenderUtils.width(font, module.getBindLabel()) + 8
+			width = Math.max(width, RenderUtils.width(font, module.getBindLabel()) + 18
 					+ RenderUtils.width(font, module.getName()));
 		}
-		width += PADDING * 2 + 4;
-		int height = bound.size() * rowHeight - 3 + PADDING * 2;
+		String title = "БИНДЫ";
+		width = Math.max(width + PADDING * 2, RenderUtils.width(font, title) + 42);
+		int height = bound.size() * rowHeight + PADDING * 2 + font.lineHeight + 4;
 
 		int screenW = client.getWindow().getGuiScaledWidth();
 		int[] position = HudLayout.position(HudInfoModule.ELEMENT_KEYBINDS, screenW - width - MARGIN, 92);
 		int x = position[0];
 		int y = position[1];
 
-		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 5, 3);
-		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 5,
+		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 7, 3);
+		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 7,
 				RenderUtils.withAlpha(PANEL_BORDER, 0.9f * alpha), RenderUtils.withAlpha(0xCC09090C, alpha));
 
-		// Заголовок-пилюля над списком: маленькая, с точкой-«записью»
-		String title = "бинды";
-		int titleW = RenderUtils.width(font, title) + 12;
-		RenderUtils.fillRounded(graphics, x + 4, y - 5, titleW, font.lineHeight + 4, 4,
-				RenderUtils.withAlpha(0xE60A0A0D, alpha));
-		RenderUtils.textFlat(graphics, font, title, x + 10, y - 4,
-				RenderUtils.withAlpha(ClientTheme.accent(now), alpha));
+		// Спокойная шапка вместо выпирающей плашки: акцент, заголовок и счётчик.
+		int accent = ClientTheme.accent(now);
+		RenderUtils.fillRounded(graphics, x + PADDING, y + PADDING + 1, 2, font.lineHeight - 1, 1,
+				RenderUtils.withAlpha(accent, alpha));
+		RenderUtils.textFlat(graphics, font, title, x + PADDING + 7, y + PADDING,
+				RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
+		String count = String.valueOf(bound.size());
+		RenderUtils.textFlat(graphics, font, count, x + width - PADDING - RenderUtils.width(font, count), y + PADDING,
+				RenderUtils.withAlpha(TEXT_DIM, alpha));
+		graphics.fill(x + PADDING, y + PADDING + font.lineHeight + 4, x + width - PADDING,
+				y + PADDING + font.lineHeight + 5, RenderUtils.withAlpha(PANEL_BORDER, alpha));
 
-		int rowY = y + PADDING;
+		int rowY = y + PADDING + font.lineHeight + 8;
 		for (Module module : bound) {
 			boolean on = module.isEnabled();
-			// Бейдж клавиши: тёмная плашка с рамкой цвета статуса
+			// Минимальная точка статуса и аккуратный бейдж клавиши справа.
 			String key = module.getBindLabel();
 			int keyW = RenderUtils.width(font, key) + 8;
-			int statusColor = on ? ENABLED_GREEN : RenderUtils.withAlpha(TEXT_SECONDARY, 0.8f);
-			RenderUtils.fillRoundedBorder(graphics, x + PADDING, rowY - 1, keyW, font.lineHeight + 2, 3,
-					RenderUtils.withAlpha(on ? ENABLED_GREEN : 0x30FFFFFF, 0.55f * alpha),
-					RenderUtils.withAlpha(0x66000000, alpha));
-			RenderUtils.textFlat(graphics, font, key, x + PADDING + 4, rowY,
-					RenderUtils.withAlpha(TEXT_COLOR, alpha));
-			// Имя: белое — выключен, зелёное — включён
-			RenderUtils.text(graphics, font, module.getName(), x + PADDING + keyW + 6, rowY,
-					RenderUtils.withAlpha(on ? ENABLED_GREEN : 0xFFF6F6F8, alpha));
+			int keyX = x + width - PADDING - keyW;
+			int stateColor = on ? ENABLED_GREEN : TEXT_DIM;
+			RenderUtils.fillRounded(graphics, x + PADDING, rowY + 3, 4, 4, 2,
+					RenderUtils.withAlpha(stateColor, alpha));
+			RenderUtils.textFlat(graphics, font, module.getName(), x + PADDING + 10, rowY,
+					RenderUtils.withAlpha(on ? TEXT_COLOR : TEXT_SECONDARY, alpha));
+			RenderUtils.fillRoundedBorder(graphics, keyX, rowY - 2, keyW, font.lineHeight + 4, 3,
+					RenderUtils.withAlpha(on ? accent : PANEL_BORDER, 0.75f * alpha),
+					RenderUtils.withAlpha(0x5C000000, alpha));
+			RenderUtils.textFlat(graphics, font, key, keyX + 4, rowY,
+					RenderUtils.withAlpha(on ? TEXT_COLOR : TEXT_SECONDARY, alpha));
 			rowY += rowHeight;
 		}
 
-		HudLayout.publishBounds(HudInfoModule.ELEMENT_KEYBINDS, x, y - 6, width, height + 6);
+		HudLayout.publishBounds(HudInfoModule.ELEMENT_KEYBINDS, x, y, width, height);
 	}
 
 	// ------------------------------------------------------------------

@@ -75,12 +75,17 @@ public abstract class Module {
 		this.description = description;
 		this.category = category;
 
+		// При чистом первом запуске клиент не навязывает горячие клавиши: это
+		// исключает случайное включение боевых/движенческих модулей во время игры.
+		// Единственное исключение — ClickGUI, без него новый пользователь вообще
+		// не сможет открыть настройки и назначить собственные бинды.
+		int initialKey = "click_gui".equals(id) ? defaultKey : org.lwjgl.glfw.GLFW.GLFW_KEY_UNKNOWN;
 		// Регистрируем клавишу модуля в ванильных настройках управления
-		this.bind = InputConstants.Type.KEYSYM.getOrCreate(defaultKey);
+		this.bind = InputConstants.Type.KEYSYM.getOrCreate(initialKey);
 		this.keyMapping = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key." + DreamcastClient.MOD_ID + "." + id,
 				InputConstants.Type.KEYSYM,
-				defaultKey,
+				initialKey,
 				DreamcastClient.KEY_CATEGORY));
 
 		this.enabled = defaultEnabled();
@@ -115,9 +120,14 @@ public abstract class Module {
 
 	public void setBindByName(String name) {
 		InputConstants.Key key = InputConstants.getKey(name);
-		if (key != InputConstants.UNKNOWN) {
-			setBind(key);
-		}
+		// UNKNOWN тоже является валидным сохранённым значением: так снятый
+		// пользователем бинд не превращается обратно в дефолтный после перезапуска.
+		setBind(key);
+	}
+
+	/** Есть ли у модуля назначенная клавиша или кнопка мыши. */
+	public boolean hasBind() {
+		return !InputConstants.UNKNOWN.equals(bind);
 	}
 
 	/** Человекочитаемое название клавиши для меню. */
