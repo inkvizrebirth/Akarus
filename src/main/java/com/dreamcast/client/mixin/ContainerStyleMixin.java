@@ -46,7 +46,7 @@ public abstract class ContainerStyleMixin {
 		if (!CustomGuiModule.wantsSlots() || CustomGuiModule.isOwnScreen(this)) {
 			return;
 		}
-		for (Slot slot : this.menu.slots()) {
+		for (Slot slot : this.menu.slots) {
 			if (!slot.isActive()) {
 				continue;
 			}
