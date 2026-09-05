@@ -49,41 +49,38 @@ public class WingsModule extends Module {
 	 * взмаха. Собирается на извлечении кадра, чтобы рендер не читал сущности.
 	 */
 	public record Rig(float x, float y, float z, float bodyYaw, float bodyPitch,
-	                 Pose pose, float flap, float move, float size, float glideProgress) {
+	                 Pose pose, float flapPhase, float move, float size) {
 	}
 
 	/**
-	 * Параметры позы. Единицы: смещения и радиусы — в блоках, углы — в градусах,
+	 * Параметры позы крыльев. Углы — в градусах, смещения — в блоках,
 	 * {@code flapSpeed} — радианы на тик.
 	 *
-	 * @param anchorUp     куда крепить крылья относительно середины корпуса
-	 * @param anchorForward смещение вдоль взгляда (минус — за спину)
-	 * @param groupPitch    наклон всей группы вокруг оси «вправо»
-	 * @param groupRoll     крен всей группы вокруг оси «вперёд»
-	 * @param openBase      базовое раскрытие крыла, °
-	 * @param openPerMove   насколько сильнее крыло раскрывается на скорости, °
-	 * @param flapAmplitude амплитуда взмаха, °
-	 * @param flapSpeed     частота взмаха, рад/тик
-	 * @param sideGap       зазор крыла от оси корпуса, блоки
-	 * @param sideUp        вертикальное смещение крыла, блоки
-	 * @param sideForward   смещение крыла вдоль корпуса, блоки
-	 * @param scale         масштаб крыла
+	 * @param anchorUp     насколько выше середины корпуса крепится крыло
+	 * @param anchorBack   смещение точки крепления назад (вдоль оси взгляда)
+	 * @param sweepBase    базовый «захлоп»: 0 — крыло вбок, 90 — прижато назад
+	 * @param sweepPerMove  насколько сильнее отводится назад на скорости, °
+	 * @param elevBase     базовый подъём кончика (минус — кончик ниже плеча)
+	 * @param flapAmplitude амплитуда взмаха по подъёму, °
+	 * @param flapSpeed    частота взмаха, рад/тик
+	 * @param scale        масштаб крыла
+	 * @param sideGap      зазор от оси корпуса, чтобы крыло не шло сквозь спину
 	 */
-	public record WingPose(float anchorUp, float anchorForward, float groupPitch, float groupRoll,
-	                       float openBase, float openPerMove, float flapAmplitude, float flapSpeed,
-	                       float sideGap, float sideUp, float sideForward, float scale) {
+	public record WingPose(float anchorUp, float anchorBack, float sweepBase, float sweepPerMove,
+	                       float elevBase, float flapAmplitude, float flapSpeed, float scale,
+	                       float sideGap) {
 	}
 
-	private static final WingPose POSE_GLIDING = new WingPose(0.34F, 0.06F, -58.0F, 0.0F,
-			52.0F, 6.0F, 7.0F, 0.055F, 0.10F, 0.02F, 0.05F, 0.78F);
-	private static final WingPose POSE_SWIMMING = new WingPose(0.12F, 0.04F, -24.0F, 0.0F,
-			72.0F, 8.0F, 12.0F, 0.10F, 0.10F, 0.02F, 0.02F, 0.88F);
-	private static final WingPose POSE_AIRBORNE = new WingPose(0.24F, 0.02F, -14.0F, 0.0F,
-			50.0F, 10.0F, 14.0F, 0.10F, 0.11F, 0.02F, 0.02F, 0.96F);
-	private static final WingPose POSE_SPRINTING = new WingPose(0.30F, 0.04F, -10.0F, 0.0F,
-			42.0F, 12.0F, 10.0F, 0.13F, 0.12F, 0.02F, 0.02F, 1.0F);
-	private static final WingPose POSE_WALKING = new WingPose(0.32F, 0.02F, -4.0F, 0.0F,
-			34.0F, 6.0F, 6.0F, 0.075F, 0.12F, 0.02F, 0.02F, 1.0F);
+	private static final WingPose POSE_GLIDING = new WingPose(0.30F, 0.16F, 74.0F, 6.0F,
+			-16.0F, 4.0F, 0.05F, 0.78F, 0.10F);
+	private static final WingPose POSE_SWIMMING = new WingPose(0.16F, 0.06F, 40.0F, 8.0F,
+			14.0F, 22.0F, 0.16F, 0.88F, 0.10F);
+	private static final WingPose POSE_AIRBORNE = new WingPose(0.24F, 0.04F, 30.0F, 12.0F,
+			18.0F, 26.0F, 0.13F, 0.96F, 0.11F);
+	private static final WingPose POSE_SPRINTING = new WingPose(0.30F, 0.06F, 42.0F, 14.0F,
+			4.0F, 18.0F, 0.16F, 1.0F, 0.12F);
+	private static final WingPose POSE_WALKING = new WingPose(0.32F, 0.03F, 26.0F, 6.0F,
+			6.0F, 10.0F, 0.09F, 1.0F, 0.12F);
 
 	private final ModeSetting when = mode("when", "Показывать",
 			ModeSetting.option("always", "Всегда"),
@@ -142,17 +139,14 @@ public class WingsModule extends Module {
 	}
 
 	private Rig rigFor(LivingEntity entity, float bodyYaw, float partialTick) {
-		Pose pose = poseOf(entity);
-		WingPose wing = poseFor(pose);
+		WingPose wing = poseFor(poseOf(entity));
+		// Фазу передаём как есть: синус считается в рендере с учётом частичного
+		// тика, иначе взмах «квантовался» бы по тикам игры (60 fps и 20 tps)
 		float phase = (entity.tickCount + partialTick) * wing.flapSpeed() * (flapSpeed.get() / 100.0F);
-		float flap = Mth.sin(phase) * wing.flapAmplitude();
 		float move = Mth.clamp((float) entity.getDeltaMovement().horizontalDistance(), 0.0F, 1.0F);
-		float glide = pose == Pose.GLIDING
-				? Mth.clamp(entity.getFallFlyingTicks() * entity.getFallFlyingTicks() / 100.0F, 0.0F, 1.0F)
-				: 0.0F;
 		return new Rig((float) entity.getX(partialTick), (float) entity.getY(partialTick),
 				(float) entity.getZ(partialTick), bodyYaw, entity.getViewXRot(partialTick),
-				pose, flap, move, size.get() / 100.0F, glide);
+				poseOf(entity), phase, move, size.get() / 100.0F);
 	}
 
 	/** Поза крыльев по состоянию игрока. */

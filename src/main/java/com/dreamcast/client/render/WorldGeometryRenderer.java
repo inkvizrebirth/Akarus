@@ -169,32 +169,36 @@ public final class WorldGeometryRenderer {
 	}
 
 	/**
-	 * Квад, всегда повёрнутый лицом к камере (бильборд), вокруг точки (x,y,z).
+	 * Оси экрана (вправо/вверх) для точки в этом пространстве:
+	 * {@code out[0..2]} — «вправо», {@code out[3..5]} — «вверх».
 	 *
-	 * Оси считаются из направления «камера → точка»: right = view × up,
-	 * up' = right × view. При взгляде строго вверх/вниз up вырождается — там
-	 * берём мировую ось Z, иначе у «свечения» начал бы заваливаться размер.
+	 * Нужно всякому «повёрнутому к зрителю» — рамкам маркера, блокам текста,
+	 * кругам-биллбордам. Оси считаются из направления «камера → точка», поэтому
+	 * не зависят от того, что в 26.2 поворот кадра живёт в матрице проекции.
 	 */
-	public static void billboard(VertexConsumer buffer, PoseStack.Pose pose,
-	                             double x, double y, double z, double halfSize, int color) {
+	public static void screenAxes(double x, double y, double z, float[] out) {
 		double dist = Math.sqrt(x * x + y * y + z * z);
-		if (dist < 1.0e-4 || halfSize <= 0.0) {
+		if (dist < 1.0e-4) {
+			out[0] = 1.0F;
+			out[1] = 0.0F;
+			out[2] = 0.0F;
+			out[3] = 0.0F;
+			out[4] = 1.0F;
+			out[5] = 0.0F;
 			return;
 		}
 		double vx = x / dist, vy = y / dist, vz = z / dist;
 		// right = normalize(view × worldUp) = normalize(-vz, 0, vx)
-		double rx = -vz;
-		double ry = 0.0;
-		double rz = vx;
-		double rlen = Math.sqrt(rx * rx + ry * ry + rz * rz);
+		double rx = -vz, ry = 0.0, rz = vx;
+		double rlen = Math.sqrt(rx * rx + rz * rz);
 		if (rlen < 1.0e-4) {
-			rx = 0.0;
-			ry = 0.0;
-			rz = -1.0;
+			// взгляд строго вверх/вниз: up вырождается — берём любую перпендикулярную
+			// ось, иначе у биллборда схлопнулся бы размер
+			rx = 1.0;
+			rz = 0.0;
 			rlen = 1.0;
 		}
 		rx /= rlen;
-		ry /= rlen;
 		rz /= rlen;
 		// up = normalize(right × view)
 		double ux = ry * vz - rz * vy;
@@ -202,19 +206,46 @@ public final class WorldGeometryRenderer {
 		double uz = rx * vy - ry * vx;
 		double ulen = Math.sqrt(ux * ux + uy * uy + uz * uz);
 		if (ulen < 1.0e-4) {
+			ux = 0.0;
+			uy = 1.0;
+			uz = 0.0;
+		} else {
+			ux /= ulen;
+			uy /= ulen;
+			uz /= ulen;
+		}
+		out[0] = (float) rx;
+		out[1] = (float) ry;
+		out[2] = (float) rz;
+		out[3] = (float) ux;
+		out[4] = (float) uy;
+		out[5] = (float) uz;
+	}
+
+	/**
+	 * Квад, всегда повёрнутый лицом к камере (бильборд), вокруг точки (x,y,z).
+	 * Оси — из {@link #screenAxes}.
+	 */
+	public static void billboard(VertexConsumer buffer, PoseStack.Pose pose,
+	                             double x, double y, double z, double halfSize, int color) {
+		if (halfSize <= 0.0) {
 			return;
 		}
-		ux /= ulen;
-		uy /= ulen;
-		uz /= ulen;
+		double dist = Math.sqrt(x * x + y * y + z * z);
+		if (dist < 1.0e-4) {
+			return;
+		}
+		float[] axes = BILLBOARD_AXES;
+		screenAxes(x, y, z, axes);
+		float rx = axes[0], ry = axes[1], rz = axes[2];
+		float ux = axes[3], uy = axes[4], uz = axes[5];
 
 		double h = halfSize;
-		// a = -r-h, -u-h ; b = +r-h... обход против часовой, два треугольника
 		double axX = x - rx * h - ux * h, axY = y - ry * h - uy * h, axZ = z - rz * h - uz * h;
 		double bxX = x + rx * h - ux * h, bxY = y + ry * h - uy * h, bxZ = z + rz * h - uz * h;
 		double cxX = x + rx * h + ux * h, cxY = y + ry * h + uy * h, cxZ = z + rz * h + uz * h;
 		double dxX = x - rx * h + ux * h, dxY = y - ry * h + uy * h, dxZ = z - rz * h + uz * h;
-		float fnx = (float) -vx, fny = (float) -vy, fnz = (float) -vz;
+		float fnx = (float) (-x / dist), fny = (float) (-y / dist), fnz = (float) (-z / dist);
 		vertex(buffer, pose, axX, axY, axZ, color, fnx, fny, fnz);
 		vertex(buffer, pose, bxX, bxY, bxZ, color, fnx, fny, fnz);
 		vertex(buffer, pose, cxX, cxY, cxZ, color, fnx, fny, fnz);
@@ -222,6 +253,8 @@ public final class WorldGeometryRenderer {
 		vertex(buffer, pose, cxX, cxY, cxZ, color, fnx, fny, fnz);
 		vertex(buffer, pose, dxX, dxY, dxZ, color, fnx, fny, fnz);
 	}
+
+	private static final float[] BILLBOARD_AXES = new float[6];
 
 	/**
 	 * Мягкое «свечение» без текстуры: несколько концентрических бильбордов,
