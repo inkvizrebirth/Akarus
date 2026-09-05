@@ -223,11 +223,14 @@ def javap_members(jar: str, owner: str, cache: dict) -> tuple[set, bool]:
         except Exception as error:  # noqa: BLE001 - тулза для CI, падать не должна
             print(f"  ! javap {current}: {error}", file=sys.stderr)
             continue
-        text = out.stdout or ""
-        if not text.strip() or "class not found" in (out.stderr or ""):
+        # javap пишет «Error: class not found» в stderr — пустой stdout и есть
+        # признак отсутствующего класса; молча считать его «найденным» нельзя,
+        # иначе пропавшая цель выглядит как «метод переименовали»
+        text = (out.stdout or "") + "\n" + (out.stderr or "")
+        if not (out.stdout or "").strip() or "class not found" in text:
             continue
         exists = True
-        for line in text.splitlines():
+        for line in (out.stdout or "").splitlines():
             match = JAVAP_MEMBER_RE.match(line)
             if match:
                 names.add(match.group(1))
