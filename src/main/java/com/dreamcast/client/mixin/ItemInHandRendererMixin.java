@@ -17,9 +17,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Раскладка рук от первого лица (модуль «ViewModel») и начало прохода обводки.
  *
- * {@code ItemInHandRenderer#renderArmWithItem} — единственная точка, где рисуются
+ * {@code ItemInHandRenderer#submitArmWithItem} — единственная точка, где рисуются
  * обе руки от первого лица: и голая рука, и рука с предметом (а для карты — обе
- * сразу). Метод сам кладёт в стек матриц взмах, поворот и подъём, а в конце снимает
+ * сразу). В 26.2 метод переименован из {@code renderArmWithItem} в {@code submit…}
+ * вместе с переходом рендера на submit-ноды, и стал приватным — {@code require = 0}
+ * превращал такое переименование в молча выключенный ViewModel (ловит
+ * {@code tools/check_mixins.py}). Метод сам кладёт в стек матриц взмах, поворот и подъём, а в конце снимает
  * их. Мы встаём до этого и добавляем свои сдвиг, поворот и масштаб — тогда они
  * применяются к руке целиком, вместе с предметом в ней, и в системе координат руки.
  *
@@ -35,7 +38,7 @@ public abstract class ItemInHandRendererMixin {
 	@Unique
 	private boolean dreamcast$transformApplied;
 
-	@Inject(method = "renderArmWithItem", at = @At("HEAD"), require = 0)
+	@Inject(method = "submitArmWithItem", at = @At("HEAD"), require = 0)
 	private void dreamcast$applyViewModel(AbstractClientPlayer player, float frameInterp, float xRot, InteractionHand hand,
 			float attack, ItemStack itemStack, float inverseArmHeight, PoseStack poseStack,
 			SubmitNodeCollector submitNodeCollector, int lightCoords, CallbackInfo ci) {
@@ -59,7 +62,7 @@ public abstract class ItemInHandRendererMixin {
 		this.dreamcast$transformApplied = true;
 	}
 
-	@Inject(method = "renderArmWithItem", at = @At("RETURN"), require = 0)
+	@Inject(method = "submitArmWithItem", at = @At("RETURN"), require = 0)
 	private void dreamcast$restoreViewModel(AbstractClientPlayer player, float frameInterp, float xRot, InteractionHand hand,
 			float attack, ItemStack itemStack, float inverseArmHeight, PoseStack poseStack,
 			SubmitNodeCollector submitNodeCollector, int lightCoords, CallbackInfo ci) {
