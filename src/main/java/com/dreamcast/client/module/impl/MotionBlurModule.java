@@ -4,7 +4,9 @@ import com.dreamcast.client.DreamcastClient;
 import com.dreamcast.client.module.Module;
 import com.dreamcast.client.module.ModuleCategory;
 import com.dreamcast.client.settings.BooleanSetting;
+import com.dreamcast.client.settings.IntSetting;
 import com.dreamcast.client.settings.ModeSetting;
+import com.dreamcast.client.shader.PostFx;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -15,31 +17,39 @@ import org.lwjgl.glfw.GLFW;
 /**
  * Motion Blur — размытие в движении поверх готового кадра.
  *
- * <p>В референсе это пост-эффект на Satin (свой FBO + velocity-буфер). В 26.2
- * такого пути нет: свой FBO/GLSL из blaze3d не нарулить, а единственная
- * поддержанная цепочка пост-обработки — ванильные «пост-эффекты»
- * ({@code GameRenderer#postEffectId} + {@code assets/<ns>/post_effect/*.json}),
- * куда мы и подключаемся. Цепочка лежит у нас в ресурсах
- * ({@code dreamcast:post_effect/motion_blur*.json}), накопление истории идёт в
- * persistent-таргете, а «размазывается» только то, что изменилось между кадрами:
+ * <p>В референсе это пост-эффект на Satin (свой FBO + velocity-буфер + N кадров
+ * истории). В 26.2 такого пути нет, поэтому эффект делает наша прослойка
+ * {@link PostFx}: она собирает ванильную {@code PostChain} из конфигурации,
+ * построенной кодом, а {@code ShaderManagerMixin} подсовывает её игре вместо
+ * загрузки {@code post_effect/*.json}. Результат — настоящий ползунок силы,
+ * радиус смаза и выбор алгоритма, а не три заранее заготовленных пресета.</p>
+ *
+ * <p>История — одна persistent-цель (экспоненциальное сглаживание по кадрам),
+ * а не кольцо из N кадров: ванильный конвейер не даёт переставлять цели между
+ * кадрами, а N полноэкранных копий за кадр стоили бы слишком дорого. Размытие
+ * применяется только там, где пиксель отличается от прошлого кадра, поэтому
  * статичная сцена остаётся резкой.</p>
  *
- * <p><b>Почему сила — три варианта, а не ползунок.</b> В 26.2 uniform'ы пост-цепочки
- * читаются из JSON при загрузке, публичного {@code PostChain#setUniform} нет, поэтому
- * менять вес истории на лету нельзя. Вместо этого под каждый уровень лежит своя
- * цепочка (мягкое/среднее/сильное), а модуль выбирает её целиком — это и есть
- * «компенсация герцовки»: на 144 Гц кадры короче, история накапливается быстрее,
- * и тот же вес дал бы слишком длинный шлейф, поэтому при высоком FPS берётся
- * вариант на ступень сильнее.</p>
+ * <p>Запасной путь — три JSON-цепочки ({@code motion_blur{,_soft,_strong}.json}):
+ * он используется, пока рантайм-цепочка не собрана (первый кадр), если сборка
+ * провалилась или если плавную силу выключить настройкой. Никакой из этого
+ * потери качества нет — это те же шейдеры, просто с фиксированными весами.</p>
  *
- * <p>С Iris эффект несовместим: Iris подменяет пайплайн и наши цели пост-цепочки
- * не существуют — как и в референсе, модуль отказывается работать и пишет причину
- * в чат. Остальное (NoBlind) с ним не конфликтует: тот гасит только
- * {@code nausea}-цепочку, а мы пишем свою.</p>
+ * <p>С Iris эффект несовместим: Iris подменяет пайплайн, и наши цели пост-цепочки
+ * не существуют — модуль отказывается работать и пишет причину в чат. NoBlind с
+ * ним не конфликтует: тот гасит только {@code nausea}-цепочку.</p>
  */
 public class MotionBlurModule extends Module {
 
-	/** Цепочки: один и тот же алгоритм, разный вес истории. */
+	/** Наш id: по нему {@code PostFx} понимает, что цепочку надо собрать самим. */
+	private static final Identifier RUNTIME_CHAIN =
+			Identifier.fromNamespaceAndPath(DreamcastClient.MOD_ID, "motion_blur_runtime");
+
+	private static final String FRAGMENT = "dreamcast:post/motion_blur";
+	private static final String HISTORY_TARGET = "accum";
+	private static final String SCRATCH_TARGET = "mix";
+
+	/** Цепочки-запасной вариант: один и тот же алгоритм, разный вес истории. */
 	private static final Identifier CHAIN_SOFT =
 			Identifier.fromNamespaceAndPath(DreamcastClient.MOD_ID, "motion_blur_soft");
 	private static final Identifier CHAIN_MEDIUM =
@@ -51,17 +61,29 @@ public class MotionBlurModule extends Module {
 	private static final int FAST_FPS = 100;
 	private static final int SLOW_FPS = 70;
 
-	private final ModeSetting strength = mode("strength", "Сила", "medium",
-			ModeSetting.option("soft", "Мягкое"),
-			ModeSetting.option("medium", "Среднее"),
-			ModeSetting.option("strong", "Сильное"));
+	/** Шаг квантования веса: без него компенсация герцовки дергала бы сборку каждый кадр. */
+	private static final float BLEND_STEP = 0.05f;
+
+	private final IntSetting strength = intSetting("strength", "Сила", 45, 5, 95);
+	private final IntSetting radius = intSetting("radius", "Радиус смаза", 2, 0, 6);
+	private final ModeSetting algorithm = mode("algorithm", "Алгоритм", "backwards",
+			ModeSetting.option("backwards", "Тянуть назад"),
+			ModeSetting.option("centered", "По центру"));
+	private final BooleanSetting smooth = bool("smooth", "Плавная сила (своя цепочка)", true);
 	private final BooleanSetting refreshScale = bool("refresh_scale", "Компенсировать герцовку", true);
+
+	/** Параметры прошлого кадра: по ним решаем, надо ли пересобирать цепочку. */
+	private record Params(int strength, int radius, String algorithm, int fpsBand) {
+	}
+
+	private Params declared;
+	private boolean fallbackAnnounced;
 
 	/** Чтобы не долбить сообщением про Iris каждый кадр. */
 	private long lastWarningMs;
 
 	public MotionBlurModule() {
-		super("motion_blur", "Motion Blur", "Размытие в движении (пост-эффект 26.2, без своего FBO)",
+		super("motion_blur", "Motion Blur", "Размытие в движении: своя пост-цепочка 26.2, без Satin",
 				ModuleCategory.RENDER, GLFW.GLFW_KEY_UNKNOWN);
 	}
 
@@ -73,50 +95,108 @@ public class MotionBlurModule extends Module {
 	/**
 	 * Какую цепочку применить, либо {@code null}, если эффект применять нельзя.
 	 *
-	 * <p>Именно отсюда читает {@code GameRendererMixin}: поле
-	 * {@code postEffectId} ваниль пересобирает каждый кадр в
-	 * {@code checkEntityPostEffect}, поэтому «применить один раз при включении»
-	 * не работает — надо отвечать на каждый кадр.</p>
+	 * <p>Именно отсюда читает {@code GameRendererMixin}: поле {@code postEffectId}
+	 * ваниль пересобирает каждый кадр в {@code checkEntityPostEffect}, поэтому
+	 * «применить один раз при включении» не работает — надо отвечать на каждый кадр.
+	 * Вызывается на render-потоке, поэтому здесь же и собираем цепочку.</p>
 	 */
 	public Identifier chainId() {
 		if (!isEnabled() || blockedByIris()) {
 			return null;
 		}
-		String base = strength.getValue();
-		if (!refreshScale.isEnabled()) {
-			return chainFor(base, 1);
+		int band = fpsBand();
+		Params params = new Params(strength.get(), radius.get(), algorithm.getValue(), band);
+		if (smooth.isEnabled() && PostFx.available()) {
+			if (!params.equals(declared)) {
+				declared = params;
+				PostFx.declare(RUNTIME_CHAIN, PostFx.motionBlur(FRAGMENT, HISTORY_TARGET, SCRATCH_TARGET,
+						blend(params), sampleRadius(params), algorithmValue(params)));
+				PostFx.prepare(RUNTIME_CHAIN);
+			}
+			if (PostFx.isReady(RUNTIME_CHAIN)) {
+				fallbackAnnounced = false;
+				return RUNTIME_CHAIN;
+			}
+			announceFallbackIfNeeded();
 		}
-		int fps = measuredFps();
-		// На мониторе 120–144 Гц тот же вес истории даёт в полтора раза более
-		// длинный шлейф по времени, поэтому сдвигаем уровень вверх
-		int bump = fps >= FAST_FPS ? 1 : (fps <= SLOW_FPS ? -1 : 0);
-		return chainFor(base, bump);
-	}
-
-	private static Identifier chainFor(String level, int shift) {
-		return switch (shift) {
-			case -1 -> CHAIN_SOFT;
-			case 1 -> CHAIN_STRONG;
-			default -> switch (level) {
-				case "soft" -> CHAIN_SOFT;
-				case "strong" -> CHAIN_STRONG;
-				default -> CHAIN_MEDIUM;
-			};
-		};
+		return chainFor(levelFor(strength.get()), band);
 	}
 
 	/**
-	 * Частика кадров как прокси герцовки монитора: {@code glfwGetVideoMode} в
-	 * 26.2 на Wayland и под некоторыми сборщиками возвращает null, а FPS при
-	 * включённой вертикальной синхронизации ровно ей равна.
+	 * Вес истории. Квантуется по {@value #BLEND_STEP}, потому что uniform'ы
+	 * пост-цепочки пишутся один раз при сборке: каждое изменение = пересборка
+	 * {@code PostChain}, и без шага ползунок на 100 значений стоил бы 100 компиляций.
 	 */
-	private int measuredFps() {
+	private float blend(Params params) {
+		float raw = params.strength() / 100f * 0.9f;
+		if (refreshScale.isEnabled()) {
+			// На 120–144 Гц кадры короче, история накапливается быстрее — чуть ослабляем;
+			// на 60 Гц и ниже, наоборот, добавляем, иначе шлейфа не видно.
+			raw += params.fpsBand() > 0 ? -BLEND_STEP : BLEND_STEP;
+		}
+		float quantized = Math.round(raw / BLEND_STEP) * BLEND_STEP;
+		return Math.max(0.05f, Math.min(0.95f, quantized));
+	}
+
+	private static float sampleRadius(Params params) {
+		return 0.5f + params.radius() * 0.6f;
+	}
+
+	private static int algorithmValue(Params params) {
+		return "centered".equals(params.algorithm()) ? 1 : 0;
+	}
+
+	/** Полоса FPS: -1 медленный монитор, 0 обычный, 1 быстрый (пороги с запасом, чтобы не щёлкало). */
+	private int fpsBand() {
+		if (!refreshScale.isEnabled()) {
+			return 0;
+		}
 		Minecraft client = Minecraft.getInstance();
 		if (client == null) {
-			return 60;
+			return 0;
 		}
 		int fps = client.getFps();
-		return fps > 0 && fps < 1000 ? fps : 60;
+		if (fps <= 0 || fps >= 1000) {
+			return 0;
+		}
+		if (fps >= FAST_FPS) {
+			return 1;
+		}
+		return fps <= SLOW_FPS ? -1 : 0;
+	}
+
+	/** Запасной вариант: уровень силы из процента — это тот же пресет, что лежал в меню. */
+	private static String levelFor(int strengthPercent) {
+		if (strengthPercent <= 25) {
+			return "soft";
+		}
+		return strengthPercent > 60 ? "strong" : "medium";
+	}
+
+	private static Identifier chainFor(String level, int band) {
+		int index = switch (level) {
+			case "soft" -> 0;
+			case "strong" -> 2;
+			default -> 1;
+		};
+		index = Math.max(0, Math.min(2, index + band));
+		return switch (index) {
+			case 0 -> CHAIN_SOFT;
+			case 2 -> CHAIN_STRONG;
+			default -> CHAIN_MEDIUM;
+		};
+	}
+
+	/** Раз в сессию объясняем, почему сила снова стала пресетом. */
+	private void announceFallbackIfNeeded() {
+		if (fallbackAnnounced) {
+			return;
+		}
+		fallbackAnnounced = true;
+		String error = PostFx.lastError();
+		warn(error.isEmpty()
+				? "Motion Blur: свою цепочку собрать ещё не успели — пока работаем на пресетах"
+				: "Motion Blur: свою цепочку собрать не вышло (" + error + "), работаем на пресетах");
 	}
 
 	private boolean blockedByIris() {
@@ -150,7 +230,10 @@ public class MotionBlurModule extends Module {
 	@Override
 	protected void onDisable() {
 		// Цепочку чистить руками не нужно: ваниль сама обнулит postEffectId в
-		// ближайшем checkEntityPostEffect, и следующий кадр пойдёт без нас
+		// ближайшем checkEntityPostEffect. А вот свою — надо: она держит две цели.
+		declared = null;
 		lastWarningMs = 0L;
+		fallbackAnnounced = false;
+		PostFx.forget(RUNTIME_CHAIN);
 	}
 }

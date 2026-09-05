@@ -19,7 +19,8 @@
     "LocalPlayerMixin",
     "LocalPlayerRotationMixin",
     "MultiPlayerGameModeMixin",
-    "ScreenEffectRendererMixin"
+    "ScreenEffectRendererMixin",
+    "ShaderManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
