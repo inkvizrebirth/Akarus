@@ -1103,7 +1103,8 @@ public final class HudRenderer {
 
 		int accent = ClientTheme.gradientAt(0.4f, Util.getMillis());
 
-		UiKit.panel(graphics, x, y, width, height, 6.0F, alpha, 0.08F, Util.getMillis());
+		// Плашка AutoWalk всегда непрозрачная: это подсказка действия, а не элемент HUD
+		UiKit.panel(graphics, x, y, width, height, 6.0F, 1.0F, 0.14F, Util.getMillis());
 		graphics.fill(x + 7, y, x + width - 7, y + 1, RenderUtils.withAlpha(accent, 0.9f));
 
 		RenderUtils.text(graphics, font, title, x + PADDING + 3, y + PADDING + 1, TEXT_COLOR);
