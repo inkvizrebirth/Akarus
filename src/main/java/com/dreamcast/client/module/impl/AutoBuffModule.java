@@ -661,6 +661,11 @@ public class AutoBuffModule extends Module {
 			finishAction();
 			return;
 		}
+		if (RotationManager.active()) {
+			// Поворот уже перехватила аура (или ещё один модуль) — лезть в углы
+			// двумя руками нельзя: вернём взгляд на тик позже, когда освободится
+			return;
+		}
 		boolean instant = restorePlan.isInterrupted() || mode.is("fast")
 				|| (kind == PotionLogic.Kind.SPLASH && throwStyle.is("fast"));
 		if (instant) {
