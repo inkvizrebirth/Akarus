@@ -644,7 +644,7 @@ public final class HudRenderer {
 		int right = x + width - 8;
 		RenderUtils.textBold(graphics, font, RenderUtils.clamp(font, name, right - textX - 30), textX, y + 7,
 				RenderUtils.withAlpha(0xFFF6F8FF, element));
-		String side = String.format(java.util.Locale.ROOT, "%.1f \u0431\u043b.", distance);
+		String side = String.format(java.util.Locale.ROOT, "%.1f бл.", distance);
 		RenderUtils.textFlat(graphics, font, side, right - RenderUtils.width(font, side), y + 9,
 				RenderUtils.withAlpha(0xFF9A9DAE, element));
 
@@ -881,12 +881,12 @@ public final class HudRenderer {
 		int accent = ClientTheme.accent(now);
 		UiKit.panel(graphics, x, y, width, height, 6.0F, alpha, 0.1F, now);
 
-		UiKit.tracked(graphics, font, "\u0421\u041a\u041e\u0420\u041e\u0421\u0422\u042c", x + 8, y + 6, alpha, 1);
+		UiKit.tracked(graphics, font, "СКОРОСТЬ", x + 8, y + 6, alpha, 1);
 		// Число крупно, единица — рядом мелко
 		String value = String.format(java.util.Locale.ROOT, "%.1f", bps);
 		RenderUtils.textBold(graphics, font, value, x + 8, y + 16,
 				RenderUtils.withAlpha(0xFFF6F8FF, alpha));
-		RenderUtils.textFlat(graphics, font, "\u0431/\u0441", x + 10 + RenderUtils.width(font, value), y + 18,
+		RenderUtils.textFlat(graphics, font, "б/с", x + 10 + RenderUtils.width(font, value), y + 18,
 				RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
 
 		// Короткий бар: доля от авто-масштаба
@@ -938,6 +938,7 @@ public final class HudRenderer {
 	// ------------------------------------------------------------------
 
 	private static void drawCoords(GuiGraphicsExtractor graphics, Minecraft client, float alpha) {
+		long now = Util.getMillis();
 		LocalPlayer player = client.player;
 		Font font = client.font;
 		int[] position = HudLayout.position(HudInfoModule.ELEMENT_COORDS, MARGIN, 232);
@@ -948,10 +949,10 @@ public final class HudRenderer {
 		HudLayout.publishBounds(HudInfoModule.ELEMENT_COORDS, x, y, width, height);
 
 		UiKit.panel(graphics, x, y, width, height, 6.0F, alpha, 0.1F, now);
-		UiKit.header(graphics, font, "\u041a\u043e\u043e\u0440\u0434\u0438\u043d\u0430\u0442\u044b", "auto_walk",
-				x + 8, y + 6, width - 16, alpha, Util.getMillis());
+		UiKit.header(graphics, font, "Координаты", "auto_walk",
+				x + 8, y + 6, width - 16, alpha, now);
 		if (player == null) {
-			RenderUtils.textFlat(graphics, font, "\u043d\u0435\u0442 \u043c\u0438\u0440\u0430", x + 8, y + 24,
+			RenderUtils.textFlat(graphics, font, "нет мира", x + 8, y + 24,
 					RenderUtils.withAlpha(TEXT_SECONDARY, alpha));
 			return;
 		}
@@ -1025,11 +1026,11 @@ public final class HudRenderer {
 			subtitle = RenderUtils.clamp(font, media.errorText(), width - 16);
 		} else {
 			title = RenderUtils.clamp(font, stripExtension(media.currentName()),
-					width - 24 - RenderUtils.width(font, playing ? "\u25B6" : "\u275A\u275A"));
+					width - 24 - RenderUtils.width(font, playing ? "▶" : "❚❚"));
 			subtitle = formatTime(media.positionMillis()) + " / " + formatTime(Math.max(1L, media.durationMillis()));
 		}
 
-		RenderUtils.textFlat(graphics, font, playing ? "\u25B6" : "\u275A\u275A", x + 8, y + 7,
+		RenderUtils.textFlat(graphics, font, playing ? "▶" : "❚❚", x + 8, y + 7,
 				RenderUtils.withAlpha(accent, (playing ? 0.95f : 0.5f) * alpha));
 		RenderUtils.text(graphics, font, title, x + 20, y + 7, RenderUtils.withAlpha(TEXT_COLOR, alpha));
 

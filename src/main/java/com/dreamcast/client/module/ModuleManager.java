@@ -6,6 +6,7 @@ import com.dreamcast.client.module.impl.AutoGgModule;
 import com.dreamcast.client.module.impl.AutoMineModule;
 import com.dreamcast.client.module.impl.BaritoneModule;
 import com.dreamcast.client.module.impl.CosmosModule;
+import com.dreamcast.client.module.impl.CustomGuiModule;
 import com.dreamcast.client.module.impl.RainModule;
 import com.dreamcast.client.module.impl.GlintColorModule;
 import com.dreamcast.client.module.impl.AutoTotemModule;
@@ -96,6 +97,7 @@ public final class ModuleManager {
 		register(new GlintColorModule());
 		register(new RainModule());
 		register(new CosmosModule());
+		register(new CustomGuiModule());
 	}
 
 	public static void register(Module module) {

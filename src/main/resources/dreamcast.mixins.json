@@ -20,7 +20,10 @@
     "LocalPlayerRotationMixin",
     "MultiPlayerGameModeMixin",
     "ScreenEffectRendererMixin",
-    "ShaderManagerMixin"
+    "ShaderManagerMixin",
+    "ScreenStyleMixin",
+    "ContainerStyleMixin",
+    "ScreenSwapMixin"
   ],
   "injectors": {
     "defaultRequire": 1
