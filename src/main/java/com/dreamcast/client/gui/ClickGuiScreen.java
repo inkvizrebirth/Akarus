@@ -704,9 +704,8 @@ public class ClickGuiScreen extends Screen {
 		boolean open = key.equals(focusedElementList);
 		float hover = hoverProgress(key, box.contains(mouseX, mouseY));
 
-		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 5,
-				RenderUtils.mix(0x10FFFFFF, accent, hover * 0.25f),
-				RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.5f));
+		UiKit.tile(graphics, box.x(), box.y(), box.width(), box.height() - 2, 5,
+				1.0F, hover, Util.getMillis());
 		String summary = setting.count() == 0 ? "ничего не выбрано"
 				: setting.count() == 1 ? "1 выбран" : setting.count() + " выбрано";
 		RenderUtils.textFlat(graphics, font, setting.getName() + " · " + summary, box.x() + 9, box.y() + 5,
@@ -783,9 +782,8 @@ public class ClickGuiScreen extends Screen {
 		float expand = open ? Math.min(1.0f, (Util.getMillis() - openedAt) / 220.0f) : 0.0f;
 		float eased = expand * expand * (3.0f - 2.0f * expand);
 
-		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height(), 5,
-				RenderUtils.mix(0x10FFFFFF, accent, Math.max(hover, eased * 0.5f) * 0.35f),
-				RenderUtils.mix(0x80000000, 0x14FFFFFF, Math.max(hover, eased * 0.5f) * 0.6f));
+		UiKit.tile(graphics, box.x(), box.y(), box.width(), box.height(), 5,
+				1.0F, Math.max(hover, eased * 0.5f), Util.getMillis());
 
 		// Заголовок: имя настройки и сколько блоков выбрано
 		int textY = box.y() + 4;
@@ -905,9 +903,8 @@ public class ClickGuiScreen extends Screen {
 		float hover = hoverProgress(key, box.contains(mouseX, mouseY));
 		int textY = box.y() + (box.height() - 2 - font.lineHeight) / 2 + 1;
 
-		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
-				RenderUtils.mix(0x10FFFFFF, accent, hover * 0.35f),
-				RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.6f));
+		UiKit.tile(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
+				1.0F, hover, Util.getMillis());
 
 		List<Hitbox> segments = modeSegments(font, setting, box);
 		if (segments.isEmpty()) {
@@ -1006,8 +1003,8 @@ public class ClickGuiScreen extends Screen {
 		float hover = hoverProgress(key, box.contains(mouseX, mouseY) || focused);
 
 		int border = focused ? accent : RenderUtils.mix(0x10FFFFFF, accent, hover * 0.35f);
-		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4, border,
-				RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.6f));
+		UiKit.tile(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
+				1.0F, Math.max(hover, focused ? 1.0F : 0.0F), Util.getMillis());
 
 		int textY = box.y() + (box.height() - 2 - font.lineHeight) / 2 + 1;
 
@@ -1039,8 +1036,8 @@ public class ClickGuiScreen extends Screen {
 		Font font = this.font;
 		float hover = hoverProgress(key, box.contains(mouseX, mouseY));
 
-		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
-				0x10FFFFFF, RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.6f));
+		UiKit.tile(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
+				1.0F, hover, Util.getMillis());
 
 		int textY = box.y() + (box.height() - 2 - font.lineHeight) / 2 + 1;
 
@@ -1066,8 +1063,8 @@ public class ClickGuiScreen extends Screen {
 		float hover = hoverProgress(key, box.contains(mouseX, mouseY));
 		float toggle = toggleProgress(key, setting);
 
-		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
-				0x10FFFFFF, RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.6f));
+		UiKit.tile(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
+				1.0F, hover, Util.getMillis());
 
 
 		RenderUtils.textFlat(graphics, font, RenderUtils.clamp(font, setting.getName(), box.width() - SETTING_TOGGLE_WIDTH - 26),
@@ -1084,9 +1081,8 @@ public class ClickGuiScreen extends Screen {
 		boolean active = setting == draggingSetting;
 		float hover = hoverProgress(key, box.contains(mouseX, mouseY) || active);
 
-		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
-				RenderUtils.mix(0x10FFFFFF, accent, hover * 0.35f),
-				RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.6f));
+		UiKit.tile(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
+				1.0F, hover, Util.getMillis());
 
 		int textY = box.y() + 4;
 		String value = String.valueOf(setting.get());
@@ -1111,8 +1107,8 @@ public class ClickGuiScreen extends Screen {
 		float hover = hoverProgress(key, box.contains(mouseX, mouseY) || focused);
 
 		int border = focused ? accent : RenderUtils.mix(0x10FFFFFF, accent, hover * 0.35f);
-		RenderUtils.fillRoundedBorder(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4, border,
-				RenderUtils.mix(0x80000000, 0x14FFFFFF, hover * 0.6f));
+		UiKit.tile(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
+				1.0F, Math.max(hover, focused ? 1.0F : 0.0F), Util.getMillis());
 
 		int textY = box.y() + (box.height() - 2 - font.lineHeight) / 2 + 1;
 		int textX = box.x() + 9;

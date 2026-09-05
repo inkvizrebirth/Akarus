@@ -256,4 +256,39 @@ public final class UiKit {
 	public static void backdrop(GuiGraphicsExtractor graphics, Minecraft client, int width, int height, float alpha) {
 		graphics.fill(0, 0, width, height, RenderUtils.withAlpha(0xC405050A, alpha));
 	}
+
+	/**
+	 * Плитка-подложка для мелких контролов: строки настроек, чипы, поля.
+	 * Та же стекло-речь, что у большой панели, но без тени и градиента —
+	 * тёмная заливка, светлая кромка, блик сверху и волосяная акцентная линия
+	 * снизу. `hover` (0..1) заставляет кромку и линию светиться темой.
+	 */
+	public static void tile(GuiGraphicsExtractor graphics, int x, int y, int width, int height, double radius,
+	                        float alpha, float hover, long now) {
+		if (width <= 0 || height <= 0 || alpha <= 0.002F) {
+			return;
+		}
+		float h = Math.max(0.0F, Math.min(1.0F, hover));
+		int accent = ClientTheme.accent(now);
+		int base = RenderUtils.withAlpha(RenderUtils.mix(0xFF121117, RenderUtils.withAlpha(accent, 0xFF),
+				0.05F + h * 0.14F), Math.min(1.0F, alpha));
+		RenderUtils.fillRounded(graphics, x, y, width, height, radius,
+				RenderUtils.withAlpha(OUTER_RING, 0.5F * alpha));
+		RenderUtils.fillRounded(graphics, x + 1, y + 1, width - 2, height - 2, Math.max(0.0, radius - 1.0), base);
+
+		int rim = RenderUtils.mix(0x33FFFFFF, accent, 0.22F + h * 0.45F);
+		RenderUtils.fillRounded(graphics, x + 1, y + 1, width - 2, height - 2, Math.max(0.0, radius - 1.0),
+				RenderUtils.withAlpha(rim, 0.55F * alpha), RenderUtils.withAlpha(rim, 0.16F * alpha));
+		graphics.fill(x + (int) Math.min(radius, width / 2), y + 2,
+				x + width - (int) Math.min(radius, width / 2), y + 3, RenderUtils.withAlpha(SPECULAR, 0.34F * alpha));
+
+		int span = width - 2 * (int) radius;
+		if (height > 9 && span > 2) {
+			for (int i = 0; i < span; i++) {
+				float tt = i / (float) span;
+				graphics.fill(x + (int) radius + i, y + height - 2, x + (int) radius + i + 1, y + height - 1,
+						RenderUtils.withAlpha(ClientTheme.gradientAt(tt, now), (0.20F + 0.34F * h) * alpha));
+			}
+		}
+	}
 }
