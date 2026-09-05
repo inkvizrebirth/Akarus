@@ -55,6 +55,24 @@ for cls in net.minecraft.client.renderer.GameRenderer net.minecraft.client.rende
   javap -p -cp "$JAR" "$cls" 2>/dev/null | grep -iE "hand|arm|item" | head -14 >> "$OUT"
 done
 
+
+echo "=== шейдер блика (для «кастомного цвета зачарования») ===" >> "$OUT"
+for f in assets/minecraft/shaders/core/glint.fsh assets/minecraft/shaders/core/glint.vsh; do
+  echo "--- $f ---" >> "$OUT"
+  unzip -p "$JAR" "$f" >> "$OUT" 2>&1
+done
+
+echo "=== Options: glint/particle/cloud + SoundManager/LevelRenderer по небу и погоде ===" >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.Options 2>/dev/null | grep -iE "glint|particle|cloud|brightness" | head -20 >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.multiplayer.ClientLevel 2>/dev/null | grep -iE "rain|snow|thunder|weather|sky" | head -20 >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.renderer.LevelRenderer 2>/dev/null | grep -iE "sky|weather|rain|snow|glint" | head -24 >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.renderer.GameRenderer 2>/dev/null | grep -iE "sky|weather|item|hand|glint" | head -20 >> "$OUT"
+javap -p -cp "$JAR" com.mojang.blaze3d.systems.RenderSystem 2>/dev/null | grep -iE "color4|shader|glin|clearColor" | head -18 >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.sounds.SoundManager 2>/dev/null | grep -iE "play|stop|reload" | head -14 >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.renderer.state.level.CameraRenderState 2>/dev/null | head -22 >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.renderer.fog.FogRenderer 2>/dev/null | head -40 >> "$OUT"
+javap -p -cp "$JAR" net.minecraft.client.renderer.item.ItemRenderer 2>/dev/null | grep -iE "glint|render" | head -14 >> "$OUT"
+
 echo "=== ресурсы шейдеров в jar ===" >> "$OUT"
 unzip -l "$JAR" 2>/dev/null | grep -E "shaders/(core|post)/|\.glsl$" | awk '{print $4}' | head -60 >> "$OUT"
 echo "=== ShaderManager: как строится цепочка (пост-эффекты) ===" >> "$OUT"
