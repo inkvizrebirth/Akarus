@@ -409,12 +409,18 @@ public class ClickGuiScreen extends Screen {
 				graphics.fill(box.x(), box.y() + 5, box.x() + 2, box.y() + box.height() - 5, accent);
 			}
 
-			int textColor = isSelected ? TEXT_PRIMARY : RenderUtils.mix(TEXT_SECONDARY, TEXT_PRIMARY, hover);
+			// Подпись и глиф категории читаются «по-настоящему»: под полупрозрачной
+			// пилюлей — стекло панели, и контраст считаем именно против результата,
+			// а не против цвета темы (иначе при светлом акценте белый текст пропадал)
+			int pill = RenderUtils.opaqueOver(background, glassBackdrop());
+			int textColor = RenderUtils.readableOn(pill,
+					isSelected ? TEXT_PRIMARY : RenderUtils.mix(TEXT_SECONDARY, TEXT_PRIMARY, hover), 4.2f);
 			int pressDy = Math.round(pressProgress("category:" + category.name()) * 1.5f);
 			// Иконка категории: красится акцентом при выборе, приглушена — без
 			RenderUtils.textFlat(graphics, font, category.getGlyph(), box.x() + 9,
 					box.y() + (box.height() - font.lineHeight) / 2 + 1 + pressDy,
-					isSelected ? accent : RenderUtils.mix(TEXT_DIM, accent, hover * 0.5f));
+					RenderUtils.readableOn(pill, isSelected ? accent
+							: RenderUtils.mix(TEXT_DIM, accent, hover * 0.5f), 3.0f));
 			RenderUtils.textFlat(graphics, font, RenderUtils.clamp(font, category.getDisplayName(), box.width() - 44), box.x() + 19,
 					box.y() + (box.height() - font.lineHeight) / 2 + 1 + pressDy, textColor);
 
@@ -510,10 +516,22 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	/** Иконка модуля с тинтом под состояние. */
+	/**
+	 * Приблизительный непрозрачный цвет «стекла» панели: то, на что реально ложатся
+	 * текст и иконки. Нужен, чтобы проверять контраст, а не угадывать его.
+	 */
+	private int glassBackdrop() {
+		return RenderUtils.opaqueOver(RenderUtils.mix(panelTop(), panelBottom(), 0.5f), 0xFF1A1A20);
+	}
+
 	private void drawModuleIcon(GuiGraphicsExtractor graphics, Module module, int x, int y, int accent) {
-		int color = module.isAlwaysEnabled()
+		int raw = module.isAlwaysEnabled()
 				? RenderUtils.mix(TEXT_SECONDARY, accent, 0.45f)
 				: module.isEnabled() ? accent : RenderUtils.mix(TEXT_DIM, 0xFFFFFFFF, 0.18f);
+		// Иконка — тоже «текст» по смыслу: на тёмном стекле тёмный акцент пропадал,
+		// и включённый модуль выглядел выключенным. Требование контраста чуть мягче
+		// обычного (3.0), потому что иконка крупная
+		int color = RenderUtils.readableOn(glassBackdrop(), raw, 3.0F);
 		drawIcon(graphics, MODULE_ICONS.getOrDefault(module.getId(), module.getId()), x, y, 13, color);
 	}
 
@@ -915,10 +933,18 @@ public class ClickGuiScreen extends Screen {
 						3, background);
 
 				String label = setting.labels().get(i);
+				// Подпись сегмента режима. Раньше выбранному сегменту жёстко давали
+				// почти чёрный цвет — при тёмном акценте темы фон сегмента тоже
+				// тёмный, и надпись становилась нечитаемой. Считаем фон честно
+				// (полупрозрачный слой поверх панели) и берём тот вариант цвета,
+				// который на нём различим.
+				int backdrop = RenderUtils.opaqueOver(background, glassBackdrop());
+				int textColor = RenderUtils.readableOn(backdrop, selected
+						? 0xFF0D0D10
+						: RenderUtils.mix(TEXT_SECONDARY, TEXT_PRIMARY, hover), 4.2f);
 				RenderUtils.textFlat(graphics, font, RenderUtils.clamp(font, label, segment.width() - 8),
 						segment.x() + (segment.width() - RenderUtils.width(font, label)) / 2,
-						segment.y() + (segment.height() - font.lineHeight) / 2 + 1,
-						selected ? 0xFF0D0D10 : RenderUtils.mix(TEXT_SECONDARY, TEXT_PRIMARY, hover));
+						segment.y() + (segment.height() - font.lineHeight) / 2 + 1, textColor);
 			}
 		}
 

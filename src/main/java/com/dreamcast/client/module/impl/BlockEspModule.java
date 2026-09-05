@@ -40,6 +40,7 @@ public class BlockEspModule extends Module {
 	private final ColorSetting color = colorSetting("color", "Цвет", 0xFFFFC66C);
 	private final BooleanSetting rainbow = bool("rainbow", "Радуга", false);
 	private final IntSetting lineWidth = intSetting("line_width", "Толщина линий", 2, 1, 8);
+	private final BooleanSetting fill = bool("fill", "Заливка граней", true);
 
 	/** Лимит одновременно рисуемых боксов: иначе спам тысячами убьёт кадр. */
 	private static final int MAX_BOXES = 1024;
@@ -187,5 +188,15 @@ public class BlockEspModule extends Module {
 
 	public int lineWidth() {
 		return lineWidth.get();
+	}
+
+	/** Заливать грани полупрозрачным цветом (блок читается как объём, а не как рамка). */
+	public boolean fill() {
+		return fill.isEnabled();
+	}
+
+	/** Радиус поиска в блоках — нужен рендеру, чтобы гасить боксы у границы. */
+	public int radiusBlocks() {
+		return radius.get();
 	}
 }

@@ -126,6 +126,13 @@ public final class WorldRenderHook {
 
 	private static TargetBar targetBar;
 
+	/** Контур сдвигаем внутрь блока — против z-fighting с его же гранью. */
+	private static final double BLOCK_INSET = 0.0045;
+	/** Призрак установки, наоборот, слегка расширен: грань клетки совпадает с блоком под ней. */
+	private static final double GHOST_EXPAND = 0.0035;
+	/** Больше этого числа боксов заливку не рисуем: 12 треугольников на каждый — дорого. */
+	private static final int MAX_FILLED_BOXES = 220;
+
 	/** Боксы BlockESP (целые координаты). */
 	private static List<com.dreamcast.client.module.impl.BlockEspModule.BlockBox> blockBoxes = List.of();
 
@@ -409,15 +416,32 @@ public final class WorldRenderHook {
 		}
 		float width = blockEsp.lineWidth();
 		boolean corners = blockEsp.cornersOnly();
+		// Заливка только когда боксов немного: 12 треугольников на каждый — это
+		// приятно глазу до сотен целей и уже дорого на них
+		boolean fill = blockEsp.fill() && boxes.size() <= MAX_FILLED_BOXES;
+		double fadeRadius = blockEsp.radiusBlocks();
 
 		for (com.dreamcast.client.module.impl.BlockEspModule.BlockBox box : boxes) {
-			double minX = box.x() - camX;
-			double minY = box.y() - camY;
-			double minZ = box.z() - camZ;
-			double maxX = minX + 1.0;
-			double maxY = minY + 1.0;
-			double maxZ = minZ + 1.0;
-			int color = withAlpha(blockEsp.lineColor(box.phase()), 0xE0);
+			// Контур сдвигаем ВНУТРЬ блока: ровно по границе линия лежит в той же
+			// плоскости, что грань мира, и начинается z-fighting — «мерцающая рамка»
+			// на каждом кадре. 0.0045 блока хватает, чтобы мерцание пропало, и
+			// недостаточно, чтобы рамка visibly «отползла» от блока.
+			double minX = box.x() - camX + BLOCK_INSET;
+			double minY = box.y() - camY + BLOCK_INSET;
+			double minZ = box.z() - camZ + BLOCK_INSET;
+			double maxX = box.x() - camX + 1.0 - BLOCK_INSET;
+			double maxY = box.y() - camY + 1.0 - BLOCK_INSET;
+			double maxZ = box.z() - camZ + 1.0 - BLOCK_INSET;
+
+			// Плавное затухание у границы радиуса: иначе блоки на пределе то
+			// появляются, то исчезают целыми пачками при малейшем движении
+			float fade = distanceFade(minX, minY, minZ, maxX, maxY, maxZ, fadeRadius);
+			int color = withAlpha(blockEsp.lineColor(box.phase()), (int) (0xE0 * fade));
+
+			if (fill) {
+				int soft = withAlpha(blockEsp.lineColor(box.phase()), (int) (0x26 * fade));
+				drawBoxFaces(pose, buffer, minX, minY, minZ, maxX, maxY, maxZ, soft);
+			}
 
 			if (corners) {
 				drawCornerBrackets(pose, buffer, minX, minY, minZ, maxX, maxY, maxZ, color, color, width, unitsPerPixel);
@@ -442,13 +466,21 @@ public final class WorldRenderHook {
 	private static void drawScaffoldPreview(net.minecraft.core.BlockPos pos, PoseStack.Pose pose,
 	                                        VertexConsumer buffer,
 	                                        double camX, double camY, double camZ, float unitsPerPixel) {
-		double minX = pos.getX() - camX;
-		double minY = pos.getY() - camY;
-		double minZ = pos.getZ() - camZ;
-		double maxX = minX + 1.0;
-		double maxY = minY + 1.0;
-		double maxZ = minZ + 1.0;
-		int color = withAlpha(0x55FF55, 0xB0);
+		// Призрак ставится в пустую клетку, но её нижняя грань совпадает с гранью
+		// блока под ней — поэтому рамку слегка РАСШИРЯЕМ (не сдвигаем внутрь, как
+		// у BlockESP): призрак должен читаться как «сюда встанет», а не как «здесь
+		// уже стоит».
+		double minX = pos.getX() - camX - GHOST_EXPAND;
+		double minY = pos.getY() - camY - GHOST_EXPAND;
+		double minZ = pos.getZ() - camZ - GHOST_EXPAND;
+		double maxX = pos.getX() - camX + 1.0 + GHOST_EXPAND;
+		double maxY = pos.getY() - camY + 1.0 + GHOST_EXPAND;
+		double maxZ = pos.getZ() - camZ + 1.0 + GHOST_EXPAND;
+		// Мягкий пульс: «сюда» видно даже боковым зрением, и оно не выглядит статичной рамкой
+		float pulse = 0.80F + 0.20F * (float) Math.sin(Util.getMillis() / 320.0);
+		int color = withAlpha(0x55FF55, (int) (0xC0 * pulse));
+		drawBoxFaces(pose, buffer, minX, minY, minZ, maxX, maxY, maxZ,
+				withAlpha(0x55FF55, (int) (0x2E * pulse)));
 		for (int[] edge : BOX_EDGES) {
 			double x0 = edge[0] == 0 ? minX : maxX;
 			double y0 = edge[1] == 0 ? minY : maxY;
@@ -458,6 +490,43 @@ public final class WorldRenderHook {
 			double z1 = edge[5] == 0 ? minZ : maxZ;
 			WorldGeometryRenderer.line(buffer, pose, x0, y0, z0, color, x1, y1, z1, color, 1.5F, unitsPerPixel);
 		}
+	}
+
+	/** Шесть граней бокса полупрозрачным цветом: блок читается объёмом. */
+	private static void drawBoxFaces(PoseStack.Pose pose, VertexConsumer buffer,
+	                                 double minX, double minY, double minZ,
+	                                 double maxX, double maxY, double maxZ, int color) {
+		// низ / верх
+		WorldGeometryRenderer.triangle(buffer, pose, minX, minY, minZ, color, maxX, minY, minZ, color, maxX, minY, maxZ, color);
+		WorldGeometryRenderer.triangle(buffer, pose, minX, minY, minZ, color, maxX, minY, maxZ, color, minX, minY, maxZ, color);
+		WorldGeometryRenderer.triangle(buffer, pose, minX, maxY, minZ, color, maxX, maxY, maxZ, color, maxX, maxY, minZ, color);
+		WorldGeometryRenderer.triangle(buffer, pose, minX, maxY, minZ, color, minX, maxY, maxZ, color, maxX, maxY, maxZ, color);
+		// четыре боковых
+		WorldGeometryRenderer.triangle(buffer, pose, minX, minY, minZ, color, maxX, minY, minZ, color, maxX, maxY, minZ, color);
+		WorldGeometryRenderer.triangle(buffer, pose, minX, minY, minZ, color, maxX, maxY, minZ, color, minX, maxY, minZ, color);
+		WorldGeometryRenderer.triangle(buffer, pose, minX, minY, maxZ, color, maxX, maxY, maxZ, color, maxX, minY, maxZ, color);
+		WorldGeometryRenderer.triangle(buffer, pose, minX, minY, maxZ, color, minX, maxY, maxZ, color, maxX, maxY, maxZ, color);
+		WorldGeometryRenderer.triangle(buffer, pose, minX, minY, minZ, color, minX, maxY, minZ, color, minX, maxY, maxZ, color);
+		WorldGeometryRenderer.triangle(buffer, pose, minX, minY, minZ, color, minX, maxY, maxZ, color, minX, minY, maxZ, color);
+		WorldGeometryRenderer.triangle(buffer, pose, maxX, minY, minZ, color, maxX, minY, maxZ, color, maxX, maxY, maxZ, color);
+		WorldGeometryRenderer.triangle(buffer, pose, maxX, minY, minZ, color, maxX, maxY, maxZ, color, maxX, maxY, minZ, color);
+	}
+
+	/**
+	 * Затухание у границы радиуса: последний «хвост» радиуса (30 %) плавно гаснет.
+	 * Без него блоки на пределе дальности вспыхивают и гаснут пачками при шаге игрока.
+	 */
+	private static float distanceFade(double minX, double minY, double minZ,
+	                                  double maxX, double maxY, double maxZ, double radius) {
+		double dx = (minX + maxX) * 0.5;
+		double dy = (minY + maxY) * 0.5;
+		double dz = (minZ + maxZ) * 0.5;
+		double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+		if (radius <= 1.0 || dist < radius * 0.7) {
+			return 1.0F;
+		}
+		float t = (float) Math.max(0.0, Math.min(1.0, (radius - dist) / (radius * 0.3)));
+		return 0.15F + 0.85F * t;
 	}
 
 	// ------------------------------------------------------------------

@@ -274,6 +274,75 @@ public final class RenderUtils {
 	// ------------------------------------------------------------------
 
 	/** Линейное смешивание двух ARGB-цветов. t = 0 — первый цвет, t = 1 — второй. */
+	/**
+	 * Относительная яркость цвета по WCAG (0..1): sRGB-каналы переводятся в
+	 * линейные и взвешиваются 0.2126/0.7152/0.0722.
+	 *
+	 * <p>Нужно для того, чтобы «видно или не видно текст» решалось числом, а не
+	 * глазами в игре: пользователь может выбрать тёмный акцент темы — и подписи
+	 * на тёмном стекле пропадут. Альфа канала игнорируется: передавайте цвет
+	 * уже смешанным с фоном (см. {@link #opaqueOver}).</p>
+	 */
+	public static float luminance(int argb) {
+		return 0.2126F * srgbChannel(argb >> 16) + 0.7152F * srgbChannel(argb >> 8)
+				+ 0.0722F * srgbChannel(argb);
+	}
+
+	private static float srgbChannel(int value) {
+		float c = (value & 0xFF) / 255.0F;
+		return c <= 0.03928F ? c / 12.92F : (float) Math.pow((c + 0.055F) / 1.055F, 2.4);
+	}
+
+	/** Контраст двух цветов по WCAG: 1 — неразличимы, 21 — чёрный по белому. */
+	public static float contrast(int first, int second) {
+		float a = luminance(first);
+		float b = luminance(second);
+		float light = Math.max(a, b);
+		float dark = Math.min(a, b);
+		return (light + 0.05F) / (dark + 0.05F);
+	}
+
+	/** Альфа-смешение поверх непрозрачного фона — то, что глаз реально увидит. */
+	public static int opaqueOver(int source, int background) {
+		int alpha = source >>> 24;
+		if (alpha >= 250) {
+			return 0xFF000000 | (source & 0xFFFFFF);
+		}
+		if (alpha <= 0) {
+			return 0xFF000000 | (background & 0xFFFFFF);
+		}
+		float t = alpha / 255.0F;
+		int red = Math.round(((source >> 16) & 0xFF) * t + ((background >> 16) & 0xFF) * (1.0F - t));
+		int green = Math.round(((source >> 8) & 0xFF) * t + ((background >> 8) & 0xFF) * (1.0F - t));
+		int blue = Math.round((source & 0xFF) * t + (background & 0xFF) * (1.0F - t));
+		return 0xFF000000 | (clamp255(red) << 16) | (clamp255(green) << 8) | clamp255(blue);
+	}
+
+	private static int clamp255(int value) {
+		return value < 0 ? 0 : Math.min(value, 255);
+	}
+
+	/**
+	 * Цвет текста, который читается на фоне. Если контраста нет — предпочитаемый
+	 * цвет тянем к белому или к чёрному (тон сохраняется, поэтому «акцентный»
+	 * текст остаётся акцентным, просто светлеет), выбирая вариант с лучшим контрастом.
+	 *
+	 * @param minRatio минимально приемлемый контраст (WCAG: 3 — крупный текст, 4.5 — обычный)
+	 */
+	public static int readableOn(int background, int preferred, float minRatio) {
+		if (contrast(background, preferred) >= minRatio) {
+			return preferred;
+		}
+		int light = mix(preferred, 0xFFFFFFFF, 0.92F);
+		int dark = mix(preferred, 0xFF0D0D10, 0.92F);
+		return contrast(background, light) >= contrast(background, dark) ? light : dark;
+	}
+
+	/** То же, но для обычного текста по умолчанию (контраст 4.5). */
+	public static int readableOn(int background, int preferred) {
+		return readableOn(background, preferred, 4.5F);
+	}
+
 	public static int mix(int first, int second, float t) {
 		float k = clamp01(t);
 		return ARGB.color(
