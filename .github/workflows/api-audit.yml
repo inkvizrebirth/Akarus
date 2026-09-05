@@ -24,6 +24,7 @@ jobs:
           cache-read-only: false
       - name: Разобрать кэш и достать классы
         run: |
+          set +e
           mkdir -p out
           find .gradle-cache ~/.gradle/caches -name "*.jar" 2>/dev/null | while read -r j; do
             if unzip -l "$j" 2>/dev/null | grep -q "net/minecraft/client/renderer/GameRenderer.class"; then echo "$j"; fi
@@ -75,6 +76,7 @@ jobs:
           javap -p -cp "$D" net.minecraft.client.renderer.PostChain\$TargetBundle 2>&1
       - name: Закоммитить результат
         run: |
+          set +e
           git config user.name "arena-agent"
           git config user.email "297053741+arena-agent@users.noreply.github.com"
           git pull --rebase -q || true
