@@ -146,3 +146,31 @@ done
 echo "--- GuiSprite/GuiAtlas ---" >> "$OUT"
 javap -p -cp "$JAR" net.minecraft.client.gui.GuiSprite 2>/dev/null | grep -iE "public" | head -18 >> "$OUT"
 javap -p -cp "$JAR" net.minecraft.client.gui.components.WidgetSprites 2>/dev/null | head -14 >> "$OUT"
+
+echo "=== размеры и нарезка gui-спрайтов (для нашей перекраски) ===" >> "$OUT"
+python3 - "$JAR" <<'PYEOF' >> "$OUT" 2>&1
+import struct, zipfile, json, sys
+z = zipfile.ZipFile(sys.argv[1])
+want = [n for n in z.namelist() if n.startswith("assets/minecraft/textures/gui/sprites/") and n.endswith(".png")]
+want += [n for n in z.namelist() if n.startswith("assets/minecraft/textures/gui/") and n.endswith(".png")
+         and "/sprites/" not in n]
+def dims(data):
+    if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    w, h = struct.unpack(">II", data[16:24])
+    return w, h
+for name in sorted(want):
+    meta = name + ".mcmeta"
+    extra = ""
+    if meta in z.namelist():
+        try:
+            j = json.loads(z.read(meta))
+            b = j.get("texture", {}).get("borders")
+            extra = " borders=%s blur=%s" % (b, j.get("texture", {}).get("blur"))
+        except Exception as e:
+            extra = " meta?<%s>" % e
+    d = dims(z.read(name))
+    short = name.replace("assets/minecraft/textures/gui/", "")
+    print("  %-64s %s%s" % (short, "%dx%d" % d if d else "?", extra))
+print("  всего:", len(want))
+PYEOF
