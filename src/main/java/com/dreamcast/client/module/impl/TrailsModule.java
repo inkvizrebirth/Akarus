@@ -196,9 +196,13 @@ public class TrailsModule extends Module {
 	/**
 	 * Цвет следа в точке t (0 — у игрока, 1 — в хвосте) с учётом настроек.
 	 * time — текущее время для радуги.
+	 *
+	 * Перегружение без времени существует для «не рендерных» мест (цвет партиклов
+	 * в тике). Часы берём те же, что и для возраста точек ({@code Util.getMillis}),
+	 * иначе фаза радуги и затухание считаются по разным шкалам.
 	 */
 	public int trailColor(float t) {
-		return trailColor(t, System.currentTimeMillis());
+		return trailColor(t, net.minecraft.util.Util.getMillis());
 	}
 
 	public int trailColor(float t, long timeMillis) {

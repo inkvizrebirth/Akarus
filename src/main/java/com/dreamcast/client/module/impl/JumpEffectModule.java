@@ -85,8 +85,9 @@ public class JumpEffectModule extends Module {
 		wasOnGround = onGround;
 
 		// Убираем отжившие кольца прямо в тике — рендеру достаётся чистый список.
-		// Часы те же, что в рендере (Util.getMillis): System.currentTimeMillis
-		// имеет другую точку отсчёта и ломает возраст колец
+		// Часы те же, что в рендере (Util.getMillis): возраст кольца считается в
+		// той же шкале, что и bornMs, — иначе «момент рождения» из другого clock
+		// дал бы кольца, которые либо не появляются вовсе, либо висят вечно
 		long now = Util.getMillis();
 		Iterator<JumpRing> it = rings.iterator();
 		while (it.hasNext()) {
