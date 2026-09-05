@@ -128,3 +128,7 @@ javap -p -cp "$JAR" net.minecraft.client.gui.GuiAtlas 2>/dev/null | grep -iE "pu
 javap -p -cp "$JAR" net.minecraft.client.renderer.RenderPipelines 2>/dev/null | grep -iE "GUI|TOOLTIP|BLUR|TEXT" | head -18 >> "$OUT"
 echo "--- ItemRenderer / модели предметов (для превью в GUI) ---" >> "$OUT"
 javap -p -cp "$JAR" net.minecraft.client.renderer.item.ItemRenderer 2>/dev/null | grep -iE "public" | head -20 >> "$OUT"
+
+echo "=== спрайты GUI (что переокрасить под своё стекло) ===" >> "$OUT"
+unzip -l "$JAR" 2>/dev/null | grep -E "textures/gui/(sprites|container)/" | awk '{print "  png: " $4}' | head -180 >> "$OUT"
+unzip -l "$JAR" 2>/dev/null | grep -E "textures/gui/(sprites|container)/" | wc -l | sed 's/^/  всего спрайтов: /' >> "$OUT"
