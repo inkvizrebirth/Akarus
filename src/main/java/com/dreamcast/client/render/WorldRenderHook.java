@@ -105,7 +105,7 @@ public final class WorldRenderHook {
 						new EspModule.EspBox(
 								(float) box.minX, (float) box.minY, (float) box.minZ,
 								(float) box.maxX, (float) box.maxY, (float) box.maxZ,
-								target.getId()),
+								target.getId(), EspModule.healthFraction(target)),
 						EspModule.healthFraction(target));
 			} else {
 				targetBar = null;
@@ -191,7 +191,7 @@ public final class WorldRenderHook {
 							drawTrail(trails, pose, buffer, camX, camY, camZ, unitsPerPixel, partialTick, now);
 						}
 						if (!boxes.isEmpty()) {
-							drawBoxes(boxes, pose, buffer, camX, camY, camZ, unitsPerPixel);
+							drawBoxes(boxes, pose, buffer, camX, camY, camZ, unitsPerPixel, now);
 						}
 						if (targetBar != null) {
 							drawTargetBar(targetBar, pose, buffer, camX, camY, camZ, unitsPerPixel);
@@ -304,9 +304,14 @@ public final class WorldRenderHook {
 	};
 
 	private static void drawBoxes(List<EspModule.EspBox> boxes, PoseStack.Pose pose, VertexConsumer buffer,
-	                              double camX, double camY, double camZ, float unitsPerPixel) {
+	                              double camX, double camY, double camZ, float unitsPerPixel, long now) {
 		EspModule esp = ModuleManager.find(EspModule.class);
 		if (esp == null) {
+			return;
+		}
+		if (esp.bloomMode()) {
+			// «Свечение»: ореол + ядро + уголки + дымка + кольца (см. EspBloomRenderer)
+			EspBloomRenderer.draw(esp, boxes, pose, buffer, camX, camY, camZ, unitsPerPixel, now);
 			return;
 		}
 

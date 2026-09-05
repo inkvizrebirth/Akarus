@@ -40,6 +40,7 @@ public class EspModule extends Module {
 			ModeSetting.option("glow", "Glow"),
 			ModeSetting.option("box", "Box"),
 			ModeSetting.option("both", "Вместе"),
+			ModeSetting.option("bloom", "Свечение"),
 			ModeSetting.option("target", "TargetESP"));
 
 	private final BooleanSetting players = bool("players", "Игроки", true);
@@ -55,6 +56,13 @@ public class EspModule extends Module {
 
 	private final IntSetting distance = intSetting("distance", "Радиус, блоков", 64, 8, 256);
 	private final IntSetting boxWidth = intSetting("box_width", "Толщина линий", 2, 1, 10);
+
+	// --- «Свечение» (bloom): слои ореола, его раздув и «живость» ---
+	private final IntSetting haloLayers = intSetting("halo_layers", "Слоёв ореола", 4, 0, 6);
+	private final IntSetting haloSpread = intSetting("halo_spread", "Раздув ореола, px", 5, 1, 14);
+	private final BooleanSetting breath = bool("breath", "Дыхание", true);
+	private final BooleanSetting brackets = bool("brackets", "Уголки", true);
+	private final BooleanSetting pool = bool("ground_pool", "Кольца под ногами", true);
 	private final BooleanSetting cornersOnly = bool("corners", "Только углы", false);
 
 	public EspModule() {
@@ -127,7 +135,12 @@ public class EspModule extends Module {
 	// ------------------------------------------------------------------
 
 	/** Один бокс: координаты AABB + id сущности (для сдвига радуги). */
-	public record EspBox(float minX, float minY, float minZ, float maxX, float maxY, float maxZ, int entityId) {
+	/**
+	 * Бокс цели для рендера. Снимок на кадр: поля финальные, рендер не лезет в мир.
+	 * {@code health} — доля здоровья на момент извлечения (для подсветки «на дожитье»).
+	 */
+	public record EspBox(float minX, float minY, float minZ, float maxX, float maxY, float maxZ,
+	                     int entityId, float health) {
 	}
 
 	public boolean wantsBoxes() {
@@ -161,7 +174,7 @@ public class EspModule extends Module {
 			result.add(new EspBox(
 					(float) box.minX, (float) box.minY, (float) box.minZ,
 					(float) box.maxX, (float) box.maxY, (float) box.maxZ,
-					entity.getId()));
+					entity.getId(), healthFraction(entity)));
 		}
 		return result;
 	}
@@ -175,6 +188,56 @@ public class EspModule extends Module {
 	}
 
 	/** Цвет линии бокса на высоте y (для градиента по высоте). */
+	/** Режим «Свечение» включён? (тогда рисует EspBloomRenderer, а не простой бокс.) */
+	public boolean bloomMode() {
+		return isEnabled() && mode.is("bloom");
+	}
+
+	public int haloLayers() {
+		return haloLayers.get();
+	}
+
+	public float haloSpread() {
+		return haloSpread.get();
+	}
+
+	public boolean breath() {
+		return breath.isEnabled();
+	}
+
+	public boolean cornerBrackets() {
+		return brackets.isEnabled();
+	}
+
+	public boolean groundPool() {
+		return pool.isEnabled();
+	}
+
+	/**
+	 * Цвет с учётом здоровья: у цели «на дожитье» уходит в красный — это видно
+	 * раньше, чем успевает закончится полоска HP над головой. Чистая функция,
+	 * проверена тестом (см. EspColorTest).
+	 */
+	public static int tintByHealth(int color, float health) {
+		float t = 1.0F - Math.max(0.0F, Math.min(1.0F, health));
+		if (t <= 0.01F) {
+			return color;
+		}
+		// 0.75 — максимум, до которого доходит подкраска: полностью багровым
+		// цель не становится никогда, иначе «почти мёртв» и «мёртв» неразличимы
+		float k = t * t * 0.75F;
+		int a = color >>> 24;
+		int r = (int) (((color >> 16) & 0xFF) + (255 - ((color >> 16) & 0xFF)) * k);
+		int g = (int) ((((color >> 8) & 0xFF)) * (1.0F - k));
+		int b = (int) (((color & 0xFF)) * (1.0F - k));
+		return (a << 24) | (Math.min(255, r) << 16) | (Math.min(255, g) << 8) | Math.min(255, b);
+	}
+
+	/** Цвет бокса цели с подкраской по здоровью (использует bloom-рендер). */
+	public int boxColorWithHealth(EspBox box, double y) {
+		return tintByHealth(boxColor(box.entityId(), y, box.minY(), box.maxY()), box.health());
+	}
+
 	public int boxColor(int entityId, double y, double minY, double maxY) {
 		int base = entityColorById(entityId);
 		if (gradient.isEnabled()) {
