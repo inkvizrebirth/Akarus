@@ -1002,7 +1002,6 @@ public class ClickGuiScreen extends Screen {
 		boolean focused = setting == focusedSetting;
 		float hover = hoverProgress(key, box.contains(mouseX, mouseY) || focused);
 
-		int border = focused ? accent : RenderUtils.mix(0x10FFFFFF, accent, hover * 0.35f);
 		UiKit.tile(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
 				1.0F, Math.max(hover, focused ? 1.0F : 0.0F), Util.getMillis());
 
@@ -1106,7 +1105,6 @@ public class ClickGuiScreen extends Screen {
 		boolean focused = setting == focusedSetting;
 		float hover = hoverProgress(key, box.contains(mouseX, mouseY) || focused);
 
-		int border = focused ? accent : RenderUtils.mix(0x10FFFFFF, accent, hover * 0.35f);
 		UiKit.tile(graphics, box.x(), box.y(), box.width(), box.height() - 2, 4,
 				1.0F, Math.max(hover, focused ? 1.0F : 0.0F), Util.getMillis());
 
