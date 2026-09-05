@@ -53,11 +53,21 @@ jobs:
         run: |
           set +e
           if [ ! -f api-notes.txt ]; then echo "заметок нет — нечего отправлять"; exit 0; fi
+          # Аннотация с выжимкой: единственный канал, который точно читается извне
+          # (артефакты и логи CI из песочницы недоступны). Кусок по рукам — чтобы
+          # имя метода в 26.2 было видно даже если push в служебную ветку не прошёл.
+          EXCERPT=$(awk '/классы рендера рук/,/методы с hand/' api-notes.txt | tr '\n' '|' | cut -c1-1100)
+          echo "::warning title=apinotes:руки::${EXCERPT}"
+          EXCERPT2=$(grep -iE "hand|arm|item" api-notes.txt | grep -E "public|private|protected" | tr '\n' '|' | cut -c1-1100)
+          echo "::warning title=apinotes:методы::${EXCERPT2}"
           SHORT=$(git log -1 --format=%h)
           git config user.name "arena-agent"
           git config user.email "297053741+arena-agent@users.noreply.github.com"
           git checkout -q -B arena/api-notes
           git add -f api-notes.txt
-          git commit -qm "api notes: $SHORT" || echo "пустой diff — файл не изменился"
-          git push -f origin arena/api-notes:arena/api-notes && echo "готово: api-notes.txt из $SHORT" || echo "::warning::push не прошёл"
+          git commit -qm "api notes: $SHORT" || echo "коммит не создан (пустой diff?)"
+          PUSH=$(git push -f origin arena/api-notes:arena/api-notes 2>&1)
+          if [ $? -eq 0 ]; then echo "готово: api-notes.txt из $SHORT"; else
+            echo "::error title=apinotes:push::$(printf '%s' "$PUSH" | tr '\n' '|' | cut -c1-500)"
+          fi
           exit 0
