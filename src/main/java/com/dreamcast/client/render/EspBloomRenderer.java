@@ -88,11 +88,11 @@ public final class EspBloomRenderer {
 				float alpha = (1.0F - t) * (1.0F - t) * 0.55F * (1.0F + 0.12F * pulse);
 				int color = RenderUtils.withAlpha(secondColor(esp, box), alpha);
 				drawEdges(esp, box, pose, buffer, camX, camY, camZ, pad, color,
-						(0.8F + 3.2F * t) * Math.max(1.0F, esp.boxWidth() * 0.5F), false);
+						(0.8F + 3.2F * t) * Math.max(1.0F, esp.boxWidth() * 0.5F), false, unitsPerPixel);
 			}
 
 			// 2) Ядро контура — яркое, с градиентом по высоте и подкраской по здоровью
-			drawEdges(esp, box, pose, buffer, camX, camY, camZ, 0.0, 0, coreWidth, true);
+			drawEdges(esp, box, pose, buffer, camX, camY, camZ, 0.0, 0, coreWidth, true, unitsPerPixel);
 
 			// 3) Уголки: 8 вершин, короткие скобы вторым цветом
 			if (esp.cornerBrackets()) {
@@ -119,7 +119,8 @@ public final class EspBloomRenderer {
 	/** Контур бокса, раздутый на {@code pad} мировых единиц (нуль — ровно по габаритам). */
 	private static void drawEdges(EspModule esp, EspModule.EspBox box, PoseStack.Pose pose,
 	                              VertexConsumer buffer, double camX, double camY, double camZ,
-	                              double pad, int flatColor, float width, boolean gradientCore) {
+	                              double pad, int flatColor, float width, boolean gradientCore,
+	                              float unitsPerPixel) {
 		double minX = box.minX() - camX - pad;
 		double minY = box.minY() - camY - pad;
 		double minZ = box.minZ() - camZ - pad;
