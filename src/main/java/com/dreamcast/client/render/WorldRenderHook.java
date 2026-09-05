@@ -4,6 +4,7 @@ import com.dreamcast.client.module.ModuleManager;
 import com.dreamcast.client.module.impl.EspModule;
 import com.dreamcast.client.module.impl.WingsModule;
 import com.dreamcast.client.module.impl.ChinaHatModule;
+import com.dreamcast.client.module.impl.CosmosModule;
 import com.dreamcast.client.module.impl.TargetEspModule;
 import com.dreamcast.client.module.impl.TrailsModule;
 import com.dreamcast.client.util.RenderUtils;
@@ -38,7 +39,7 @@ public final class WorldRenderHook {
 
 	/** Боксы ESP, собранные на извлечении; атомарно меняются целиком. */
 	private static volatile List<EspModule.EspBox> espBoxes = List.of();
-	private static volatile List<com.dreamcast.client.module.impl.CosmosModule.Target> cosmosTargets = List.of();
+	private static volatile List<CosmosModule.Target> cosmosTargets = List.of();
 
 	private WorldRenderHook() {
 	}
@@ -87,8 +88,8 @@ public final class WorldRenderHook {
 			CosmosModule cosmos = ModuleManager.find(CosmosModule.class);
 			if (cosmos != null && cosmos.isEnabled()) {
 				var cosmosCamera = context.camera().position();
-				cosmos.collect(context.level().entitiesForRendering(),
-						cosmosCamera.x, cosmosCamera.y, cosmosCamera.z, net.minecraft.util.Util.getMillis());
+				cosmos.collect(context.level().entitiesForRendering(), cosmosCamera.x, cosmosCamera.y,
+						cosmosCamera.z, partialTick, net.minecraft.util.Util.getMillis());
 				cosmosTargets = cosmos.targets();
 			} else {
 				cosmosTargets = List.of();
@@ -174,9 +175,8 @@ public final class WorldRenderHook {
 			com.dreamcast.client.module.impl.RainModule rain =
 					ModuleManager.find(com.dreamcast.client.module.impl.RainModule.class);
 			boolean hasRain = rain != null && rain.isEnabled();
-			com.dreamcast.client.module.impl.CosmosModule cosmos =
-					ModuleManager.find(com.dreamcast.client.module.impl.CosmosModule.class);
-			List<com.dreamcast.client.module.impl.CosmosModule.Target> cosmosList = cosmosTargets;
+			CosmosModule cosmos = ModuleManager.find(CosmosModule.class);
+			List<CosmosModule.Target> cosmosList = cosmosTargets;
 			boolean hasCosmos = cosmos != null && cosmos.wantsCosmos() && !cosmosList.isEmpty();
 			List<ChinaHatModule.Hat> hatList = hats;
 			List<WingsModule.Rig> wingRigs = wings;

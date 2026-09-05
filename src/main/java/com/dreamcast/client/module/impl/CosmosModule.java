@@ -87,7 +87,8 @@ public class CosmosModule extends Module {
 	}
 
 	/** Собирает цели и заводит эффекты смерти — вызывается на этапе извлечения кадра. */
-	public void collect(Iterable<Entity> entities, double camX, double camY, double camZ, long now) {
+	public void collect(Iterable<Entity> entities, double camX, double camY, double camZ,
+	                    float partialTick, long now) {
 		double maxSqr = (double) reach.get() * reach.get();
 		List<Target> list = new ArrayList<>();
 		nextSeen.clear();
@@ -98,9 +99,11 @@ public class CosmosModule extends Module {
 			if (!mobs.isEnabled() && !(entity instanceof Player)) {
 				continue;
 			}
-			double x = entity.getX();
-			double y = entity.getY();
-			double z = entity.getZ();
+			// Интерполяция по partialTick: без неё обёртка дёргается 20 раз в секунду,
+			// а «текстура» на бегущем игроке начинает жить своей жизнью.
+			double x = entity.getX(partialTick);
+			double y = entity.getY(partialTick);
+			double z = entity.getZ(partialTick);
 			double dx = x - camX;
 			double dy = y - camY;
 			double dz = z - camZ;
