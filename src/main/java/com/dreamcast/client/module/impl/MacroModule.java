@@ -207,8 +207,22 @@ public class MacroModule extends Module {
 	 * контейнер — можно; чат и экраны клиента (где есть поле ввода) — нет.
 	 */
 	public static boolean acceptsHotkeys(net.minecraft.client.gui.screens.Screen screen) {
-		return screen == null
-				|| screen instanceof net.minecraft.client.gui.screens.inventory.HandledScreen;
+		if (screen == null) {
+			return true;
+		}
+		if (screen instanceof net.minecraft.client.gui.screens.ChatScreen) {
+			return false;
+		}
+		// Экраны контейнеров (инвентарь, сундук, верстак) печатать не умеют —
+		// там клавиши свободны. Идём по иерархии: общий предок у них один.
+		for (Class<?> type = screen.getClass(); type != null && type != Object.class;
+				type = type.getSuperclass()) {
+			String name = type.getSimpleName();
+			if (name.contains("Container") || name.contains("Inventory") || name.contains("Crafting")) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private long lastFired(String command) {

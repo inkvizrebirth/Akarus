@@ -827,7 +827,7 @@ public final class HudRenderer {
 		int barX = x + 8;
 		int barW = width - 16;
 		int barY = y + 21;
-		float fraction = RenderUtils.clamp(bps / Math.max(0.001F, speedScale), 0.0F, 1.0F);
+		float fraction = Math.min(1.0F, Math.max(0.0F, bps / Math.max(0.001F, speedScale)));
 		RenderUtils.fillRounded(graphics, barX, barY, barW, 3, 1, RenderUtils.withAlpha(0x33FFFFFF, alpha));
 		if (fraction > 0.001F) {
 			int filled = Math.max(2, Math.round(barW * fraction));
@@ -853,7 +853,8 @@ public final class HudRenderer {
 		for (int i = 0; i < used; i++) {
 			float sample = speedHistory[(speedHead - used + i + SPEED_SAMPLES * 2) % SPEED_SAMPLES];
 			int columnX = graphX + i * step;
-			int valueH = Math.round(RenderUtils.clamp(sample / Math.max(0.001F, speedScale), 0.0F, 1.0F) * (graphH - 1));
+			int valueH = Math.round(Math.min(1.0F, Math.max(0.0F,
+					sample / Math.max(0.001F, speedScale))) * (graphH - 1));
 			int sampleY = graphBottom - Math.max(1, valueH);
 			if (prevY >= 0) {
 				// вертикальный отрезок между соседними точками = звено ломаной
