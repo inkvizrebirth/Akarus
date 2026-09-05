@@ -1,0 +1,86 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  lombok.Generated
+ */
+package sweetie.leonware.client.features.modules.render.targetesp;
+
+import lombok.Generated;
+import sweetie.leonware.api.event.Listener;
+import sweetie.leonware.api.event.events.player.other.UpdateEvent;
+import sweetie.leonware.api.event.events.render.Render3DEvent;
+import sweetie.leonware.api.module.Category;
+import sweetie.leonware.api.module.Module;
+import sweetie.leonware.api.module.ModuleRegister;
+import sweetie.leonware.api.module.setting.BooleanSetting;
+import sweetie.leonware.api.module.setting.ModeSetting;
+import sweetie.leonware.api.module.setting.SliderSetting;
+import sweetie.leonware.client.features.modules.render.targetesp.TargetEspMode;
+import sweetie.leonware.client.features.modules.render.targetesp.modes.TargetEspCircle;
+import sweetie.leonware.client.features.modules.render.targetesp.modes.TargetEspCrystals;
+import sweetie.leonware.client.features.modules.render.targetesp.modes.TargetEspGhost2;
+import sweetie.leonware.client.features.modules.render.targetesp.modes.TargetEspGhosts;
+import sweetie.leonware.client.features.modules.render.targetesp.modes.TargetEspTexture;
+
+@ModuleRegister(name="Target Esp", category=Category.RENDER)
+public class TargetEspModule
+extends Module {
+    public static final TargetEspModule instance = new TargetEspModule();
+    private final TargetEspTexture espTexture = new TargetEspTexture();
+    private final TargetEspCrystals espCrystals = new TargetEspCrystals();
+    private final TargetEspGhosts espGhosts = new TargetEspGhosts();
+    private final TargetEspGhost2 espGhost2 = new TargetEspGhost2();
+    private final TargetEspCircle espCircle = new TargetEspCircle();
+    private TargetEspMode currentMode = this.espTexture;
+    private final ModeSetting mode = new ModeSetting("Mode").value("Crystals").values("Marker", "Crystals", "Ghosts", "Ghost2", "Circle");
+    private final ModeSetting animation = new ModeSetting("Animation").value("In").values("In", "Out", "None");
+    private final SliderSetting duration = new SliderSetting("Duration").value(Float.valueOf(3.0f)).range(1.0f, 20.0f).step(1.0f);
+    private final SliderSetting crystalsCount = new SliderSetting("Amount").value(Float.valueOf(14.0f)).range(1.0f, 36.0f).step(1.0f).setVisible(() -> this.mode.is("Crystals"));
+    private final SliderSetting crystalsSpeed = new SliderSetting("Speed").value(Float.valueOf(3.0f)).range(0.0f, 5.0f).step(0.5f).setVisible(() -> this.mode.is("Crystals"));
+    public final BooleanSetting lastPosition = new BooleanSetting("Last position").value(true);
+
+    public TargetEspModule() {
+        this.addSettings(this.mode, this.animation, this.duration, this.crystalsCount, this.crystalsSpeed, this.lastPosition);
+        this.mode.onAction(() -> {
+            this.currentMode = switch ((String)this.mode.getValue()) {
+                case "Crystals" -> this.espCrystals;
+                case "Ghosts" -> this.espGhosts;
+                case "Ghost2" -> this.espGhost2;
+                case "Circle" -> this.espCircle;
+                default -> this.espTexture;
+            };
+        });
+    }
+
+    @Override
+    public void onEvent() {
+        this.addEvents(Render3DEvent.getInstance().subscribe(new Listener<Render3DEvent.Render3DEventData>(event -> {
+            TargetEspMode.updatePositions();
+            this.currentMode.onRender3D((Render3DEvent.Render3DEventData)((Object)event));
+        })), UpdateEvent.getInstance().subscribe(new Listener<UpdateEvent>(event -> {
+            this.currentMode.updateAnimation(((Float)this.duration.getValue()).longValue() * 50L, (String)this.animation.getValue(), 1.0f, 0.0f, 2.0f);
+            this.currentMode.updateTarget();
+            this.currentMode.onUpdate();
+        })));
+    }
+
+    public int getCrystalsCount() {
+        return ((Float)this.crystalsCount.getValue()).intValue();
+    }
+
+    public float getCrystalsSpeed() {
+        return ((Float)this.crystalsSpeed.getValue()).floatValue();
+    }
+
+    @Generated
+    public static TargetEspModule getInstance() {
+        return instance;
+    }
+
+    @Generated
+    public ModeSetting getMode() {
+        return this.mode;
+    }
+}
+
