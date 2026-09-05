@@ -74,6 +74,24 @@ jobs:
           fi
           exit "$status"
 
+      - name: Проверить цели миксинов по jar Minecraft
+        run: |
+          set +e
+          JAR=$(find ~/.gradle .gradle . -name '*.jar' 2>/dev/null | grep -vi source | while read -r j; do
+                  if unzip -l "$j" 2>/dev/null | grep -q "net/minecraft/client/renderer/GameRenderer.class"; then echo "$j"; break; fi
+                done | head -1)
+          if [ -z "$JAR" ]; then
+            echo "::warning::jar Minecraft не найден — проверка целей миксинов пропущена"
+            exit 0
+          fi
+          echo "jar: $JAR"
+          python3 tools/check_mixins.py --jar "$JAR"
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "::error::часть целей миксинов не найдена в Minecraft — часть модулей молча не работает"
+          fi
+          exit $status
+
       - name: Verify mixins are remapped inside the jar
         run: |
           JAR=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' ! -name '*-dev.jar' | head -1)

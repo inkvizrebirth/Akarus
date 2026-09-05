@@ -73,6 +73,12 @@ public class DreamcastClient implements ClientModInitializer {
 			com.dreamcast.client.rotation.RotationManager.reset();
 		});
 
+		// Baritone: при входе в мир проверяем, стоит ли мод (нужен AutoMine/AutoWalk).
+		// На старте игры — только лог: сеть не должна тормозить загрузку клиента.
+		ClientPlayConnectionEvents.INIT.register((handler, client) ->
+				com.dreamcast.client.module.impl.BaritoneModule.onWorldJoin(client));
+		com.dreamcast.client.util.ModInstaller.reportAtStartup();
+
 		// Сохраняем настройки при закрытии игры
 		Runtime.getRuntime().addShutdownHook(new Thread(ConfigManager::save, "dreamcast-config-save"));
 

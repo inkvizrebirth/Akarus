@@ -2,7 +2,9 @@ package com.dreamcast.client.module;
 
 import com.dreamcast.client.DreamcastClient;
 import com.dreamcast.client.config.ConfigManager;
+import com.dreamcast.client.module.impl.AutoGgModule;
 import com.dreamcast.client.module.impl.AutoMineModule;
+import com.dreamcast.client.module.impl.BaritoneModule;
 import com.dreamcast.client.module.impl.AutoTotemModule;
 import com.dreamcast.client.module.impl.AutoWalkModule;
 import com.dreamcast.client.module.impl.BlockEspModule;
@@ -86,6 +88,8 @@ public final class ModuleManager {
 		register(new WingsModule());
 		register(new TargetEspModule());
 		register(new MotionBlurModule());
+		register(new AutoGgModule());
+		register(new BaritoneModule());
 	}
 
 	public static void register(Module module) {

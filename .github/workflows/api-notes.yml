@@ -1,0 +1,61 @@
+name: Заметки по API Minecraft (по маркеру [apinotes])
+
+# Отдельный workflow, а не шаг в build: ему нужно право на запись, а build-джобу — нет.
+# Запускается только когда в сообщении последнего коммита есть маркер [apinotes]:
+#   git commit -m "… [apinotes]"
+# Результат — файл api-notes.txt в служебной ветке arena/api-notes (рабочую ветку не трогает).
+
+on:
+  push:
+    branches: ["arena/01a0709d-dreamcast", "main"]
+
+permissions:
+  contents: write
+
+jobs:
+  api-notes:
+    if: "github.actor != 'github-actions[bot]'"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+      - name: Разобрать Minecraft (loom-кэш)
+        run: |
+          set +e
+          if git log -1 --format=%s | grep -q '\[apinotes\]'; then
+            chmod +x ./gradlew
+            ./gradlew :compileJava --stacktrace > resolve.log 2>&1 || tail -20 resolve.log
+            find ~/.gradle .gradle -name '*.jar' 2>/dev/null | grep -vi source | head -30
+            exit 0
+          fi
+          echo "нет маркера [apinotes] — помечаем пропуск"
+          touch .skip-notes
+      - name: Собрать заметки
+        run: |
+          set +e
+          [ -f .skip-notes ] && exit 0
+          JAR=$(find ~/.gradle .gradle . -name '*.jar' 2>/dev/null | grep -vi source | while read -r j; do
+                  if unzip -l "$j" 2>/dev/null | grep -q "net/minecraft/client/renderer/GameRenderer.class"; then echo "$j"; break; fi
+                done | head -1)
+          echo "JAR=$JAR" > /tmp/paths.env
+          [ -z "$JAR" ] && echo "::warning::jar Minecraft не найден"
+          bash tools/api_notes.sh
+          wc -l api-notes.txt
+      - name: Отправить в служебную ветку
+        run: |
+          set +e
+          [ -f .skip-notes ] || [ ! -f api-notes.txt ] && exit 0
+          git config user.name "arena-agent"
+          git config user.email "297053741+arena-agent@users.noreply.github.com"
+          git checkout -q -b arena/api-notes origin/arena/api-notes 2>/dev/null \
+            || git checkout -q --orphan arena/api-notes
+          git add -f api-notes.txt
+          git commit -qm "api notes: $(git log -1 --format=%h arena/01a0709d-dreamcast 2>/dev/null || echo local)" || true
+          git push -f -q origin HEAD:refs/heads/arena/api-notes && echo "готово: ветка arena/api-notes"
+          exit 0

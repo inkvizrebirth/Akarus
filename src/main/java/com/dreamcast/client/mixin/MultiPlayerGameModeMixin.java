@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Хук атаки игрока: точка, где засчитывается удар по сущности.
  *
- * Здесь стартуют HitSounds и HitParticles (в т.ч. для атак KillAura —
+ * Здесь стартуют HitSounds, HitParticles и AutoGG (в т.ч. для атак KillAura —
  * модуль бьёт тем же gameMode#attack). Слушатели сами фильтруют цели.
  */
 @Mixin(MultiPlayerGameMode.class)
@@ -26,6 +26,7 @@ public abstract class MultiPlayerGameModeMixin {
 		if (player instanceof LocalPlayer localPlayer) {
 			com.dreamcast.client.module.impl.HitParticlesModule.onAttack(localPlayer, target);
 			com.dreamcast.client.module.impl.HitSoundsModule.onAttack(localPlayer, target);
+			com.dreamcast.client.module.impl.AutoGgModule.onAttack(localPlayer, target);
 		}
 	}
 }
