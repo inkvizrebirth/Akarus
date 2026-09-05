@@ -86,6 +86,7 @@ jobs:
           if git rev-parse --verify -q origin/arena/01a0709d-dreamcast >/dev/null; then git merge -X ours -q origin/arena/01a0709d-dreamcast || true; fi
           echo "=== merged ==="
           javap -p -cp "$FULL" net.minecraft.client.renderer.GameRenderer 2>&1 | grep -iE 'postEffect|MainTarget' >> result.txt
+          cp -f result.txt api-audit-result.txt
           git add -f api-audit-result.txt
           git commit -m "ci: результат аудита API 26.2" || true
           git push origin HEAD:refs/heads/arena/01a0709d-dreamcast || true
