@@ -124,29 +124,43 @@ public final class RenderUtils {
 		if (w <= 4 || h <= 4 || glow <= 0.003f) {
 			return;
 		}
-		final float r = 6.0f;                 // меньше ячеек — быстрее, без потери читаемости
+		final float r = 6.0f;
 		final float stepX = 1.7320508f * r;   // √3·r — шаг по горизонтали
 		final float stepY = 1.5f * r;         // шаг по вертикали
-		final float pushRadius = 26.0f;       // радиус «расступания» вокруг курсора
+		final float pushRadius = 30.0f;       // работает и немного за границей кнопки
 		final float pushStrength = 3.4f;      // насколько соты отодвигаются
+		final float radiusSq = pushRadius * pushRadius;
 
 		graphics.enableScissor(x, y, x + w, y + h);
-		int cols = (int) Math.ceil(w / stepX) + 2;
-		int rows = (int) Math.ceil(h / stepY) + 2;
-		for (int row = 0; row < rows; row++) {
+		int totalRows = (int) Math.ceil(h / stepY) + 2;
+		// Раньше каждый кадр обходил всю сетку каждой затухающей кнопки. Теперь
+		// берём только несколько строк/столбцов вокруг курсора: визуально эффект
+		// тот же, а число отрисовываемых сот падает в несколько раз.
+		int firstRow = Math.max(0, (int) Math.floor((mouseY - y - pushRadius - r) / stepY));
+		int lastRow = Math.min(totalRows - 1, (int) Math.ceil((mouseY - y + pushRadius + r) / stepY));
+		for (int row = firstRow; row <= lastRow; row++) {
 			float cy = y + r + row * stepY;
 			float shift = (row & 1) == 0 ? 0.0f : stepX * 0.5f;
-			for (int col = 0; col < cols; col++) {
+			int firstCol = Math.max(0,
+					(int) Math.floor((mouseX - x - shift - pushRadius) / stepX));
+			int lastCol = Math.min((int) Math.ceil(w / stepX) + 1,
+					(int) Math.ceil((mouseX - x - shift + pushRadius) / stepX));
+			for (int col = firstCol; col <= lastCol; col++) {
 				float cx = x + r + col * stepX + shift - stepX;
 
-				// Дистанция до курсора: соты рядом отодвигаются наружу
+				// Квадрат расстояния позволяет сразу отсеять далёкие соты без sqrt/exp.
 				float dx = cx - mouseX;
 				float dy = cy - mouseY;
-				float dist = (float) Math.sqrt(dx * dx + dy * dy);
-				float influence = (float) Math.exp(-(dist * dist) / (2.0f * pushRadius * pushRadius / 4.0f));
+				float distanceSq = dx * dx + dy * dy;
+				if (distanceSq >= radiusSq) {
+					continue;
+				}
+				float influence = 1.0F - distanceSq / radiusSq;
+				influence *= influence;
 				float ox = 0.0f;
 				float oy = 0.0f;
-				if (dist > 0.001f && influence > 0.02f) {
+				if (distanceSq > 0.001F && influence > 0.02F) {
+					float dist = (float) Math.sqrt(distanceSq);
 					float push = pushStrength * influence;
 					ox = dx / dist * push;
 					oy = dy / dist * push;

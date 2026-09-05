@@ -188,8 +188,10 @@ public abstract class DreamcastScreen extends Screen {
 		int border = RenderUtils.mix(0x26FFFFFF, 0x66FFFFFF, item.hover);
 		RenderUtils.fillRoundedBorder(graphics, x, y, w, h, 8, border, top, bottom, 1);
 		graphics.fill(x + 8, y, x + w - 8, y + 1, RenderUtils.withAlpha(accent, 0.30f + 0.60f * item.hover));
-		// Сотовая текстура: шестиугольники расступаются у курсора и подсвечиваются
-		if (inside) {
+		// Сотовая текстура реагирует и рядом с кнопкой. Сам рендер ограничивает
+		// расчёт ближайшими к курсору сотами, поэтому соседние кнопки больше не
+		// создают прежнюю просадку FPS во время движения мыши.
+		if (near > 0.01F) {
 			RenderUtils.drawHexPattern(graphics, x + 2, y + 2, w - 4, h - 4, accent,
 					mouseX, mouseY, item.hover);
 		}
