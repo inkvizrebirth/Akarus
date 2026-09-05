@@ -23,9 +23,9 @@
 MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 === классы мобов/врагов/манекенов ===
-        0  2026-09-05 08:24   assets/minecraft/textures/entity/armorstand/
+        0  2026-09-05 08:30   assets/minecraft/textures/entity/armorstand/
       809  1980-02-01 00:00   assets/minecraft/textures/entity/armorstand/armorstand.png
-        0  2026-09-05 08:24   net/minecraft/client/model/object/armorstand/
+        0  2026-09-05 08:30   net/minecraft/client/model/object/armorstand/
      6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
       320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
      5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
@@ -474,17 +474,17 @@ public class net.minecraft.world.item.BucketItem extends net.minecraft.world.ite
   public void handleSlotStateChanged(int, int, boolean);
 
 === классы оверлеев ===
-     7316  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay.class
      3595  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay$1.class
+     7316  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay.class
+    21742  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay.class
      3361  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay$1.class
      4652  1980-02-01 00:00   net/minecraft/client/gui/components/IMEPreeditOverlay.class
-    21742  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay.class
      1473  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay$HealthState.class
      2498  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay$ScoreDisplayEntry.class
-     2015  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$SoundPlayedAt.class
      5001  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$Subtitle.class
-     7576  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay.class
     21670  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay.class
+     2015  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$SoundPlayedAt.class
+     7576  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay.class
      8761  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay.class
       632  1980-02-01 00:00   net/minecraft/client/gui/screens/Overlay.class
      2687  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay$LogoTexture.class
@@ -510,10 +510,10 @@ public class net.minecraft.world.item.BucketItem extends net.minecraft.world.ite
       166  1980-02-01 00:00   assets/minecraft/models/block/attached_pumpkin_stem.json
       197  1980-02-01 00:00   assets/minecraft/models/block/carved_pumpkin.json
       326  1980-02-01 00:00   assets/minecraft/models/block/pumpkin.json
-      110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage0.json
-      110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage1.json
       110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage2.json
       110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage3.json
+      110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage4.json
+      110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage5.json
 grep: write error: Broken pipe
 
 === FogRenderer ===
@@ -540,9 +540,9 @@ public class net.minecraft.client.renderer.fog.FogRenderer implements java.lang.
 }
 
 === nausea-классы ===
-    12935  1980-02-01 00:00   assets/minecraft/textures/misc/nausea.png
        40  1980-02-01 00:00   assets/minecraft/textures/misc/nausea.png.mcmeta
       169  1980-02-01 00:00   assets/minecraft/textures/mob_effect/nausea.png
+    12935  1980-02-01 00:00   assets/minecraft/textures/misc/nausea.png
 
 === Camera (fov) ===
   public static final float BASE_HUD_FOV;
@@ -588,16 +588,16 @@ public final class net.minecraft.world.inventory.ContainerInput extends java.lan
   public static final net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> DARKNESS;
 
 === fog environments ===
-        0  2026-09-05 08:24   net/minecraft/client/renderer/fog/environment/
+        0  2026-09-05 08:30   net/minecraft/client/renderer/fog/environment/
+     7163  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/AtmosphericFogEnvironment.class
      2722  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/BlindnessFogEnvironment.class
      2698  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/DarknessFogEnvironment.class
-     7163  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/AtmosphericFogEnvironment.class
      1723  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/FogEnvironment.class
      2599  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/LavaFogEnvironment.class
      1494  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/MobEffectFogEnvironment.class
-      321  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/package-info.class
      2290  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/PowderedSnowFogEnvironment.class
      3052  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/WaterFogEnvironment.class
+      321  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/package-info.class
 
 === gui layers/overlays ===
      2196  1980-02-01 00:00   net/minecraft/client/gui/Hud$1DisplayEntry.class
@@ -1223,7 +1223,7 @@ grep: write error: Broken pipe
 grep: write error: Broken pipe
 
 === PlayerRenderer / render state ===
-        0  2026-09-05 08:24   net/minecraft/client/renderer/entity/player/
+        0  2026-09-05 08:30   net/minecraft/client/renderer/entity/player/
       319  1980-02-01 00:00   net/minecraft/client/renderer/entity/player/package-info.class
     24446  1980-02-01 00:00   net/minecraft/client/renderer/entity/player/AvatarRenderer.class
 
@@ -1609,8 +1609,8 @@ public final class net.minecraft.client.CameraType extends java.lang.Enum<net.mi
 === строки-идентификаторы постэффектов в GameRenderer ===
 
 === ассеты шейдеров ===
-      201  1980-02-01 00:00   assets/minecraft/shaders/core/rendertype_water_mask.vsh
       131  1980-02-01 00:00   assets/minecraft/shaders/core/rendertype_water_mask.fsh
+      201  1980-02-01 00:00   assets/minecraft/shaders/core/rendertype_water_mask.vsh
 
 === Hud полный список методов ===
   private static final net.minecraft.resources.Identifier CROSSHAIR_SPRITE;
@@ -1769,6 +1769,161 @@ String textures/misc/vignette.png
   public static final net.minecraft.core.component.DataComponentType<net.minecraft.world.item.component.CustomData> BUCKET_ENTITY_DATA;
 grep: write error: Broken pipe
 
+=== ScreenEffectRenderer ===
+Compiled from "ScreenEffectRenderer.java"
+public class net.minecraft.client.renderer.ScreenEffectRenderer {
+  private static final net.minecraft.resources.Identifier UNDERWATER_LOCATION;
+  private final net.minecraft.client.Minecraft minecraft;
+  private final net.minecraft.client.resources.model.sprite.SpriteGetter sprites;
+  public static final int ITEM_ACTIVATION_ANIMATION_LENGTH;
+  private net.minecraft.world.item.ItemStack itemActivationItem;
+  private int itemActivationTicks;
+  private float itemActivationOffX;
+  private float itemActivationOffY;
+  public net.minecraft.client.renderer.ScreenEffectRenderer(net.minecraft.client.Minecraft, net.minecraft.client.resources.model.sprite.SpriteGetter);
+  public void tick();
+  public void submit(boolean, boolean, float, net.minecraft.client.renderer.SubmitNodeCollector, boolean);
+  private void renderItemActivationAnimation(com.mojang.blaze3d.vertex.PoseStack, float, net.minecraft.client.renderer.SubmitNodeCollector);
+  public void resetItemActivation();
+  public void displayItemActivation(net.minecraft.world.item.ItemStack, net.minecraft.util.RandomSource);
+  private static net.minecraft.world.level.block.state.BlockState getViewBlockingState(net.minecraft.world.entity.player.Player);
+  private static void submitBlockSprite(net.minecraft.client.renderer.texture.TextureAtlasSprite, com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.SubmitNodeCollector, int);
+  private static void submitWater(net.minecraft.client.Minecraft, com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.SubmitNodeCollector);
+  private static void submitFire(com.mojang.blaze3d.vertex.PoseStack, net.minecraft.client.renderer.SubmitNodeCollector, net.minecraft.client.renderer.texture.TextureAtlasSprite);
+  private static void buildFireQuad(net.minecraft.client.renderer.texture.TextureAtlasSprite, com.mojang.blaze3d.vertex.VertexConsumer, org.joml.Matrix4f);
+  private static void buildSpriteQuad(com.mojang.blaze3d.vertex.VertexConsumer, org.joml.Matrix4f, net.minecraft.client.renderer.texture.TextureAtlasSprite, float, float, float, float, float, int);
+  private static void buildQuad(com.mojang.blaze3d.vertex.VertexConsumer, org.joml.Matrix4f, float, float, float, float, float, float, float, float, float, int);
+  private static void lambda$submitFire$0(net.minecraft.client.renderer.texture.TextureAtlasSprite, com.mojang.blaze3d.vertex.PoseStack$Pose, com.mojang.blaze3d.vertex.VertexConsumer);
+  private static void lambda$submitWater$0(float, float, int, com.mojang.blaze3d.vertex.PoseStack$Pose, com.mojang.blaze3d.vertex.VertexConsumer);
+  private static void lambda$submitBlockSprite$0(net.minecraft.client.renderer.texture.TextureAtlasSprite, int, com.mojang.blaze3d.vertex.PoseStack$Pose, com.mojang.blaze3d.vertex.VertexConsumer);
+  static {};
+}
+
+=== CameraType ===
+Compiled from "CameraType.java"
+public final class net.minecraft.client.CameraType extends java.lang.Enum<net.minecraft.client.CameraType> {
+  public static final net.minecraft.client.CameraType FIRST_PERSON;
+  public static final net.minecraft.client.CameraType THIRD_PERSON_BACK;
+  public static final net.minecraft.client.CameraType THIRD_PERSON_FRONT;
+  private static final net.minecraft.client.CameraType[] VALUES;
+  private final boolean firstPerson;
+  private final boolean mirrored;
+  private static final net.minecraft.client.CameraType[] $VALUES;
+  public static net.minecraft.client.CameraType[] values();
+  public static net.minecraft.client.CameraType valueOf(java.lang.String);
+  private net.minecraft.client.CameraType(boolean, boolean);
+  public boolean isFirstPerson();
+  public boolean isMirrored();
+  public net.minecraft.client.CameraType cycle();
+  private static net.minecraft.client.CameraType[] $values();
+  static {};
+}
+
+=== ClientPacketListener (send/playerinfo) ===
+  private static final net.minecraft.network.chat.Component COMMAND_SEND_CONFIRM_TITLE;
+  public net.minecraft.client.multiplayer.PlayerInfo getPlayerInfo(java.util.UUID);
+  public net.minecraft.client.multiplayer.PlayerInfo getPlayerInfo(java.lang.String);
+  public net.minecraft.client.multiplayer.PlayerInfo getPlayerInfoIgnoreCase(java.lang.String);
+  private void sendChatAcknowledgement();
+  public void sendChat(java.lang.String);
+  public void sendCommand(java.lang.String);
+  public void sendUnattendedCommand(java.lang.String, net.minecraft.client.gui.screens.Screen);
+  private void openSendConfirmationWindow(java.lang.String, java.lang.String, net.minecraft.network.chat.Component, java.lang.Runnable);
+  private void openCommandSendConfirmationWindow(java.lang.String, java.lang.String, net.minecraft.client.gui.screens.Screen);
+  private void openSignedCommandSendConfirmationWindow(java.lang.String, java.lang.String, net.minecraft.client.gui.screens.Screen);
+  public boolean hasClientLoaded();
+  private void lambda$openSignedCommandSendConfirmationWindow$1(java.lang.String, net.minecraft.client.gui.screens.Screen);
+  private void lambda$openSignedCommandSendConfirmationWindow$0(java.lang.String);
+  private void lambda$openCommandSendConfirmationWindow$0(java.lang.String, net.minecraft.client.gui.screens.Screen);
+  private void lambda$openSendConfirmationWindow$0(java.lang.Runnable, net.minecraft.client.gui.screens.Screen, boolean);
+  private net.minecraft.network.chat.MessageSignature lambda$sendCommand$0(java.time.Instant, long, net.minecraft.network.chat.LastSeenMessagesTracker$Update, java.lang.String);
+
+=== Player (abilities) ===
+  protected net.minecraft.world.food.FoodData foodData;
+  private final net.minecraft.world.entity.player.Abilities abilities;
+  public net.minecraft.world.entity.player.Abilities getAbilities();
+  public net.minecraft.world.food.FoodData getFoodData();
+  public void onUpdateAbilities();
+  public boolean isCreative();
+
+=== PlayerAbilities ===
+
+=== LivingEntity (hurt/armor) ===
+  protected static final int INVULNERABLE_DURATION;
+  public int hurtTime;
+  public net.minecraft.world.damagesource.DamageSource getLastDamageSource();
+  public int getArmorValue();
+  public net.minecraft.world.item.ItemStack getMainHandItem();
+  public float getAbsorptionAmount();
+  public boolean isSleeping();
+  public boolean isInvulnerableTo(net.minecraft.server.level.ServerLevel, net.minecraft.world.damagesource.DamageSource);
+
+=== Entity (level/id/misc) ===
+  public boolean canInteractWithLevel();
+  public net.minecraft.network.protocol.game.VecDeltaCodec getPositionCodec();
+  public boolean getRequiresPrecisePosition();
+  public int getId();
+  public void setPose(net.minecraft.world.entity.Pose);
+  public net.minecraft.world.entity.Pose getPose();
+  public final void setPos(net.minecraft.world.phys.Vec3);
+  public void setPos(double, double, double);
+  public final net.minecraft.world.phys.Vec3 oldPosition();
+  public final net.minecraft.world.phys.Vec3 getEyePosition();
+  public final net.minecraft.world.phys.Vec3 getPosition(float);
+  public void teleportSetPosition(net.minecraft.world.entity.PositionMoveRotation, java.util.Set<net.minecraft.world.entity.Relative>);
+  public void teleportSetPosition(net.minecraft.world.entity.PositionMoveRotation, net.minecraft.world.entity.PositionMoveRotation, java.util.Set<net.minecraft.world.entity.Relative>);
+  public java.util.UUID getUUID();
+  public net.minecraft.world.phys.Vec3 position();
+  public net.minecraft.world.phys.Vec3 trackingPosition();
+  public net.minecraft.core.BlockPos blockPosition();
+  public net.minecraft.world.level.ChunkPos chunkPosition();
+  public double getRandomX(double);
+  public double getRandomY(double);
+
+=== Options camera type get/set ===
+  private net.minecraft.client.CameraType cameraType;
+  public net.minecraft.client.CameraType getCameraType();
+  public void setCameraType(net.minecraft.client.CameraType);
+
+=== ItemCooldowns full ===
+Compiled from "ItemCooldowns.java"
+public class net.minecraft.world.item.ItemCooldowns {
+  private final java.util.Map<net.minecraft.resources.Identifier, net.minecraft.world.item.ItemCooldowns$CooldownInstance> cooldowns;
+  private int tickCount;
+  public net.minecraft.world.item.ItemCooldowns();
+  public boolean isOnCooldown(net.minecraft.world.item.ItemStack);
+  public float getCooldownPercent(net.minecraft.world.item.ItemStack, float);
+  public void tick();
+  public net.minecraft.resources.Identifier getCooldownGroup(net.minecraft.world.item.ItemStack);
+  public void addCooldown(net.minecraft.world.item.ItemStack, int);
+  public void addCooldown(net.minecraft.resources.Identifier, int);
+  public void removeCooldown(net.minecraft.resources.Identifier);
+  protected void onCooldownStarted(net.minecraft.resources.Identifier, int);
+  protected void onCooldownEnded(net.minecraft.resources.Identifier);
+}
+
+=== MobEffectInstance ===
+public class net.minecraft.world.effect.MobEffectInstance implements java.lang.Comparable<net.minecraft.world.effect.MobEffectInstance> {
+  public static final int INFINITE_DURATION;
+  public static final int MIN_AMPLIFIER;
+  public static final int MAX_AMPLIFIER;
+  public static final com.mojang.serialization.Codec<net.minecraft.world.effect.MobEffectInstance> CODEC;
+  public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, net.minecraft.world.effect.MobEffectInstance> STREAM_CODEC;
+  public net.minecraft.world.effect.MobEffectInstance(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect>);
+  public net.minecraft.world.effect.MobEffectInstance(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect>, int);
+  public net.minecraft.world.effect.MobEffectInstance(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect>, int, int);
+  public net.minecraft.world.effect.MobEffectInstance(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect>, int, int, boolean, boolean);
+  public net.minecraft.world.effect.MobEffectInstance(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect>, int, int, boolean, boolean, boolean);
+  public net.minecraft.world.effect.MobEffectInstance(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect>, int, int, boolean, boolean, boolean, net.minecraft.world.effect.MobEffectInstance);
+  public net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffectInstance);
+  public float getBlendFactor(net.minecraft.world.entity.LivingEntity, float);
+  public net.minecraft.core.particles.ParticleOptions getParticleOptions();
+  public boolean update(net.minecraft.world.effect.MobEffectInstance);
+  public boolean isInfiniteDuration();
+  public boolean endsWithin(int);
+  public net.minecraft.world.effect.MobEffectInstance withScaledDuration(float);
+  public int mapDuration(it.unimi.dsi.fastutil.ints.Int2IntFunction);
+
 === Minecraft (crosshair/misc) ===
   public final net.minecraft.client.renderer.LevelRenderer levelRenderer;
   public final net.minecraft.client.Options options;
@@ -1911,8 +2066,8 @@ grep: write error: Broken pipe
      4644  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerCommandPacket.class
      4009  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerInputPacket.class
      3509  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundSetCarriedItemPacket.class
-     3618  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundSwingPacket.class
      4306  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundUseItemOnPacket.class
+     3618  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundSwingPacket.class
 
 === ClientLevel (entities by class) ===
   public java.lang.Iterable<net.minecraft.world.entity.Entity> entitiesForRendering();
