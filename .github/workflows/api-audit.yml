@@ -322,6 +322,37 @@ jobs:
               javap -p -cp "$MC" net.minecraft.client.gui.GuiGraphicsExtractor 2>&1 | grep -iE 'sampler|texture|blit|sprite|pose|submit' | head -30 || true
               echo; echo "=== Entity render state (для «призраков») ==="
               javap -p -cp "$MC" net.minecraft.client.renderer.entity.state.LivingEntityRenderState 2>&1 | head -40 || true
+              echo; echo "=== где лежат pipeline/json (26.2) ==="
+              unzip -l "$MC" | grep -F '.json' | grep -iE 'pipeline|post_chain|shader|assets/minecraft/.*post' | awk '{print $NF}' | head -40 || true
+              echo; echo "=== все .json рядом с шейдерами ==="
+              unzip -l "$MC" | grep -F 'shaders' | grep -F '.json' | awk '{print $NF}' | head -30 || true
+              echo; echo "=== PostChainConfig (формат json) ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.PostChainConfig 2>&1 | head -30 || true
+              echo; echo "=== PostChainConfig inner ==="
+              for c in 'net.minecraft.client.renderer.PostChainConfig$Pass' 'net.minecraft.client.renderer.PostChainConfig$InternalTarget' 'net.minecraft.client.renderer.PostChainConfig$Input' 'net.minecraft.client.renderer.PostPass$TextureInput' 'net.minecraft.client.renderer.PostPass$TargetInput' 'net.minecraft.client.renderer.PostPass$Input'; do echo "--- $c"; javap -p -cp "$MC" "$c" 2>&1 | head -14; done
+              echo; echo "=== PostChain (публичный API) ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.PostChain 2>&1 | head -30 || true
+              echo; echo "=== ShaderManager ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.ShaderManager 2>&1 | grep -iE 'public|static' | head -30 || true
+              echo; echo "=== GameRenderer полный ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | head -70 || true
+              echo; echo "=== RenderPipeline (blaze3d) ==="
+              javap -p -cp "$MC" com.mojang.blaze3d.pipeline.RenderPipeline 2>&1 | head -30 || true
+              echo; echo "=== RenderPipelines (ванильные константы) ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.RenderPipelines 2>&1 | grep -iE 'BLUR|POST|TRANSPARENCY|GUI|OUTLINE' | head -25 || true
+              echo; echo "=== классы entity state ==="
+              unzip -l "$MC" | grep -E 'client/renderer/entity/state/' | awk '{print $NF}' | head -30 || true
+              echo; echo "=== EntityRenderState ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.entity.state.EntityRenderState 2>&1 | head -30 || true
+              echo; echo "=== LivingEntityRenderState (через list) ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.entity.state.LivingEntityRenderState 2>&1 | head -35 || true
+              echo; echo "=== ParticleRenderType + SpriteGetter ==="
+              javap -p -cp "$MC" net.minecraft.client.particle.ParticleRenderType 2>&1 | head -20 || true
+              javap -p -cp "$MC" net.minecraft.client.resources.model.sprite.SpriteGetter 2>&1 | head -15 || true
+              echo; echo "=== ParticleOptions/типы (что можно спавнить) ==="
+              unzip -l "$MC" | grep -E 'core/particles/[A-Za-z]+ParticleOptions\\.class' | awk '{print $NF}' | head -40 || true
+              echo; echo "=== ParticleTypes (константы) ==="
+              javap -p -cp "$MC" net.minecraft.core.particles.ParticleTypes 2>&1 | grep -iE 'public static final' | head -60 || true
             fi
 
           } > api-audit-result.txt 2>&1
