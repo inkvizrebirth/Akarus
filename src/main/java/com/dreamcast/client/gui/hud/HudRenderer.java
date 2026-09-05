@@ -425,9 +425,7 @@ public final class HudRenderer {
 		int x = position[0];
 		int y = position[1];
 
-		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 7, 3);
-		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 7,
-				RenderUtils.withAlpha(PANEL_BORDER, 0.9f * alpha), RenderUtils.withAlpha(0xCC09090C, alpha));
+		UiKit.panel(graphics, x, y, width, height, 6.0F, alpha, 0.08F, Util.getMillis());
 
 		// Спокойная шапка вместо выпирающей плашки: акцент, заголовок и счётчик.
 		int accent = ClientTheme.accent(now);
@@ -763,9 +761,7 @@ public final class HudRenderer {
 		int y = position[1];
 		HudLayout.publishBounds(HudInfoModule.ELEMENT_ARMOR, x, y, width, height);
 
-		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 3);
-		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6,
-				RenderUtils.withAlpha(PANEL_BORDER, alpha), RenderUtils.withAlpha(0xD908080B, alpha));
+		UiKit.panel(graphics, x, y, width, height, 6.0F, alpha, 0.08F, Util.getMillis());
 		EquipmentSlot[] slots = {EquipmentSlot.FEET, EquipmentSlot.LEGS, EquipmentSlot.CHEST, EquipmentSlot.HEAD};
 		for (int index = 0; index < slots.length + 1; index++) {
 			int itemX = x + 5 + index * 22 + (index == 4 ? 4 : 0);
@@ -829,10 +825,7 @@ public final class HudRenderer {
 	private static void drawInputKey(GuiGraphicsExtractor graphics, Font font, String label,
 			int x, int y, int width, int height, boolean down, float alpha, long now, float gradientOffset) {
 		int accent = ClientTheme.gradientAt(gradientOffset, now);
-		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 4, down ? 3 : 1);
-		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 4,
-				RenderUtils.withAlpha(down ? accent : PANEL_BORDER, (down ? 0.9f : 0.55f) * alpha),
-				RenderUtils.withAlpha(down ? accent : 0xC909090D, (down ? 0.24f : 1.0f) * alpha));
+		UiKit.panel(graphics, x, y, width, height, 6.0F, alpha, 0.08F, Util.getMillis());
 		RenderUtils.textCentered(graphics, font, label, x + width / 2,
 				y + (height - font.lineHeight) / 2, RenderUtils.withAlpha(TEXT_COLOR, alpha), false);
 	}
@@ -1010,9 +1003,7 @@ public final class HudRenderer {
 		HudLayout.publishBounds(HudInfoModule.ELEMENT_MEDIA, x, y, width, height);
 
 		int accent = ClientTheme.gradientAt(0.35f, now);
-		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 6, 4);
-		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 6,
-				RenderUtils.withAlpha(PANEL_BORDER, 0.9f * alpha), RenderUtils.withAlpha(0xD2080809, alpha));
+		UiKit.panel(graphics, x, y, width, height, 6.0F, alpha, 0.08F, Util.getMillis());
 
 		String title;
 		String subtitle;
@@ -1112,8 +1103,7 @@ public final class HudRenderer {
 
 		int accent = ClientTheme.gradientAt(0.4f, Util.getMillis());
 
-		RenderUtils.drawSoftShadow(graphics, x, y, width, height, 5, 4);
-		RenderUtils.fillRoundedBorder(graphics, x, y, width, height, 5, PANEL_BORDER, PANEL_BACKGROUND);
+		UiKit.panel(graphics, x, y, width, height, 6.0F, alpha, 0.08F, Util.getMillis());
 		graphics.fill(x + 7, y, x + width - 7, y + 1, RenderUtils.withAlpha(accent, 0.9f));
 
 		RenderUtils.text(graphics, font, title, x + PADDING + 3, y + PADDING + 1, TEXT_COLOR);
