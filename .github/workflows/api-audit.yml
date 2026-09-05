@@ -37,6 +37,7 @@ jobs:
           { echo "FULL=$FULL"; echo "COMMON=$COMMON"; } >> "$GITHUB_ENV"
       - name: Аудит пост-эффектов и рендера
         run: |
+          set +e
           exec > >(tee -a result.txt) 2>&1
           D=out/full
           echo "=== PostPass: байткод (биндинг входов) ==="
@@ -58,8 +59,20 @@ jobs:
           for f in $(find "$D"/net/minecraft/client/renderer -name 'RenderTypes.class' | head -1); do javap -p -cp "$D" "$(echo "$f" | sed "s|$D/||; s|\.class$||; s|/|.|g")" 2>&1 | grep -iE 'emissive|depth|translucent|lines' | head -30; done
           echo "=== ScreenEffectRenderer public ==="
           javap -p -cp "$D" net.minecraft.client.renderer.ScreenEffectRenderer 2>&1
-          echo "=== RenderPass: есть ли pass для пост-эффектов/depth ==="
+          echo "=== RenderPass: pass для пост-эффектов/depth ==="
           javap -p -cp "$D" net.minecraft.client.renderer.RenderPass 2>&1 | head -40
+          echo "=== кто вызывает checkEntityPostEffect (константы классов) ==="
+          for c in Minecraft GameRenderer LevelRenderer; do echo "-- $c"; javap -p -c -cp "$D" net.minecraft.client.renderer.$c 2>/dev/null | grep -B2 -A2 checkEntityPostEffect | head -20; javap -p -c -cp "$D" net.minecraft.client.$c 2>/dev/null | grep -B2 -A2 checkEntityPostEffect | head -20; done
+          echo "=== PostPass: поля и конструктор ==="
+          javap -p -cp "$D" net.minecraft.client.renderer.PostPass 2>&1
+          echo "=== PostPass: байткод конструктора (сколько сэмплеров) ==="
+          javap -p -c -cp "$D" net.minecraft.client.renderer.PostPass 2>&1 | sed -n '1,120p'
+          echo "=== blit.fsh ==="
+          cat "$D/assets/minecraft/shaders/post/blit.fsh" 2>/dev/null
+          echo "=== screenquad.vsh ==="
+          cat "$D/assets/minecraft/shaders/core/screenquad.vsh" 2>/dev/null
+          echo "=== MotionBlur: есть ли у ShaderManager проверка неизвестных uniform ==="
+          javap -p -cp "$D" net.minecraft.client.renderer.PostChain\$TargetBundle 2>&1
       - name: Закоммитить результат
         run: |
           git config user.name "arena-agent"
