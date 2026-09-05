@@ -23,12 +23,12 @@
 MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 === классы мобов/врагов/манекенов ===
-        0  2026-09-05 08:48   assets/minecraft/textures/entity/armorstand/
+        0  2026-09-05 08:53   assets/minecraft/textures/entity/armorstand/
       809  1980-02-01 00:00   assets/minecraft/textures/entity/armorstand/armorstand.png
-        0  2026-09-05 08:48   net/minecraft/client/model/object/armorstand/
-     6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
-     5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
+        0  2026-09-05 08:53   net/minecraft/client/model/object/armorstand/
       320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
+     5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
+     6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
     11516  1980-02-01 00:00   net/minecraft/client/renderer/entity/ArmorStandRenderer.class
      1224  1980-02-01 00:00   net/minecraft/client/renderer/entity/state/ArmorStandRenderState.class
      2859  1980-02-01 00:00   net/minecraft/util/datafix/fixes/EntityArmorStandSilentFix.class
@@ -474,26 +474,26 @@ public class net.minecraft.world.item.BucketItem extends net.minecraft.world.ite
   public void handleSlotStateChanged(int, int, boolean);
 
 === классы оверлеев ===
-     3595  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay$1.class
      7316  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay.class
+     3595  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay$1.class
      3361  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay$1.class
-    21742  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay.class
      4652  1980-02-01 00:00   net/minecraft/client/gui/components/IMEPreeditOverlay.class
-     1473  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay$HealthState.class
+    21742  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay.class
      2498  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay$ScoreDisplayEntry.class
     21670  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay.class
-     5001  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$Subtitle.class
-     7576  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay.class
+     1473  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay$HealthState.class
      2015  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$SoundPlayedAt.class
+     7576  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay.class
+     5001  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$Subtitle.class
      2687  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay$LogoTexture.class
      8761  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay.class
       632  1980-02-01 00:00   net/minecraft/client/gui/screens/Overlay.class
      1522  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayScreen$1.class
      4421  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayTabButton.class
     22448  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayScreen.class
-     6490  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayCraftingRecipeButton.class
      3112  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayRecipeButton$Pos.class
      4694  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayRecipeButton.class
+     6490  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayCraftingRecipeButton.class
      3959  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlaySmeltingRecipeButton.class
      7848  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent.class
      2000  1980-02-01 00:00   net/minecraft/client/particle/FireworkParticles$OverlayParticle.class
@@ -540,8 +540,8 @@ public class net.minecraft.client.renderer.fog.FogRenderer implements java.lang.
 }
 
 === nausea-классы ===
-       40  1980-02-01 00:00   assets/minecraft/textures/misc/nausea.png.mcmeta
     12935  1980-02-01 00:00   assets/minecraft/textures/misc/nausea.png
+       40  1980-02-01 00:00   assets/minecraft/textures/misc/nausea.png.mcmeta
       169  1980-02-01 00:00   assets/minecraft/textures/mob_effect/nausea.png
 
 === Camera (fov) ===
@@ -588,26 +588,26 @@ public final class net.minecraft.world.inventory.ContainerInput extends java.lan
   public static final net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> DARKNESS;
 
 === fog environments ===
-        0  2026-09-05 08:48   net/minecraft/client/renderer/fog/environment/
+        0  2026-09-05 08:53   net/minecraft/client/renderer/fog/environment/
      7163  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/AtmosphericFogEnvironment.class
      2722  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/BlindnessFogEnvironment.class
      2698  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/DarknessFogEnvironment.class
      1723  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/FogEnvironment.class
-     1494  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/MobEffectFogEnvironment.class
      2599  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/LavaFogEnvironment.class
+     1494  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/MobEffectFogEnvironment.class
      2290  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/PowderedSnowFogEnvironment.class
-     3052  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/WaterFogEnvironment.class
       321  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/package-info.class
+     3052  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/WaterFogEnvironment.class
 
 === gui layers/overlays ===
      2196  1980-02-01 00:00   net/minecraft/client/gui/Hud$1DisplayEntry.class
      1551  1980-02-01 00:00   net/minecraft/client/gui/Hud$ContextualInfo.class
      5824  1980-02-01 00:00   net/minecraft/client/gui/Hud$HeartType.class
     60255  1980-02-01 00:00   net/minecraft/client/gui/Hud.class
-       41  1980-02-01 00:00   assets/minecraft/textures/misc/credits_vignette.png.mcmeta
      5054  1980-02-01 00:00   assets/minecraft/textures/misc/credits_vignette.png
-     5054  1980-02-01 00:00   assets/minecraft/textures/misc/vignette.png
+       41  1980-02-01 00:00   assets/minecraft/textures/misc/credits_vignette.png.mcmeta
        41  1980-02-01 00:00   assets/minecraft/textures/misc/vignette.png.mcmeta
+     5054  1980-02-01 00:00   assets/minecraft/textures/misc/vignette.png
      2617  1980-02-01 00:00   net/minecraft/world/entity/ai/goal/ClimbOnTopOfPowderSnowGoal.class
     12056  1980-02-01 00:00   net/minecraft/world/level/block/PowderSnowBlock.class
 
@@ -1223,7 +1223,7 @@ grep: write error: Broken pipe
 grep: write error: Broken pipe
 
 === PlayerRenderer / render state ===
-        0  2026-09-05 08:48   net/minecraft/client/renderer/entity/player/
+        0  2026-09-05 08:53   net/minecraft/client/renderer/entity/player/
       319  1980-02-01 00:00   net/minecraft/client/renderer/entity/player/package-info.class
     24446  1980-02-01 00:00   net/minecraft/client/renderer/entity/player/AvatarRenderer.class
 
@@ -2064,10 +2064,10 @@ grep: write error: Broken pipe
      5443  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundInteractPacket.class
      1874  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerCommandPacket$Action.class
      4009  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerInputPacket.class
-     4644  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerCommandPacket.class
      3509  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundSetCarriedItemPacket.class
      3618  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundSwingPacket.class
      4306  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundUseItemOnPacket.class
+     4644  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerCommandPacket.class
 
 === ClientLevel (entities by class) ===
   public java.lang.Iterable<net.minecraft.world.entity.Entity> entitiesForRendering();
@@ -2118,36 +2118,36 @@ com/mojang/blaze3d/opengl/GlRenderPipeline.class
 com/mojang/blaze3d/pipeline/
 com/mojang/blaze3d/pipeline/BindGroupLayout$Builder.class
 com/mojang/blaze3d/pipeline/BindGroupLayout$UniformDescription.class
-com/mojang/blaze3d/pipeline/BindGroupLayout.class
-com/mojang/blaze3d/pipeline/BlendEquation.class
+com/mojang/blaze3d/pipeline/ColorTargetState$WriteMask.class
 com/mojang/blaze3d/pipeline/BlendFunction.class
 com/mojang/blaze3d/pipeline/CompiledRenderPipeline.class
-com/mojang/blaze3d/pipeline/DepthStencilState.class
 com/mojang/blaze3d/pipeline/ColorTargetState.class
+com/mojang/blaze3d/pipeline/DepthStencilState.class
 com/mojang/blaze3d/pipeline/MainTarget$Dimension.class
 com/mojang/blaze3d/pipeline/MainTarget.class
+com/mojang/blaze3d/pipeline/BlendEquation.class
 com/mojang/blaze3d/pipeline/RenderPipeline$Builder.class
-com/mojang/blaze3d/pipeline/RenderTarget.class
+com/mojang/blaze3d/pipeline/RenderPipeline.class
 com/mojang/blaze3d/pipeline/TextureTarget.class
 com/mojang/blaze3d/pipeline/package-info.class
 com/mojang/blaze3d/pipeline/RenderPipeline$Snippet.class
-com/mojang/blaze3d/pipeline/RenderPipeline.class
-com/mojang/blaze3d/pipeline/ColorTargetState$WriteMask.class
+com/mojang/blaze3d/pipeline/BindGroupLayout.class
+com/mojang/blaze3d/pipeline/RenderTarget.class
 com/mojang/blaze3d/vulkan/VulkanRenderPipeline.class
 net/minecraft/client/renderer/PostChain$TargetBundle$1.class
-net/minecraft/client/renderer/PostChain$TargetBundle.class
 net/minecraft/client/renderer/PostChainConfig$Input.class
-net/minecraft/client/renderer/PostChainConfig$Pass.class
+net/minecraft/client/renderer/PostChain.class
+net/minecraft/client/renderer/PostChainConfig$InternalTarget.class
 net/minecraft/client/renderer/PostChainConfig$TargetInput.class
 net/minecraft/client/renderer/PostChainConfig$TextureInput.class
-net/minecraft/client/renderer/PostPass$Input.class
 net/minecraft/client/renderer/PostChainConfig.class
 net/minecraft/client/renderer/PostPass$InputTexture.class
-net/minecraft/client/renderer/PostPass$TextureInput.class
-net/minecraft/client/renderer/PostChainConfig$InternalTarget.class
-net/minecraft/client/renderer/PostChain.class
+net/minecraft/client/renderer/PostChainConfig$Pass.class
 net/minecraft/client/renderer/PostPass$TargetInput.class
+net/minecraft/client/renderer/PostPass$TextureInput.class
 net/minecraft/client/renderer/PostPass.class
+net/minecraft/client/renderer/PostPass$Input.class
+net/minecraft/client/renderer/PostChain$TargetBundle.class
 net/minecraft/client/renderer/ShaderDefines$Builder.class
 net/minecraft/client/renderer/ShaderDefines.class
 net/minecraft/client/renderer/ShaderManager$1.class
@@ -2166,10 +2166,10 @@ assets/minecraft/shaders/post/box_blur.fsh
 assets/minecraft/shaders/post/color_convolve.fsh
 assets/minecraft/shaders/post/entity_outline_box_blur.fsh
 assets/minecraft/shaders/post/entity_sobel.fsh
-assets/minecraft/shaders/post/spiderclip.fsh
-assets/minecraft/shaders/post/rotscale.vsh
-assets/minecraft/shaders/post/transparency.fsh
 assets/minecraft/shaders/post/invert.fsh
+assets/minecraft/shaders/post/rotscale.vsh
+assets/minecraft/shaders/post/spiderclip.fsh
+assets/minecraft/shaders/post/transparency.fsh
 
 === формат pipeline json (nausea) ===
 
@@ -2349,19 +2349,19 @@ assets/minecraft/models/block/composter_contents5.json
 assets/minecraft/models/block/composter_contents6.json
 assets/minecraft/models/block/composter_contents7.json
 assets/minecraft/models/block/composter_contents_ready.json
-assets/minecraft/models/block/copper_bars_post_ends.json
 assets/minecraft/models/block/copper_bars_post.json
+assets/minecraft/models/block/copper_bars_post_ends.json
 assets/minecraft/models/block/crimson_fence_post.json
 assets/minecraft/models/block/custom_fence_post.json
-assets/minecraft/models/block/cyan_stained_glass_pane_post.json
 assets/minecraft/models/block/dark_oak_fence_post.json
+assets/minecraft/models/block/cyan_stained_glass_pane_post.json
 assets/minecraft/models/block/deepslate_brick_wall_post.json
-assets/minecraft/models/block/deepslate_tile_wall_post.json
 assets/minecraft/models/block/diorite_wall_post.json
 assets/minecraft/models/block/end_stone_brick_wall_post.json
 assets/minecraft/models/block/exposed_copper_bars_post.json
 assets/minecraft/models/block/exposed_copper_bars_post_ends.json
 assets/minecraft/models/block/fence_post.json
+assets/minecraft/models/block/deepslate_tile_wall_post.json
 assets/minecraft/models/block/glass_pane_post.json
 assets/minecraft/models/block/granite_wall_post.json
 
@@ -2634,32 +2634,32 @@ net/minecraft/client/renderer/entity/state/
 net/minecraft/client/renderer/entity/state/AllayRenderState.class
 net/minecraft/client/renderer/entity/state/ArmadilloRenderState.class
 net/minecraft/client/renderer/entity/state/ArmedEntityRenderState.class
-net/minecraft/client/renderer/entity/state/ArrowRenderState.class
 net/minecraft/client/renderer/entity/state/ArmorStandRenderState.class
-net/minecraft/client/renderer/entity/state/AxolotlRenderState.class
+net/minecraft/client/renderer/entity/state/ArrowRenderState.class
 net/minecraft/client/renderer/entity/state/AvatarRenderState.class
+net/minecraft/client/renderer/entity/state/AxolotlRenderState.class
 net/minecraft/client/renderer/entity/state/BatRenderState.class
 net/minecraft/client/renderer/entity/state/BeeRenderState.class
 net/minecraft/client/renderer/entity/state/BlockDisplayEntityRenderState.class
 net/minecraft/client/renderer/entity/state/BoggedRenderState.class
 net/minecraft/client/renderer/entity/state/BoatRenderState.class
-net/minecraft/client/renderer/entity/state/BreezeRenderState.class
 net/minecraft/client/renderer/entity/state/CamelRenderState.class
-net/minecraft/client/renderer/entity/state/CatRenderState.class
 net/minecraft/client/renderer/entity/state/ChickenRenderState.class
-net/minecraft/client/renderer/entity/state/CopperGolemRenderState.class
 net/minecraft/client/renderer/entity/state/CowRenderState.class
 net/minecraft/client/renderer/entity/state/CreakingRenderState.class
 net/minecraft/client/renderer/entity/state/CreeperRenderState.class
 net/minecraft/client/renderer/entity/state/DisplayEntityRenderState.class
+net/minecraft/client/renderer/entity/state/DolphinRenderState.class
+net/minecraft/client/renderer/entity/state/DonkeyRenderState.class
 net/minecraft/client/renderer/entity/state/EndCrystalRenderState.class
+net/minecraft/client/renderer/entity/state/BreezeRenderState.class
 net/minecraft/client/renderer/entity/state/EnderDragonRenderState.class
+net/minecraft/client/renderer/entity/state/CatRenderState.class
 net/minecraft/client/renderer/entity/state/EndermanRenderState.class
 net/minecraft/client/renderer/entity/state/EntityRenderState$LeashState.class
 net/minecraft/client/renderer/entity/state/EntityRenderState$ShadowPiece.class
-net/minecraft/client/renderer/entity/state/EntityRenderState.class
-net/minecraft/client/renderer/entity/state/EvokerFangsRenderState.class
 net/minecraft/client/renderer/entity/state/EquineRenderState.class
+net/minecraft/client/renderer/entity/state/EvokerFangsRenderState.class
 
 === EntityRenderState ===
 Compiled from "EntityRenderState.java"
@@ -2806,3 +2806,469 @@ public interface net.minecraft.client.resources.model.sprite.SpriteGetter {
   public static final net.minecraft.core.particles.SimpleParticleType RESET_MOB_GROWTH;
   public static final net.minecraft.core.particles.SimpleParticleType ITEM_SLIME;
 grep: write error: Broken pipe
+
+=== assets/minecraft: верхнеуровневые папки ===
+atlases
+blockstates
+equipment
+font
+items
+lang
+models
+particles
+post_effect
+shaders
+texts
+textures
+waypoint_style
+
+=== json с shader/post/pipeline в имени ===
+assets/minecraft/blockstates/composter.json
+assets/minecraft/items/composter.json
+assets/minecraft/models/block/acacia_fence_post.json
+assets/minecraft/models/block/andesite_wall_post.json
+assets/minecraft/models/block/bamboo_fence_post.json
+assets/minecraft/models/block/birch_fence_post.json
+assets/minecraft/models/block/black_stained_glass_pane_post.json
+assets/minecraft/models/block/blackstone_wall_post.json
+assets/minecraft/models/block/blue_stained_glass_pane_post.json
+assets/minecraft/models/block/brick_wall_post.json
+assets/minecraft/models/block/brown_stained_glass_pane_post.json
+assets/minecraft/models/block/cherry_fence_post.json
+assets/minecraft/models/block/cinnabar_brick_wall_post.json
+assets/minecraft/models/block/cinnabar_wall_post.json
+assets/minecraft/models/block/cobbled_deepslate_wall_post.json
+assets/minecraft/models/block/cobblestone_wall_post.json
+assets/minecraft/models/block/composter.json
+assets/minecraft/models/block/composter_contents1.json
+assets/minecraft/models/block/composter_contents2.json
+assets/minecraft/models/block/composter_contents3.json
+assets/minecraft/models/block/composter_contents4.json
+assets/minecraft/models/block/composter_contents5.json
+assets/minecraft/models/block/composter_contents6.json
+assets/minecraft/models/block/composter_contents7.json
+assets/minecraft/models/block/composter_contents_ready.json
+assets/minecraft/models/block/copper_bars_post.json
+assets/minecraft/models/block/copper_bars_post_ends.json
+assets/minecraft/models/block/crimson_fence_post.json
+assets/minecraft/models/block/custom_fence_post.json
+assets/minecraft/models/block/dark_oak_fence_post.json
+assets/minecraft/models/block/cyan_stained_glass_pane_post.json
+assets/minecraft/models/block/deepslate_brick_wall_post.json
+assets/minecraft/models/block/diorite_wall_post.json
+assets/minecraft/models/block/end_stone_brick_wall_post.json
+assets/minecraft/models/block/exposed_copper_bars_post.json
+assets/minecraft/models/block/exposed_copper_bars_post_ends.json
+assets/minecraft/models/block/fence_post.json
+assets/minecraft/models/block/deepslate_tile_wall_post.json
+assets/minecraft/models/block/glass_pane_post.json
+assets/minecraft/models/block/granite_wall_post.json
+grep: write error: Broken pipe
+
+=== ShaderManager: публичный API ===
+Compiled from "ShaderManager.java"
+public class net.minecraft.client.renderer.ShaderManager extends net.minecraft.server.packs.resources.SimplePreparableReloadListener<net.minecraft.client.renderer.ShaderManager$Configs> implements java.lang.AutoCloseable {
+  private static final org.slf4j.Logger LOGGER;
+  public static final int MAX_LOG_LENGTH;
+  public static final java.lang.String SHADER_PATH;
+  private static final java.lang.String SHADER_INCLUDE_PATH;
+  private static final net.minecraft.resources.FileToIdConverter POST_CHAIN_ID_CONVERTER;
+  private final net.minecraft.client.renderer.texture.TextureManager textureManager;
+  private final java.util.function.Consumer<java.lang.Exception> recoveryHandler;
+  private net.minecraft.client.renderer.ShaderManager$CompilationCache compilationCache;
+  private final net.minecraft.client.renderer.Projection postChainProjection;
+  private final net.minecraft.client.renderer.ProjectionMatrixBuffer postChainProjectionMatrixBuffer;
+  public net.minecraft.client.renderer.ShaderManager(net.minecraft.client.renderer.texture.TextureManager, java.util.function.Consumer<java.lang.Exception>);
+  protected net.minecraft.client.renderer.ShaderManager$Configs prepare(net.minecraft.server.packs.resources.ResourceManager, net.minecraft.util.profiling.ProfilerFiller);
+  private static void loadShader(net.minecraft.resources.Identifier, net.minecraft.server.packs.resources.Resource, com.mojang.blaze3d.shaders.ShaderType, java.util.Map<net.minecraft.resources.Identifier, net.minecraft.server.packs.resources.Resource>, com.google.common.collect.ImmutableMap$Builder<net.minecraft.client.renderer.ShaderManager$ShaderSourceKey, java.lang.String>);
+  private static com.mojang.blaze3d.preprocessor.GlslPreprocessor createPreprocessor(java.util.Map<net.minecraft.resources.Identifier, net.minecraft.server.packs.resources.Resource>, net.minecraft.resources.Identifier);
+  private static void loadPostChain(net.minecraft.resources.Identifier, net.minecraft.server.packs.resources.Resource, com.google.common.collect.ImmutableMap$Builder<net.minecraft.resources.Identifier, net.minecraft.client.renderer.PostChainConfig>);
+  private static boolean isShader(net.minecraft.resources.Identifier);
+  protected void apply(net.minecraft.client.renderer.ShaderManager$Configs, net.minecraft.server.packs.resources.ResourceManager, net.minecraft.util.profiling.ProfilerFiller);
+  public java.lang.String getName();
+  private void tryTriggerRecovery(java.lang.Exception);
+  public net.minecraft.client.renderer.PostChain getPostChain(net.minecraft.resources.Identifier, java.util.Set<net.minecraft.resources.Identifier>);
+  public void close();
+  public java.lang.String getShader(net.minecraft.resources.Identifier, com.mojang.blaze3d.shaders.ShaderType);
+  protected void apply(java.lang.Object, net.minecraft.server.packs.resources.ResourceManager, net.minecraft.util.profiling.ProfilerFiller);
+  protected java.lang.Object prepare(net.minecraft.server.packs.resources.ResourceManager, net.minecraft.util.profiling.ProfilerFiller);
+  private static java.lang.String lambda$apply$0(net.minecraft.resources.Identifier);
+  static {};
+}
+
+=== ShaderManager: строки (папки ресурсов) ===
+  public static final java.lang.String SHADER_PATH;
+  private static final java.lang.String SHADER_INCLUDE_PATH;
+        35: ldc           #86                 // String post
+        37: invokespecial #89                 // Method net/minecraft/client/renderer/ProjectionMatrixBuffer."<init>":(Ljava/lang/String;)V
+         5: ldc           #46                 // String shaders
+        12: invokeinterface #136,  3          // InterfaceMethod net/minecraft/server/packs/resources/ResourceManager.listResources:(Ljava/lang/String;Ljava/util/function/Predicate;)Ljava/util/Map;
+  private static void loadShader(net.minecraft.resources.Identifier, net.minecraft.server.packs.resources.Resource, com.mojang.blaze3d.shaders.ShaderType, java.util.Map<net.minecraft.resources.Identifier, net.minecraft.server.packs.resources.Resource>, com.google.common.collect.ImmutableMap$Builder<net.minecraft.client.renderer.ShaderManager$ShaderSourceKey, java.lang.String>);
+        25: invokestatic  #242                // Method org/apache/commons/io/IOUtils.toString:(Ljava/io/Reader;)Ljava/lang/String;
+        42: ldc           #247                // String
+        48: invokevirtual #253                // Method com/mojang/blaze3d/preprocessor/GlslPreprocessor.process:(Ljava/lang/String;)Ljava/util/List;
+        51: invokestatic  #259                // Method java/lang/String.join:(Ljava/lang/CharSequence;Ljava/lang/Iterable;)Ljava/lang/String;
+       106: ldc_w         #276                // String Failed to load shader source at {}
+       112: invokeinterface #282,  4          // InterfaceMethod org/slf4j/Logger.error:(Ljava/lang/String;Ljava/lang/Object;Ljava/lang/Object;)V
+       101: ldc_w         #359                // String Failed to parse post chain at {}
+       107: invokeinterface #282,  4          // InterfaceMethod org/slf4j/Logger.error:(Ljava/lang/String;Ljava/lang/Object;Ljava/lang/Object;)V
+         8: invokevirtual #366                // Method net/minecraft/resources/Identifier.getPath:()Ljava/lang/String;
+        11: ldc_w         #368                // String .glsl
+        14: invokevirtual #372                // Method java/lang/String.endsWith:(Ljava/lang/String;)Z
+       161: ldc_w         #463                // String \n
+       172: checkcast     #255                // class java/lang/String
+       175: invokedynamic #484,  0            // InvokeDynamic #5:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+       180: invokespecial #485                // Method java/lang/RuntimeException."<init>":(Ljava/lang/String;)V
+  public java.lang.String getName();
+         0: ldc_w         #502                // String Shader Loader
+        14: ldc_w         #525                // String Failed to load post chain: {}
+        19: invokeinterface #282,  4          // InterfaceMethod org/slf4j/Logger.error:(Ljava/lang/String;Ljava/lang/Object;Ljava/lang/Object;)V
+  public java.lang.String getShader(net.minecraft.resources.Identifier, com.mojang.blaze3d.shaders.ShaderType);
+         6: invokevirtual #415                // Method net/minecraft/client/renderer/ShaderManager$CompilationCache.getShaderSource:(Lnet/minecraft/resources/Identifier;Lcom/mojang/blaze3d/shaders/ShaderType;)Ljava/lang/String;
+  private static java.lang.String lambda$apply$0(net.minecraft.resources.Identifier);
+         1: invokestatic  #552                // Method java/lang/String.valueOf:(Ljava/lang/Object;)Ljava/lang/String;
+         4: invokedynamic #555,  0            // InvokeDynamic #6:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+         6: ldc_w         #564                // String post_effect
+         9: invokestatic  #567                // Method net/minecraft/resources/FileToIdConverter.json:(Ljava/lang/String;)Lnet/minecraft/resources/FileToIdConverter;
+
+=== GameRenderer: строки ===
+       154: ldc           #195                // String level
+       156: invokespecial #198                // Method net/minecraft/client/renderer/ProjectionMatrixBuffer."<init>":(Ljava/lang/String;)V
+       167: ldc           #202                // String 3d hud
+       169: invokespecial #198                // Method net/minecraft/client/renderer/ProjectionMatrixBuffer."<init>":(Ljava/lang/String;)V
+       227: invokestatic  #248                // Method java/lang/String.valueOf:(Ljava/lang/Object;)Ljava/lang/String;
+       230: invokedynamic #260,  0            // InvokeDynamic #0:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+       235: invokestatic  #265                // Method com/mojang/blaze3d/platform/MessageBox.error:(Ljava/lang/String;)V
+       242: ldc_w         #269                // String Unable to allocate render buffers
+       247: invokespecial #272                // Method net/minecraft/client/main/SilentInitException."<init>":(Ljava/lang/String;Ljava/lang/Throwable;)V
+        47: ldc_w         #419                // String creeper
+        50: invokestatic  #425                // Method net/minecraft/resources/Identifier.withDefaultNamespace:(Ljava/lang/String;)Lnet/minecraft/resources/Identifier;
+        66: ldc_w         #431                // String spider
+        69: invokestatic  #425                // Method net/minecraft/resources/Identifier.withDefaultNamespace:(Ljava/lang/String;)Lnet/minecraft/resources/Identifier;
+        85: ldc_w         #433                // String invert
+        88: invokestatic  #425                // Method net/minecraft/resources/Identifier.withDefaultNamespace:(Ljava/lang/String;)Lnet/minecraft/resources/Identifier;
+         5: ldc_w         #864                // String camera
+         8: invokeinterface #869,  2          // InterfaceMethod net/minecraft/util/profiling/ProfilerFiller.push:(Ljava/lang/String;)V
+         5: ldc_w         #938                // String render
+         8: invokeinterface #869,  2          // InterfaceMethod net/minecraft/util/profiling/ProfilerFiller.push:(Ljava/lang/String;)V
+       251: ldc_w         #1014               // String world
+       254: invokeinterface #869,  2          // InterfaceMethod net/minecraft/util/profiling/ProfilerFiller.push:(Ljava/lang/String;)V
+       375: ldc_w         #1044               // String gui
+       378: invokeinterface #869,  2          // InterfaceMethod net/minecraft/util/profiling/ProfilerFiller.push:(Ljava/lang/String;)V
+        67: ldc_w         #1228               // String matrices
+        70: invokeinterface #869,  2          // InterfaceMethod net/minecraft/util/profiling/ProfilerFiller.push:(Ljava/lang/String;)V
+       308: ldc_w         #1288               // String fog
+       311: invokeinterface #1291,  2         // InterfaceMethod net/minecraft/util/profiling/ProfilerFiller.popPush:(Ljava/lang/String;)V
+       342: ldc           #195                // String level
+       344: invokeinterface #1291,  2         // InterfaceMethod net/minecraft/util/profiling/ProfilerFiller.popPush:(Ljava/lang/String;)V
+       410: ldc_w         #1323               // String hand
+       413: invokeinterface #1291,  2         // InterfaceMethod net/minecraft/util/profiling/ProfilerFiller.popPush:(Ljava/lang/String;)V
+       512: ldc_w         #1337               // String screenEffects
+       515: invokeinterface #1291,  2         // InterfaceMethod net/minecraft/util/profiling/ProfilerFiller.popPush:(Ljava/lang/String;)V
+       116: ldc_w         #1679               // String Couldn\'t save auto screenshot
+       121: invokeinterface #1684,  3         // InterfaceMethod org/slf4j/Logger.warn:(Ljava/lang/String;Ljava/lang/Throwable;)V
+  private static java.lang.String lambda$preloadUiShader$0(net.minecraft.server.packs.resources.ResourceProvider, net.minecraft.resources.Identifier, com.mojang.blaze3d.shaders.ShaderType);
+        23: invokestatic  #1732               // Method org/apache/commons/io/IOUtils.toString:(Ljava/io/Reader;)Ljava/lang/String;
+        73: ldc_w         #1737               // String Coudln\'t preload {} shader {}: {}
+        93: invokeinterface #1740,  3         // InterfaceMethod org/slf4j/Logger.error:(Ljava/lang/String;[Ljava/lang/Object;)V
+         0: ldc_w         #1749               // String blur
+
+=== PostChain: строки ===
+public class net.minecraft.client.renderer.PostChain implements java.lang.AutoCloseable {
+  public static final net.minecraft.resources.Identifier MAIN_TARGET_ID;
+  public static net.minecraft.client.renderer.PostChain load(net.minecraft.client.renderer.PostChainConfig, net.minecraft.client.renderer.texture.TextureManager, java.util.Set<net.minecraft.resources.Identifier>, net.minecraft.resources.Identifier, net.minecraft.client.renderer.Projection, net.minecraft.client.renderer.ProjectionMatrixBuffer) throws net.minecraft.client.renderer.ShaderManager$CompilationException;
+        71: invokestatic  #197                // Method java/lang/String.valueOf:(Ljava/lang/Object;)Ljava/lang/String;
+        74: invokedynamic #209,  0            // InvokeDynamic #2:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+        79: invokespecial #212                // Method net/minecraft/client/renderer/ShaderManager$CompilationException."<init>":(Ljava/lang/String;)V
+       129: invokedynamic #229,  0            // InvokeDynamic #3:makeConcatWithConstants:(I)Ljava/lang/String;
+       134: invokevirtual #235                // Method net/minecraft/resources/Identifier.withSuffix:(Ljava/lang/String;)Lnet/minecraft/resources/Identifier;
+        74: invokeinterface #315,  1          // InterfaceMethod net/minecraft/client/renderer/PostChainConfig$Input.samplerName:()Ljava/lang/String;
+        79: invokedynamic #318,  0            // InvokeDynamic #4:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+        84: invokevirtual #322                // Method com/mojang/blaze3d/pipeline/BindGroupLayout$Builder.withSampler:(Ljava/lang/String;)Lcom/mojang/blaze3d/pipeline/BindGroupLayout$Builder;
+        93: ldc_w         #324                // String SamplerInfo
+        99: invokevirtual #334                // Method com/mojang/blaze3d/pipeline/BindGroupLayout$Builder.withUniform:(Ljava/lang/String;Lcom/mojang/blaze3d/shaders/UniformType;)Lcom/mojang/blaze3d/pipeline/BindGroupLayout$Builder;
+       136: checkcast     #193                // class java/lang/String
+       148: invokevirtual #334                // Method com/mojang/blaze3d/pipeline/BindGroupLayout$Builder.withUniform:(Ljava/lang/String;Lcom/mojang/blaze3d/shaders/UniformType;)Lcom/mojang/blaze3d/pipeline/BindGroupLayout$Builder;
+       196: invokestatic  #197                // Method java/lang/String.valueOf:(Ljava/lang/Object;)Ljava/lang/String;
+       199: invokedynamic #375,  0            // InvokeDynamic #5:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+       204: invokespecial #212                // Method net/minecraft/client/renderer/ShaderManager$CompilationException."<init>":(Ljava/lang/String;)V
+       302: invokespecial #398                // Method java/lang/MatchException."<init>":(Ljava/lang/String;Ljava/lang/Throwable;)V
+       315: invokevirtual #399                // Method net/minecraft/client/renderer/PostChainConfig$TextureInput.samplerName:()Ljava/lang/String;
+       433: invokespecial #432                // Method net/minecraft/client/renderer/PostPass$TextureInput."<init>":(Ljava/lang/String;Lnet/minecraft/client/renderer/texture/AbstractTexture;IIZ)V
+       454: invokevirtual #435                // Method net/minecraft/client/renderer/PostChainConfig$TargetInput.samplerName:()Ljava/lang/String;
+       535: invokespecial #445                // Method net/minecraft/client/renderer/PostPass$TargetInput."<init>":(Ljava/lang/String;Lnet/minecraft/resources/Identifier;ZZ)V
+       578: invokevirtual #454                // Method java/lang/Throwable.toString:()Ljava/lang/String;
+       583: invokespecial #398                // Method java/lang/MatchException."<init>":(Ljava/lang/String;Ljava/lang/Throwable;)V
+  public void addToFrame(com.mojang.blaze3d.framegraph.FrameGraphBuilder, int, int, net.minecraft.client.renderer.PostChain$TargetBundle);
+       251: invokevirtual #556                // Method net/minecraft/resources/Identifier.toString:()Ljava/lang/String;
+       256: invokevirtual #562                // Method com/mojang/blaze3d/framegraph/FrameGraphBuilder.importExternal:(Ljava/lang/String;Ljava/lang/Object;)Lcom/mojang/blaze3d/resource/ResourceHandle;
+       275: invokevirtual #556                // Method net/minecraft/resources/Identifier.toString:()Ljava/lang/String;
+       280: invokevirtual #566                // Method com/mojang/blaze3d/framegraph/FrameGraphBuilder.createInternal:(Ljava/lang/String;Lcom/mojang/blaze3d/resource/ResourceDescriptor;)Lcom/mojang/blaze3d/resource/ResourceHandle;
+
+=== UniformValue ===
+Compiled from "UniformValue.java"
+public interface net.minecraft.client.renderer.UniformValue {
+  public static final com.mojang.serialization.Codec<net.minecraft.client.renderer.UniformValue> CODEC;
+  public abstract void writeTo(com.mojang.blaze3d.buffers.Std140Builder);
+  public abstract void addSize(com.mojang.blaze3d.buffers.Std140SizeCalculator);
+  public abstract net.minecraft.client.renderer.UniformValue$Type type();
+  private static com.mojang.serialization.MapCodec lambda$static$0(net.minecraft.client.renderer.UniformValue$Type);
+  static {};
+}
+
+=== shaders/: все файлы ===
+assets/minecraft/shaders/
+assets/minecraft/shaders/core/
+assets/minecraft/shaders/core/animate_sprite_blit.fsh
+assets/minecraft/shaders/core/blit_screen.fsh
+assets/minecraft/shaders/core/animate_sprite.vsh
+assets/minecraft/shaders/core/block.fsh
+assets/minecraft/shaders/core/block.vsh
+assets/minecraft/shaders/core/entity.fsh
+assets/minecraft/shaders/core/entity.vsh
+assets/minecraft/shaders/core/glint.fsh
+assets/minecraft/shaders/core/glint.vsh
+assets/minecraft/shaders/core/gui.fsh
+assets/minecraft/shaders/core/gui.vsh
+assets/minecraft/shaders/core/item.fsh
+assets/minecraft/shaders/core/item.vsh
+assets/minecraft/shaders/core/lightmap.fsh
+assets/minecraft/shaders/core/panorama.fsh
+assets/minecraft/shaders/core/panorama.vsh
+assets/minecraft/shaders/core/particle.fsh
+assets/minecraft/shaders/core/particle.vsh
+assets/minecraft/shaders/core/position.fsh
+assets/minecraft/shaders/core/position.vsh
+assets/minecraft/shaders/core/position_color.fsh
+assets/minecraft/shaders/core/position_color.vsh
+assets/minecraft/shaders/core/debug_point.vsh
+assets/minecraft/shaders/core/animate_sprite_interpolate.fsh
+assets/minecraft/shaders/core/position_tex_color.fsh
+assets/minecraft/shaders/core/position_tex_color.vsh
+assets/minecraft/shaders/core/rendertype_beacon_beam.fsh
+assets/minecraft/shaders/core/rendertype_beacon_beam.vsh
+assets/minecraft/shaders/core/rendertype_clouds.fsh
+assets/minecraft/shaders/core/rendertype_clouds.vsh
+assets/minecraft/shaders/core/rendertype_crumbling.fsh
+assets/minecraft/shaders/core/rendertype_crumbling.vsh
+assets/minecraft/shaders/core/rendertype_end_portal.fsh
+assets/minecraft/shaders/core/rendertype_end_portal.vsh
+assets/minecraft/shaders/core/rendertype_entity_shadow.fsh
+assets/minecraft/shaders/core/rendertype_entity_shadow.vsh
+assets/minecraft/shaders/core/rendertype_leash.fsh
+assets/minecraft/shaders/core/rendertype_leash.vsh
+assets/minecraft/shaders/core/rendertype_lightning.fsh
+assets/minecraft/shaders/core/rendertype_lightning.vsh
+assets/minecraft/shaders/core/rendertype_lines.fsh
+assets/minecraft/shaders/core/rendertype_lines.vsh
+assets/minecraft/shaders/core/rendertype_outline.fsh
+assets/minecraft/shaders/core/rendertype_outline.vsh
+assets/minecraft/shaders/core/rendertype_water_mask.fsh
+assets/minecraft/shaders/core/rendertype_water_mask.vsh
+assets/minecraft/shaders/core/rendertype_world_border.fsh
+assets/minecraft/shaders/core/rendertype_world_border.vsh
+assets/minecraft/shaders/core/screenquad.vsh
+assets/minecraft/shaders/core/sky.fsh
+assets/minecraft/shaders/core/sky.vsh
+assets/minecraft/shaders/core/stars.fsh
+assets/minecraft/shaders/core/stars.vsh
+assets/minecraft/shaders/core/terrain.fsh
+assets/minecraft/shaders/core/terrain.vsh
+assets/minecraft/shaders/core/text.fsh
+assets/minecraft/shaders/core/text.vsh
+assets/minecraft/shaders/core/text_background.fsh
+assets/minecraft/shaders/core/text_background.vsh
+assets/minecraft/shaders/include/
+assets/minecraft/shaders/include/animation_sprite.glsl
+assets/minecraft/shaders/include/chunksection.glsl
+assets/minecraft/shaders/include/dynamictransforms.glsl
+assets/minecraft/shaders/include/fog.glsl
+assets/minecraft/shaders/include/globals.glsl
+assets/minecraft/shaders/include/light.glsl
+assets/minecraft/shaders/core/position_tex.fsh
+assets/minecraft/shaders/include/projection.glsl
+assets/minecraft/shaders/include/sample_lightmap.glsl
+assets/minecraft/shaders/post/
+assets/minecraft/shaders/post/bits.fsh
+assets/minecraft/shaders/post/blit.fsh
+assets/minecraft/shaders/post/box_blur.fsh
+assets/minecraft/shaders/post/color_convolve.fsh
+assets/minecraft/shaders/post/entity_outline_box_blur.fsh
+assets/minecraft/shaders/post/entity_sobel.fsh
+assets/minecraft/shaders/post/invert.fsh
+assets/minecraft/shaders/post/rotscale.vsh
+grep: write error: Broken pipe
+
+=== RenderTarget (blaze3d) ===
+Compiled from "RenderTarget.java"
+public abstract class com.mojang.blaze3d.pipeline.RenderTarget {
+  private static int UNNAMED_RENDER_TARGETS;
+  public int width;
+  public int height;
+  protected final java.lang.String label;
+  public final boolean useDepth;
+  protected final com.mojang.blaze3d.GpuFormat format;
+  protected com.mojang.blaze3d.textures.GpuTexture colorTexture;
+  protected com.mojang.blaze3d.textures.GpuTextureView colorTextureView;
+  protected com.mojang.blaze3d.textures.GpuTexture depthTexture;
+  protected com.mojang.blaze3d.textures.GpuTextureView depthTextureView;
+  public com.mojang.blaze3d.pipeline.RenderTarget(java.lang.String, boolean, com.mojang.blaze3d.GpuFormat);
+  public void resize(int, int);
+  public void destroyBuffers();
+  public void copyDepthFrom(com.mojang.blaze3d.pipeline.RenderTarget);
+  public void createBuffers(int, int);
+  public void blitAndBlendToTexture(com.mojang.blaze3d.textures.GpuTextureView, com.mojang.blaze3d.textures.GpuTextureView);
+  public com.mojang.blaze3d.textures.GpuTexture getColorTexture();
+  public com.mojang.blaze3d.textures.GpuTextureView getColorTextureView();
+  public com.mojang.blaze3d.textures.GpuTexture getDepthTexture();
+  public com.mojang.blaze3d.textures.GpuTextureView getDepthTextureView();
+  private static java.lang.String lambda$blitAndBlendToTexture$0();
+  private java.lang.String lambda$createBuffers$1();
+  private java.lang.String lambda$createBuffers$0();
+  static {};
+}
+
+=== MainTarget ===
+Compiled from "MainTarget.java"
+public class com.mojang.blaze3d.pipeline.MainTarget extends com.mojang.blaze3d.pipeline.RenderTarget {
+  public static final int DEFAULT_WIDTH;
+  public static final int DEFAULT_HEIGHT;
+  private static final com.mojang.blaze3d.pipeline.MainTarget$Dimension DEFAULT_DIMENSIONS;
+  public com.mojang.blaze3d.pipeline.MainTarget(int, int);
+  private void createFrameBuffer(int, int);
+  private com.mojang.blaze3d.pipeline.MainTarget$Dimension allocateAttachments(int, int);
+  private com.mojang.blaze3d.textures.GpuTexture allocateColorAttachment(com.mojang.blaze3d.pipeline.MainTarget$Dimension);
+  private com.mojang.blaze3d.textures.GpuTexture allocateDepthAttachment(com.mojang.blaze3d.pipeline.MainTarget$Dimension);
+  private java.lang.String lambda$allocateDepthAttachment$0();
+  private java.lang.String lambda$allocateColorAttachment$0();
+  static {};
+}
+
+=== Iris/Sodium-пути: RenderPipeline.Snippet ===
+Compiled from "RenderPipeline.java"
+public class com.mojang.blaze3d.pipeline.RenderPipeline {
+  private final net.minecraft.resources.Identifier location;
+  private final net.minecraft.resources.Identifier vertexShader;
+  private final net.minecraft.resources.Identifier fragmentShader;
+  private final net.minecraft.client.renderer.ShaderDefines shaderDefines;
+  private final java.util.List<com.mojang.blaze3d.pipeline.BindGroupLayout> bindGroupLayouts;
+  private final com.mojang.blaze3d.pipeline.DepthStencilState depthStencilState;
+  private final com.mojang.blaze3d.platform.PolygonMode polygonMode;
+  private final boolean cull;
+  private final com.mojang.blaze3d.pipeline.ColorTargetState[] colorTargetStates;
+  private final com.mojang.blaze3d.vertex.VertexFormat[] vertexFormatPerBuffer;
+  private final com.mojang.blaze3d.PrimitiveTopology primitiveTopology;
+  private final int sortKey;
+  private static int sortKeySeed;
+  protected com.mojang.blaze3d.pipeline.RenderPipeline(net.minecraft.resources.Identifier, net.minecraft.resources.Identifier, net.minecraft.resources.Identifier, net.minecraft.client.renderer.ShaderDefines, java.util.List<com.mojang.blaze3d.pipeline.BindGroupLayout>, com.mojang.blaze3d.pipeline.ColorTargetState[], com.mojang.blaze3d.pipeline.DepthStencilState, com.mojang.blaze3d.platform.PolygonMode, boolean, com.mojang.blaze3d.vertex.VertexFormat[], com.mojang.blaze3d.PrimitiveTopology, int);
+  public int getSortKey();
+  public static void updateSortKeySeed();
+  public java.lang.String toString();
+  public com.mojang.blaze3d.platform.PolygonMode getPolygonMode();
+  public boolean isCull();
+  public com.mojang.blaze3d.pipeline.ColorTargetState[] getColorTargetStates();
+  public com.mojang.blaze3d.pipeline.ColorTargetState getColorTargetState();
+  public com.mojang.blaze3d.pipeline.DepthStencilState getDepthStencilState();
+  public net.minecraft.resources.Identifier getLocation();
+  public com.mojang.blaze3d.vertex.VertexFormat[] getVertexFormatBindings();
+  public com.mojang.blaze3d.vertex.VertexFormat getVertexFormatBinding(int);
+  public com.mojang.blaze3d.PrimitiveTopology getPrimitiveTopology();
+  public net.minecraft.resources.Identifier getVertexShader();
+  public net.minecraft.resources.Identifier getFragmentShader();
+  public net.minecraft.client.renderer.ShaderDefines getShaderDefines();
+  public java.util.List<com.mojang.blaze3d.pipeline.BindGroupLayout> getBindGroupLayouts();
+  public boolean wantsDepthTexture();
+  public static com.mojang.blaze3d.pipeline.RenderPipeline$Builder builder(com.mojang.blaze3d.pipeline.RenderPipeline$Snippet...);
+}
+
+=== RenderPipelines все ===
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline$Snippet POST_PROCESSING_SNIPPET;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline SOLID_BLOCK;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline SOLID_TERRAIN;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline WIREFRAME;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline CUTOUT_BLOCK;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline CUTOUT_TERRAIN;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline TRANSLUCENT_TERRAIN;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline TRANSLUCENT_BLOCK;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ARMOR_CUTOUT_NO_CULL;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ARMOR_DECAL_CUTOUT_NO_CULL;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ARMOR_TRANSLUCENT;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ENTITY_SOLID;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ENTITY_SOLID_Z_OFFSET_FORWARD;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ENTITY_CUTOUT_CULL;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ENTITY_CUTOUT;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ENTITY_CUTOUT_Z_OFFSET;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ENTITY_CUTOUT_DISSOLVE;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ENTITY_TRANSLUCENT;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ENTITY_TRANSLUCENT_EMISSIVE;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ENTITY_TRANSLUCENT_CULL;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline END_CRYSTAL_BEAM;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline BANNER_PATTERN;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline BREEZE_WIND;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ENERGY_SWIRL;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline EYES;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ENTITY_SHADOW;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ITEM_CUTOUT;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline ITEM_TRANSLUCENT;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline BEACON_BEAM_OPAQUE;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline BEACON_BEAM_TRANSLUCENT;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline LEASH;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline WATER_MASK;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline GLINT;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline CRUMBLING;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline TEXT;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline GUI_TEXT;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline TEXT_BACKGROUND;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline TEXT_GRAYSCALE;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline GUI_TEXT_GRAYSCALE;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline TEXT_POLYGON_OFFSET;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline TEXT_GRAYSCALE_POLYGON_OFFSET;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline TEXT_SEE_THROUGH;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline TEXT_BACKGROUND_SEE_THROUGH;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline TEXT_GRAYSCALE_SEE_THROUGH;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline LIGHTNING;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline DRAGON_RAYS;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline END_PORTAL;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline END_GATEWAY;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline FLAT_CLOUDS;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline CLOUDS;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline LINES;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline LINES_TRANSLUCENT;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline LINES_DEPTH_BIAS;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline SECONDARY_BLOCK_OUTLINE;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline DEBUG_POINTS;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline DEBUG_FILLED_BOX;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline DEBUG_QUADS;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline DEBUG_TRIANGLE_FAN;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline WORLD_BORDER;
+  public static final com.mojang.blaze3d.pipeline.RenderPipeline OPAQUE_PARTICLE;
+
+=== setPostEffect вызовы (checkEntityPostEffect) ===
+  private static final net.minecraft.resources.Identifier BLUR_POST_CHAIN_ID;
+  public static final int MAX_BLUR_RADIUS;
+  private net.minecraft.resources.Identifier postEffectId;
+  public void clearPostEffect();
+         2: putfield      #393                // Field postEffectId:Lnet/minecraft/resources/Identifier;
+  public void togglePostEffect();
+  public void checkEntityPostEffect(net.minecraft.world.entity.Entity);
+        53: invokevirtual #429                // Method setPostEffect:(Lnet/minecraft/resources/Identifier;)V
+        72: invokevirtual #429                // Method setPostEffect:(Lnet/minecraft/resources/Identifier;)V
+        91: invokevirtual #429                // Method setPostEffect:(Lnet/minecraft/resources/Identifier;)V
+        98: invokevirtual #435                // Method clearPostEffect:()V
+  private void setPostEffect(net.minecraft.resources.Identifier);
+         2: putfield      #393                // Field postEffectId:Lnet/minecraft/resources/Identifier;
+  public void processBlurEffect();
+         7: getstatic     #448                // Field BLUR_POST_CHAIN_ID:Lnet/minecraft/resources/Identifier;
+        13: invokevirtual #460                // Method net/minecraft/client/renderer/ShaderManager.getPostChain:(Lnet/minecraft/resources/Identifier;Ljava/util/Set;)Lnet/minecraft/client/renderer/PostChain;
+        30: invokevirtual #466                // Method net/minecraft/client/renderer/PostChain.process:(Lcom/mojang/blaze3d/pipeline/RenderTarget;Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;)V
+  public net.minecraft.resources.Identifier currentPostEffect();
+         1: getfield      #393                // Field postEffectId:Lnet/minecraft/resources/Identifier;
+       191: getfield      #982                // Field net/minecraft/client/renderer/state/OptionsRenderState.menuBackgroundBlurriness:I
+       279: getfield      #393                // Field postEffectId:Lnet/minecraft/resources/Identifier;
+       300: getfield      #393                // Field postEffectId:Lnet/minecraft/resources/Identifier;
+       306: invokevirtual #460                // Method net/minecraft/client/renderer/ShaderManager.getPostChain:(Lnet/minecraft/resources/Identifier;Ljava/util/Set;)Lnet/minecraft/client/renderer/PostChain;
+       326: invokevirtual #466                // Method net/minecraft/client/renderer/PostChain.process:(Lcom/mojang/blaze3d/pipeline/RenderTarget;Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;)V
+        86: invokevirtual #1430               // Method net/minecraft/client/Options.getMenuBackgroundBlurriness:()I
+        89: putfield      #982                // Field net/minecraft/client/renderer/state/OptionsRenderState.menuBackgroundBlurriness:I
+         0: ldc_w         #1749               // String blur
+         6: putstatic     #448                // Field BLUR_POST_CHAIN_ID:Lnet/minecraft/resources/Identifier;
