@@ -298,6 +298,30 @@ jobs:
               javap -p -cp "$MC" net.minecraft.world.item.ItemCooldowns 2>&1 | head -14
               echo; echo "=== GameRenderer (camera/fov) ==="
               javap -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | grep -iE 'camera|fov|bob|viewOffset|renderItemOverlay|bobHurt|tiltView' | head -30
+              echo; echo "=== GameRenderer (post/pipeline API) ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | grep -iE 'post|pipeline|shader|Blur|entityEffect|tick' | head -40 || true
+              echo; echo "=== классы пост-эффектов ==="
+              unzip -l "$MC" | grep -iE 'client/renderer/(post|shader|PostChain|PostEffect|CoreShaders)|RenderPipeline|Pipeline' | awk '{print $NF}' | head -40 || true
+              echo; echo "=== CoreShaders ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.CoreShaders 2>&1 | head -40 || true
+              echo; echo "=== список assets shaders/post ==="
+              unzip -l "$MC" | grep -E 'shaders/post/' | awk '{print $NF}' | head -40 || true
+              echo; echo "=== формат pipeline json (nausea) ==="
+              unzip -p "$MC" assets/minecraft/shaders/post/nausea.json 2>/dev/null | head -40 || true
+              echo; echo "=== формат fshader (nausea) ==="
+              unzip -p "$MC" assets/minecraft/shaders/program/nausea.fsh 2>/dev/null | head -30 || true
+              echo; echo "=== Particle (базовый класс) ==="
+              javap -p -cp "$MC" net.minecraft.client.particle.Particle 2>&1 | grep -iE 'public|protected' | head -45 || true
+              echo; echo "=== ClientLevel.addParticle ==="
+              javap -p -cp "$MC" net.minecraft.client.multiplayer.ClientLevel 2>&1 | grep -iE 'addParticle|particles' | head -12 || true
+              echo; echo "=== ParticleEngine ==="
+              javap -p -cp "$MC" net.minecraft.client.particle.ParticleEngine 2>&1 | grep -iE 'public' | head -30 || true
+              echo; echo "=== DustParticleOptions ==="
+              javap -p -cp "$MC" net.minecraft.core.particles.DustParticleOptions 2>&1 | head -15 || true
+              echo; echo "=== GuiGraphicsExtractor (текстуры/спрайты) ==="
+              javap -p -cp "$MC" net.minecraft.client.gui.GuiGraphicsExtractor 2>&1 | grep -iE 'sampler|texture|blit|sprite|pose|submit' | head -30 || true
+              echo; echo "=== Entity render state (для «призраков») ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.entity.state.LivingEntityRenderState 2>&1 | head -40 || true
             fi
 
           } > api-audit-result.txt 2>&1
