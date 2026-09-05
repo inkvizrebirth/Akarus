@@ -50,7 +50,9 @@ class AutoGgLogicTest {
 	void templatePlaceholdersAreReplaced() {
 		assertEquals("*Steve* GG", AutoGgLogic.format("*%player%* GG", "Steve"));
 		assertEquals("Steve GG", AutoGgLogic.format("%name% GG", "Steve"));
-		assertEquals("gg Steve, gg", AutoGgLogic.format("gg %player%, %name%", "Steve"));
+		// оба токена ведут в одно и то же имя — шаблон «gg %player%, %name%» — это
+		// «gg Steve, Steve», а не «gg Steve, gg»: дублирование плейсхолдеров разрешено
+		assertEquals("gg Steve, Steve", AutoGgLogic.format("gg %player%, %name%", "Steve"));
 		assertEquals("EZ", AutoGgLogic.format("EZ", "Steve"), "шаблон без плейсхолдеров — как есть");
 		assertEquals("GG", AutoGgLogic.format("%player% GG", null), "без ника — только текст");
 	}
