@@ -91,6 +91,12 @@ public final class UiKit {
 		panel(graphics, x, y, width, height, 6.0F, alpha, accentMix, now, true);
 	}
 
+	/** То же, но с явным радиусом скругления. */
+	public static void panel(GuiGraphicsExtractor graphics, int x, int y, int width, int height,
+	                         double radius, float alpha, float accentMix, long now) {
+		panel(graphics, x, y, width, height, radius, alpha, accentMix, now, true);
+	}
+
 	public static void panel(GuiGraphicsExtractor graphics, int x, int y, int width, int height, double radius,
 	                         float alpha, float accentMix, long now, boolean shadow) {
 		if (width <= 0 || height <= 0 || alpha <= 0.002F) {
