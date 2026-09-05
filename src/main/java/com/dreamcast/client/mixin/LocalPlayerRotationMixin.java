@@ -14,7 +14,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * {@code ServerboundMovePlayerPacket} (Pos / Rot / PosRot / StatusOnly) и решает,
  * надо ли вообще слать поворот (ваниль сравнивает {@code yRotLast/xRotLast}).
  * Всё остальное — движение, камера, тряска, точка прицела — считается ДО или ПОСЛЕ,
- * поэтому если подменить углы игрока между HEAD и TAIL этого метода, то:</p>
+ * поэтому если подменить углы игрока на время этого метода (HEAD → каждый RETURN),
+ * то:</p>
  * <ul>
  *   <li>сервер увидит прицел ауры (значит reach и angle-проверки Grim/Matrix
  *       проходят честно — удар летит туда, куда «смотрит» сервер);</li>
@@ -40,7 +41,12 @@ public abstract class LocalPlayerRotationMixin {
 		RotationManager.beginPacket();
 	}
 
-	@Inject(method = "sendPosition", at = @At("TAIL"), require = 0)
+	// RETURN, а не TAIL: у sendPosition несколько ранних return'ов (ваниль решает,
+	// нужен ли пакет вообще). TAIL сработал бы только на последнем — и при раннем
+	// выходе угол игрока ОСТАЛСЯ бы нашим: камера дёрнулась бы на пол-оборота.
+	// endPacket идемпотентен (сбрасывает packetApplied), так что вызов на каждом
+	// выходе безопасен.
+	@Inject(method = "sendPosition", at = @At("RETURN"), require = 0)
 	private void dreamcast$restoreCameraRotation(CallbackInfo ci) {
 		RotationManager.endPacket();
 	}
