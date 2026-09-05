@@ -277,6 +277,24 @@ def find_jar() -> str | None:
     return None
 
 
+def suggest(name: str, members: set) -> str:
+    """Близкие имена членов того же класса: обычно цель не удалили, а переименовали."""
+    lower = name.lower()
+    scored = []
+    for candidate in members:
+        current = candidate.lower()
+        if current == lower or current.startswith("<"):
+            continue
+        prefix = len(os.path.commonprefix([lower, current]))
+        # renderArmWithItem → submitArmWithItem: общий хвост важнее начала
+        suffix = len(os.path.commonprefix([lower[::-1], current[::-1]]))
+        score = max(prefix, suffix)
+        if score >= 5:
+            scored.append((score, candidate))
+    scored.sort(reverse=True)
+    return ", ".join(candidate for _, candidate in scored[:4])
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--jar", default="auto", help="путь к jar Minecraft или 'auto'")
@@ -319,8 +337,10 @@ def main() -> int:
                 continue  # intermediary-имена: их в 26.2 нет, но пусть будет
             if name not in members:
                 marker = " (require=0 — тихо не применится)" if soft else ""
+                hint = suggest(name, members)
                 problems.append((info["path"], line,
-                                 f"{kind} {name}: нет в {owner}{marker}"))
+                                 f"{kind} {name}: нет в {owner}{marker}"
+                                 + (f"; похожее: {hint}" if hint else "")))
 
     print(f"проверено целей: {checked}, файлов миксинов: {len(files)}")
     if not problems:

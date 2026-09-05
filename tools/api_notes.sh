@@ -31,6 +31,7 @@ J net.minecraft.client.renderer.GameRenderer
 JC net.minecraft.client.renderer.GameRenderer
 J com.mojang.blaze3d.systems.RenderSystem
 J net.minecraft.client.Minecraft
+J net.minecraft.client.renderer.ItemInHandRenderer
 J net.minecraft.client.renderer.RenderPipelines
 J com.mojang.blaze3d.pipeline.RenderPipeline
 J com.mojang.blaze3d.shaders.GpuShader
