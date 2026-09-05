@@ -5,6 +5,8 @@ import com.dreamcast.client.config.ConfigManager;
 import com.dreamcast.client.module.impl.AutoGgModule;
 import com.dreamcast.client.module.impl.AutoMineModule;
 import com.dreamcast.client.module.impl.BaritoneModule;
+import com.dreamcast.client.module.impl.RainModule;
+import com.dreamcast.client.module.impl.GlintColorModule;
 import com.dreamcast.client.module.impl.AutoTotemModule;
 import com.dreamcast.client.module.impl.AutoWalkModule;
 import com.dreamcast.client.module.impl.BlockEspModule;
