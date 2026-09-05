@@ -239,6 +239,7 @@ public class KillAuraModule extends Module {
 		this.spinYaw = 0.0F;
 		this.orbitTicks = 0;
 		this.blockingByAura = false;
+		trackingUserYaw = false;
 		resetSequence();
 	}
 
@@ -246,11 +247,12 @@ public class KillAuraModule extends Module {
 	protected void onDisable() {
 		this.targetId = null;
 		this.currentTarget = null;
+		trackingUserYaw = false;
 		resetSequence();
 		releaseMovement();
 		Minecraft client = Minecraft.getInstance();
 		if (client != null && client.player != null) {
-			stopBlocking(client.player);
+			stopBlocking(client, client.player);
 		}
 		KeyOwnership.releaseAll(client, this);
 	}
@@ -269,33 +271,37 @@ public class KillAuraModule extends Module {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client == null ? null : client.player;
 		if (player == null || client.level == null) {
+			trackingUserYaw = false;
 			return;
 		}
 
 		// В меню и чате не воюем
 		if (client.gui != null && client.gui.screen() != null) {
+			trackingUserYaw = false;
 			releaseMovement();
-			stopBlocking(player);
+			stopBlocking(client, player);
 			return;
 		}
 
 		// Использование предмета — пауза, КРОМЕ щита: пока держим щит Авто-Блоком,
 		// isUsingItem() истинен, и прерывать себя нельзя. Еда и тотем — по лимитам.
 		if (itemUsePausesAttack(player)) {
+			trackingUserYaw = false;
 			releaseMovement();
-			stopBlocking(player);
+			stopBlocking(client, player);
 			return;
 		}
 
 		Entity target = selectTarget(client, player);
 		this.currentTarget = target;
 		if (target == null) {
+			trackingUserYaw = false;
 			this.targetId = null;
 			this.wasTargetSwinging = false;
 			resetSequence();
 			releaseMovement();
 			// Врага больше нет — щит опускаем, если держим его мы
-			stopBlocking(player);
+			stopBlocking(client, player);
 			return;
 		}
 
@@ -399,7 +405,7 @@ public class KillAuraModule extends Module {
 			if (wantBlock && !player.isBlocking() && blockCooldown == 0) {
 				raiseShield(client, player, shieldHand);
 			} else if (!wantBlock && blockingByAura) {
-				stopBlocking(player);
+				stopBlocking(client, player);
 			}
 
 			boolean basicReady = attackDelay == 0 && aimReady && rayHits
@@ -526,8 +532,7 @@ public class KillAuraModule extends Module {
 	/** Решение бить принято: если держим щит — сначала опускаем его. */
 	private void beginAttackSequence(Minecraft client, LocalPlayer player, Entity target) {
 		if (player.isBlocking()) {
-			player.stopUsingItem();
-			blockingByAura = false;
+			releaseShield(client, player);
 			this.sequence = Sequence.LOWERING;
 			this.lowerTicks = isLegit() ? 2 + RANDOM.nextInt(2) : 1;
 			this.blockCooldown = 5 + RANDOM.nextInt(5);
@@ -607,14 +612,25 @@ public class KillAuraModule extends Module {
 
 	private void raiseShield(Minecraft client, LocalPlayer player, InteractionHand hand) {
 		if (client.gameMode != null && !player.isBlocking() && !player.isUsingItem()) {
+			KeyOwnership.hold(client, client.options.keyUse, this);
 			client.gameMode.useItem(player, hand);
 			blockingByAura = true;
 		}
 	}
 
 	/** Опускаем щит, только если мы его держим (не трогаем чужое использование). */
-	private void stopBlocking(LocalPlayer player) {
-		if (blockingByAura && player.isBlocking()) {
+	private void stopBlocking(Minecraft client, LocalPlayer player) {
+		if (blockingByAura) {
+			releaseShield(client, player);
+		}
+	}
+
+	/** Снимает удержание клавиши и сообщает серверу об окончании блока. */
+	private void releaseShield(Minecraft client, LocalPlayer player) {
+		KeyOwnership.releaseHold(client, client.options.keyUse, this);
+		if (player.isUsingItem() && client.gameMode != null) {
+			client.gameMode.releaseUsingItem(player);
+		} else if (player.isUsingItem()) {
 			player.stopUsingItem();
 		}
 		blockingByAura = false;
@@ -710,7 +726,8 @@ public class KillAuraModule extends Module {
 	 */
 	public static net.minecraft.world.phys.Vec2 correctedMovement(net.minecraft.world.phys.Vec2 moveVector) {
 		KillAuraModule module = ModuleManager.find(KillAuraModule.class);
-		if (module == null || !module.isEnabled() || !module.movement.is(MOVEMENT_FREE) || !trackingUserYaw) {
+		if (module == null || !module.isEnabled() || !module.movement.is(MOVEMENT_FREE)
+				|| module.currentTarget == null || !trackingUserYaw) {
 			return null;
 		}
 		Minecraft client = Minecraft.getInstance();

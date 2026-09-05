@@ -509,10 +509,10 @@ public class AutoTotemModule extends Module {
 		var box = player.getBoundingBox().inflate(range);
 
 		for (Entity entity : client.level.getEntities(player, box, candidate -> candidate != player)) {
-			if (!(entity instanceof LivingEntity living) || !living.isAlive()) {
+			if (!(entity instanceof LivingEntity living) || !living.isAlive() || living.isSpectator()) {
 				continue;
 			}
-			boolean playerEnemy = living instanceof Player;
+			boolean playerEnemy = living instanceof Player && !player.isAlliedTo(living);
 			boolean mobEnemy = living.getType().getCategory() == MobCategory.MONSTER;
 			if (!playerEnemy && !mobEnemy) {
 				continue;
