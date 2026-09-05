@@ -160,6 +160,9 @@ public final class WorldRenderHook {
 			ChinaHatModule hatModule = ModuleManager.find(ChinaHatModule.class);
 			WingsModule wingsModule = ModuleManager.find(WingsModule.class);
 			TargetEspModule targetEspModule = ModuleManager.find(TargetEspModule.class);
+			com.dreamcast.client.module.impl.RainModule rain =
+					ModuleManager.find(com.dreamcast.client.module.impl.RainModule.class);
+			boolean hasRain = rain != null && rain.isEnabled();
 			List<ChinaHatModule.Hat> hatList = hats;
 			List<WingsModule.Rig> wingRigs = wings;
 			TargetEspModule.Frame frame = targetFrame;
@@ -171,7 +174,7 @@ public final class WorldRenderHook {
 			net.minecraft.core.BlockPos preview = scaffoldPreview;
 			if (!hasTrail && boxes.isEmpty() && !hasRings && !hasHits && !hasTags
 					&& targetBar == null && blockBoxes.isEmpty() && preview == null
-					&& hatList.isEmpty() && wingRigs.isEmpty() && frame == null) {
+					&& hatList.isEmpty() && wingRigs.isEmpty() && frame == null && !hasRain) {
 				return;
 			}
 
@@ -226,6 +229,10 @@ public final class WorldRenderHook {
 						if (targetEspModule != null && frame != null) {
 							TargetEspRenderer.draw(targetEspModule, frame, pose, buffer,
 									camX, camY, camZ, unitsPerPixel, now, partialTick);
+						}
+						if (hasRain) {
+							RainRenderer.render(rain, pose, buffer, camX, camY, camZ,
+									unitsPerPixel, now);
 						}
 					});
 					// Nametags: текстовые биллборды — той же трубой, что ванильные ники

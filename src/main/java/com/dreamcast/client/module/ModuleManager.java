@@ -90,6 +90,8 @@ public final class ModuleManager {
 		register(new MotionBlurModule());
 		register(new AutoGgModule());
 		register(new BaritoneModule());
+		register(new GlintColorModule());
+		register(new RainModule());
 	}
 
 	public static void register(Module module) {
