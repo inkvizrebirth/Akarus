@@ -97,6 +97,8 @@ public class ScaffoldModule extends Module {
 			ModeSetting.option("silent", "Silent"),
 			ModeSetting.option("none", "None"));
 	private final IntSetting rotationSpeed = intSetting("rotation_speed", "Rotation Speed", 10, 1, 20);
+	/** Человечность доворота в Legit-режиме (пружина, промахи, отведения взгляда). */
+	private final IntSetting randomization = intSetting("randomization", "Рандомизация, %", 55, 0, 100);
 	private final BooleanSetting rayTrace = bool("ray_trace", "RayTrace", true);
 	private final ModeSetting swing = mode("swing", "Swing", "client",
 			ModeSetting.option("client", "Client"),
@@ -752,6 +754,8 @@ public class ScaffoldModule extends Module {
 	 * состояние прицела живёт в слое, а модуль только говорит, куда он хочет.</p>
 	 *
 	 * @return true, когда прицел на грани (для Legit-тайминга установки)
+	 *
+	 * @see com.dreamcast.client.util.RotationHumanizer — очеловечивание доворота
 	 */
 	private boolean rotateTowards(Minecraft client, LocalPlayer player, Vec3 point) {
 		Vec3 eye = player.getEyePosition();
@@ -763,8 +767,12 @@ public class ScaffoldModule extends Module {
 			case "silent" -> RotationManager.Mode.SILENT;
 			default -> RotationManager.Mode.VISIBLE;
 		};
+		// Тот же человеческий слой, что у ауры: в Legit-режиме доворот к грани
+		// идёт пружиной (без линейной ступеньки), а не «10°/тик ровным циклом» —
+		// последнее Grim видит как scripted rotation даже при корректном тайминге.
+		boolean humanize = isLegit() && wanted != RotationManager.Mode.NONE;
 		if (!RotationManager.request(this, RotationManager.PRIORITY_BUILD, wanted,
-				RotationManager.Movement.NONE, rotationSpeed.get(), false, targetYaw, targetPitch)) {
+				RotationManager.Movement.NONE, rotationSpeed.get(), humanize, targetYaw, targetPitch)) {
 			// Слоем владеет более важный модуль (аура) — в этом тике не наводимся
 			return false;
 		}
@@ -782,6 +790,16 @@ public class ScaffoldModule extends Module {
 					targetYaw, targetPitch, AIM_TOLERANCE);
 		}
 		return RotationManager.aimed(AIM_TOLERANCE);
+	}
+
+	/** Legit-режим Scaffold: ставим блок только после того, как реально навелись. */
+	public boolean isLegit() {
+		return mode.is("legit");
+	}
+
+	/** Степень очеловечивания доворота, 0..100 (читает {@code RotationHumanizer}). */
+	public int getRandomization() {
+		return randomization.get();
 	}
 
 	/**

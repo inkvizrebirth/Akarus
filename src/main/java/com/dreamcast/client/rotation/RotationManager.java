@@ -183,11 +183,18 @@ public final class RotationManager {
 			nextYaw = player.getYRot();
 			nextPitch = player.getXRot();
 		} else if (humanize) {
-			// Человеческий доворот: промах, перелёт, торможение — математика в слое
-			float[] smoothed = RotationHumanizer.aimTowards(player, wantedYaw, wantedPitch, baseYaw, basePitch);
+			// Человеческий доворот: пружина, промахи, отведения взгляда — математика
+			// в RotationHumanizer. Важно: сюда НЕ прикладывается обычный
+			// «stepYaw(base, x, speed)» — он бы обрезал кривую до ровной ступеньки,
+			// то есть вернул ровно ту линейность, из-за которой ротации и режут.
+			// Настройка «Скорость доворота» уходит в слой как потолок скорости, а
+			// страховка от сумасшедшего скачка — 3 заявленных шага за тик.
+			float[] smoothed = RotationHumanizer.aimTowards(player, wantedYaw, wantedPitch,
+					baseYaw, basePitch, step);
 			if (smoothed != null) {
-				nextYaw = RotationMath.stepYaw(baseYaw, smoothed[0], step);
-				nextPitch = RotationMath.stepPitch(basePitch, smoothed[1], step);
+				float rail = step > 0.0F ? step * 3.0F : Float.MAX_VALUE;
+				nextYaw = RotationMath.stepYaw(baseYaw, smoothed[0], rail);
+				nextPitch = RotationMath.stepPitch(basePitch, smoothed[1], rail);
 			} else {
 				nextYaw = RotationMath.stepYaw(baseYaw, wantedYaw, step);
 				nextPitch = RotationMath.stepPitch(basePitch, wantedPitch, step);
@@ -224,6 +231,9 @@ public final class RotationManager {
 	}
 
 	private static void forget() {
+		// Слой освобождён: человеческая пружина человеческая пружина не должна помнить старые
+		// углы/скорости — иначе следующий владелец стартует с чужой инерцией
+		RotationHumanizer.reset();
 		owner = null;
 		ownerPriority = 0;
 		mode = Mode.NONE;

@@ -95,6 +95,8 @@ public class AutoBuffModule extends Module {
 	private final BooleanSetting preferSplash = bool("splash_priority", "Приоритет взрывных", true);
 
 	/** Стиль броска: легитный (плавно, с паузой на синхронизацию) или быстрый. */
+	/** Степень очеловечивания доворота (0 = ровно в цель, 100 = максимум шума). */
+	private final IntSetting randomization = intSetting("randomization", "Рандомизация, %", 55, 0, 100);
 	private final ModeSetting throwStyle = mode("throw_style", "Стиль броска", "legit",
 			ModeSetting.option("legit", "Легитный"),
 			ModeSetting.option("fast", "Быстрый"));
@@ -512,8 +514,21 @@ public class AutoBuffModule extends Module {
 		RotationManager.Mode wanted = rotation.is("visible")
 				? RotationManager.Mode.VISIBLE
 				: RotationManager.Mode.SILENT;
+		// Легитные бросок/питьё целяются тем же человеческим слоем, что и аура:
+		// пружина вместо ровной ступеньки, лёгкий промах, иногда — взгляд в сторону
 		return RotationManager.request(this, RotationManager.PRIORITY_BUFF, wanted,
-				RotationManager.Movement.NONE, speed, false, wantYaw, wantPitch);
+				RotationManager.Movement.NONE, speed, isHumanizedThrow() || mode.is("legit"),
+				wantYaw, wantPitch);
+	}
+
+	/** Бросок «по-человечески» (название стиля + общий слой поворотов). */
+	public boolean isHumanizedThrow() {
+		return throwStyle.is("legit");
+	}
+
+	/** Степень очеловечивания доворота, 0..100 (читает {@code RotationHumanizer}). */
+	public int getRandomization() {
+		return randomization.get();
 	}
 
 	private void tickWaitRotation(LocalPlayer player) {
