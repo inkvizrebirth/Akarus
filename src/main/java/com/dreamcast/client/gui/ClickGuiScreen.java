@@ -359,6 +359,16 @@ public class ClickGuiScreen extends Screen {
 					RenderUtils.withAlpha(color, 0.35f + 0.60f * wave));
 		}
 
+		// Волосяная линия по нижнему краю — та же речь, что у панелей HUD (UiKit.panel)
+		int bottomY = y + height - 1;
+		for (int i = 0; i < GUI_WIDTH - 2; i++) {
+			float t = i / (float) (GUI_WIDTH - 3);
+			int color = ClientTheme.gradientAt(t, time);
+			float wave = 0.4f + 0.6f * (float) (0.5 + 0.5 * Math.sin((t * 3.1 - ClientTheme.flowPhase(time) * 0.6) * Math.PI));
+			graphics.fill(x + 1 + i, bottomY, x + 2 + i, bottomY + 1,
+					RenderUtils.withAlpha(color, 0.24f + 0.34f * wave));
+		}
+
 		Font font = this.font;
 		int titleY = y + (HEADER_HEIGHT - font.lineHeight) / 2;
 
