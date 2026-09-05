@@ -230,7 +230,7 @@ public class SpiderModule extends Module {
 		if (!canPlaceAt(client, target)) {
 			return; // в целевую клетку лить некуда — ждём, пока освободится
 		}
-		if (target.getCenter().distanceToSqr(player.position()) > REACH_SQR) {
+		if (Vec3.atCenterOf(target).distanceToSqr(player.position()) > REACH_SQR) {
 			return; // сервер такой клик всё равно отклонит — не дёргаем ведро зря
 		}
 
