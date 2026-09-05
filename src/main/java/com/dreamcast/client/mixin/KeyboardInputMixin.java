@@ -1,7 +1,7 @@
 package com.dreamcast.client.mixin;
 
 import com.dreamcast.client.module.impl.FreeCamModule;
-import com.dreamcast.client.module.impl.KillAuraModule;
+import com.dreamcast.client.rotation.RotationManager;
 import net.minecraft.client.player.ClientInput;
 import net.minecraft.client.player.KeyboardInput;
 import net.minecraft.world.entity.player.Input;
@@ -46,9 +46,9 @@ public abstract class KeyboardInputMixin extends ClientInput {
 			return;
 		}
 
-		// «Свободная» коррекция движений киллауры: ввод разворачивается так,
-		// будто камера не наводилась аурой — W ведёт игрока по его взгляду
-		Vec2 corrected = KillAuraModule.correctedMovement(this.moveVector);
+		// Коррекция движений киллауры (только «видимый» поворот): ввод разворачивается
+		// так, будто камера не наводилась аурой — W ведёт игрока по его взгляду
+		Vec2 corrected = RotationManager.correctedInput(this.moveVector);
 		if (corrected != null) {
 			this.moveVector = corrected;
 		}

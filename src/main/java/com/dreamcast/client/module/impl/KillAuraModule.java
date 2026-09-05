@@ -9,6 +9,8 @@ import com.dreamcast.client.settings.BooleanSetting;
 import com.dreamcast.client.settings.ElementListSetting;
 import com.dreamcast.client.settings.IntSetting;
 import com.dreamcast.client.settings.ModeSetting;
+import com.dreamcast.client.rotation.RotationManager;
+import com.dreamcast.client.rotation.RotationMath;
 import com.dreamcast.client.util.RotationHumanizer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -65,6 +67,10 @@ public class KillAuraModule extends Module {
 	public static final String SPRINT_FAST = "fast";
 	public static final String SPRINT_LEGIT = "legit";
 
+	public static final String ROTATION_SILENT = "silent";
+	public static final String ROTATION_VISIBLE = "visible";
+	public static final String ROTATION_NONE = "none";
+
 	public static final String MOVEMENT_FREE = "free";
 	public static final String MOVEMENT_FOCUSED = "focused";
 	public static final String MOVEMENT_LEGIT = "legit";
@@ -105,6 +111,29 @@ public class KillAuraModule extends Module {
 			ModeSetting.option("legs", "Ноги"));
 
 	/**
+	 * Как аура наводится. «Сайлент» — у ауры СВОЯ камера: доворот уходит только в
+	 * пакет движения, взгляд игрока не двигается вообще (см. {@link RotationManager}).
+	 * «Видимый» — как раньше: игрок разворачивается на цель. «Без доворота» — аура
+	 * бьёт только то, во что уже смотрит игрок (для самых строгих античитов).
+	 */
+	private final ModeSetting rotation = mode("rotation", "Поворот", ROTATION_SILENT,
+			ModeSetting.option(ROTATION_SILENT, "Сайлент (своя камера)"),
+			ModeSetting.option(ROTATION_VISIBLE, "Видимый"),
+			ModeSetting.option(ROTATION_NONE, "Без доворота"));
+
+	/** Ограничение скорости доворота, °/тик. 0 — мгновенно (как раньше в «Быстром»). */
+	private final IntSetting rotationSpeed = intSetting("rotation_speed", "Скорость доворота, °/тик", 0, 0, 90);
+
+	/** Ждать ли, пока сервер получил наш поворот, перед ударом (защита от angle-флагов). */
+	private final BooleanSetting waitSync = bool("wait_sync", "Бить только после синхронизации", true);
+
+	/** Насколько расширить хитбокс цели при проверке лучом (0.1 блока за единицу). */
+	private final IntSetting hitboxExpand = intSetting("hitbox_expand", "Расширение хитбокса (0.1)", 2, 0, 8);
+
+	/** Упреждение: на сколько тиков вперёд берём скорость цели (0 — не упреждать). */
+	private final IntSetting leadTicks = intSetting("lead_ticks", "Упреждение цели, тиков", 0, 0, 5);
+
+	/**
 	 * Степень «человечности» легитного режима: 0 — почти без шума, максимум буста,
 	 * 100 — максимум рандомизации. Влияет на промахи, перелёты, дрожь, задержки.
 	 */
@@ -123,7 +152,7 @@ public class KillAuraModule extends Module {
 	 * цели и на близкой дистанции кружит вокруг неё. Легитный — аура клавиши не
 	 * трогает: игрок идёт сам, и только пока держит W.
 	 */
-	private final ModeSetting movement = mode("movement", "Коррекция движений", MOVEMENT_LEGIT,
+	private final ModeSetting movement = mode("movement", "Коррекция движений (видимый поворот)", MOVEMENT_LEGIT,
 			ModeSetting.option(MOVEMENT_FREE, "Свободный"),
 			ModeSetting.option(MOVEMENT_FOCUSED, "Фокусированный"),
 			ModeSetting.option(MOVEMENT_LEGIT, "Легитный"));
@@ -165,6 +194,9 @@ public class KillAuraModule extends Module {
 
 	/** До скольки градусов считаем, что прицел наведён (легитный режим). */
 	private static final float AIM_TOLERANCE = 6.0F;
+
+	/** Допуск «Быстрого» режима: мгновенный доворот обязан быть точным. */
+	private static final float AIM_SNAP_TOLERANCE = 1.0F;
 
 	/** Дальняя граница «враг может достать ударом» — здесь щит ещё имеет смысл. */
 	private static final float BLOCK_REACH = 3.2F;
@@ -215,15 +247,6 @@ public class KillAuraModule extends Module {
 	private int orbitDirection = 1;
 	private int orbitTicks;
 
-	/**
-	 * Куда игрок смотрел бы «сам» — без камеры киллауры. Считается из мышиных
-	 * дельт (см. tick): нужно «Свободной» коррекции, чтобы W вёл игрока по его
-	 * собственному взгляду, а не по наведённой камере.
-	 */
-	private static float userYaw;
-	private static float lastWrittenYaw;
-	private static boolean trackingUserYaw;
-
 	public KillAuraModule() {
 		super("kill_aura", "KillAura", "Автоматическая атака: режимы, Авто-Блок щитом, Смарт Крит, сброс спринта и обязательный RayTrace",
 				ModuleCategory.COMBAT, GLFW.GLFW_KEY_X);
@@ -246,6 +269,7 @@ public class KillAuraModule extends Module {
 	protected void onDisable() {
 		this.targetId = null;
 		this.currentTarget = null;
+		RotationManager.release(this);
 		resetSequence();
 		releaseMovement();
 		Minecraft client = Minecraft.getInstance();
@@ -274,6 +298,7 @@ public class KillAuraModule extends Module {
 
 		// В меню и чате не воюем
 		if (client.gui != null && client.gui.screen() != null) {
+			RotationManager.release(this);
 			releaseMovement();
 			stopBlocking(player);
 			return;
@@ -282,6 +307,7 @@ public class KillAuraModule extends Module {
 		// Использование предмета — пауза, КРОМЕ щита: пока держим щит Авто-Блоком,
 		// isUsingItem() истинен, и прерывать себя нельзя. Еда и тотем — по лимитам.
 		if (itemUsePausesAttack(player)) {
+			RotationManager.release(this);
 			releaseMovement();
 			stopBlocking(player);
 			return;
@@ -292,6 +318,7 @@ public class KillAuraModule extends Module {
 		if (target == null) {
 			this.targetId = null;
 			this.wasTargetSwinging = false;
+			RotationManager.release(this);
 			resetSequence();
 			releaseMovement();
 			// Врага больше нет — щит опускаем, если держим его мы
@@ -309,21 +336,6 @@ public class KillAuraModule extends Module {
 			resetSequence();
 		}
 
-		// «Свободная» коррекция: запоминаем, куда игрок смотрел бы без ауры —
-		// ввод потом разворачивается к этому взгляду в KeyboardInputMixin
-		if (movement.is(MOVEMENT_FREE)) {
-			float currentYaw = player.getYRot();
-			if (!trackingUserYaw) {
-				userYaw = currentYaw;
-				trackingUserYaw = true;
-			} else {
-				float mouse = Mth.wrapDegrees(currentYaw - lastWrittenYaw);
-				userYaw = Math.abs(mouse) < 40.0F ? Mth.wrapDegrees(userYaw + mouse) : currentYaw;
-			}
-		} else {
-			trackingUserYaw = false;
-		}
-
 		// «Фокусированный» режим сам ведёт игрока; остальные — ввод не трогают
 		if (!movement.is(MOVEMENT_FOCUSED)) {
 			releaseHeldKeys();
@@ -339,43 +351,43 @@ public class KillAuraModule extends Module {
 		boolean enemyJustSwung = targetSwinging && !this.wasTargetSwinging;
 		this.wasTargetSwinging = targetSwinging;
 
-		// Прицеливание
+		// ---- Прицеливание: СВОИМИ углами, через RotationManager ------------------
+		// Модуль больше не пишет player.setYRot/setXRot. В «сайленте» доворот уходит
+		// только в пакет движения (см. LocalPlayerRotationMixin), поэтому камера
+		// игрока остаётся там, где её оставил игрок, а сервер видит прицел ауры.
 		float[] aim = aimAt(player, target);
-		boolean fastRotation = !isLegit() || movement.is(MOVEMENT_FOCUSED);
-		boolean aimReady;
-		if (!fastRotation) {
-			// Доворот через RotationHumanizer: плавно, с промахом, перелётом и дрожью.
-			// Пишем публичными setYRot/setXRot — они не перехватываются миксином
-			float[] rotation = RotationHumanizer.aimTowards(player, aim[0], aim[1]);
-			if (rotation != null) {
-				player.setYRot(rotation[0]);
-				player.setXRot(rotation[1]);
-			} else {
-				player.setYRot(aim[0]);
-				player.setXRot(aim[1]);
-			}
-			// Бьём только прицелом, который «успел» за целью (перелёт скорректирован)
-			aimReady = RotationHumanizer.settled()
-					&& Math.abs(Mth.wrapDegrees(player.getYRot() - aim[0])) <= AIM_TOLERANCE
-					&& Math.abs(player.getXRot() - aim[1]) <= AIM_TOLERANCE;
+		if (movement.is(MOVEMENT_FOCUSED) && player.distanceTo(target) < 2.2F) {
+			// Дошли до центра — «ультра-быстрое кружение»: аура обходит цель по дуге,
+			// удары проходят по RayTrace на каждом обороте
+			this.spinYaw += 38.0F + RANDOM.nextFloat() * 14.0F;
+			aim[0] = RotationMath.wrap(aim[0] + this.spinYaw);
 		} else {
-			if (movement.is(MOVEMENT_FOCUSED) && player.distanceTo(target) < 2.2F) {
-				// Дошли до центра — «ультра-быстрое кружение»: камера крутится
-				// вокруг цели, удары проходят по RayTrace на каждом обороте
-				this.spinYaw += 38.0F + RANDOM.nextFloat() * 14.0F;
-				player.setYRot(aim[0] + this.spinYaw);
-				player.setXRot(aim[1]);
-			} else {
-				this.spinYaw = 0.0F;
-				player.setYRot(aim[0]);
-				player.setXRot(aim[1]);
-			}
-			aimReady = true;
+			this.spinYaw = 0.0F;
 		}
-		lastWrittenYaw = player.getYRot();
 
-		// Обязательный RayTrace: луч из глаз по взгляду должен пересекать хитбокс
-		// И не упираться раньше в блок (block clip): иначе бьём «сквозь стену»
+		// «Легитный» доворот очеловечивается; в «Быстром» скорость не ограничиваем
+		boolean humanize = isLegit() && !movement.is(MOVEMENT_FOCUSED);
+		float speed = isLegit() ? rotationSpeed.get() : 0.0F;
+		if (!RotationManager.request(this, RotationManager.PRIORITY_AURA, rotationMode(),
+				movementMode(), speed, humanize, aim[0], aim[1])) {
+			// Прямо сейчас слоем владеет более важный модуль (AutoBuff бросает зелье) —
+			// не дерём камеру/пакеты: просто ждём свой следующий тик
+			return;
+		}
+
+		// Бьём, только НАВЕДШИСЬ и синхронизировав поворот с сервером: удар под
+		// старым углом — это «rotation mismatch», самый частый флаг на аурах.
+		boolean aimReady;
+		if (rotation.is(ROTATION_NONE)) {
+			aimReady = RotationMath.aimed(player.getYRot(), player.getXRot(),
+					aim[0], aim[1], AIM_TOLERANCE);
+		} else {
+			aimReady = RotationManager.aimed(isLegit() ? AIM_TOLERANCE : AIM_SNAP_TOLERANCE)
+					&& (!waitSync.isEnabled() || RotationManager.inSync());
+		}
+
+		// Обязательный RayTrace: луч из глаз по НАШЕМУ прицелу должен пересекать
+		// хитбокс и не упираться раньше в блок (то есть бьём то, что видит сервер)
 		boolean rayHits = rayIntersectsHitbox(player, target, range.get())
 				&& (throughWalls.isEnabled() || !blockBlocksRay(player, target));
 
@@ -561,6 +573,10 @@ public class KillAuraModule extends Module {
 			return;
 		}
 
+		// Сервер должен видеть наш прицел ДО удара: обычно поворот уже ушёл в
+		// пакете движения этого тика, но если миксина нет (или угол сменился
+		// позже) — докупаем коротким Rot-пакетом прямо здесь.
+		RotationManager.syncBeforeAction(player);
 		client.gameMode.attack(player, target);
 		player.swing(InteractionHand.MAIN_HAND);
 		this.attackDelay = nextAttackDelay();
@@ -705,39 +721,34 @@ public class KillAuraModule extends Module {
 	}
 
 	/**
-	 * «Свободная» коррекция для KeyboardInputMixin: пересчитывает ввод так, будто
-	 * камера не наводилась аурой — W ведёт игрока по его собственному взгляду.
+	 * Коррекция ввода для {@code KeyboardInputMixin} — делегат к слою поворотов.
+	 * Метод оставлен, чтобы у миксина был понятный «ауровский» вход: вся логика
+	 * (когда она вообще нужна) живёт в {@link RotationManager}.
 	 */
 	public static net.minecraft.world.phys.Vec2 correctedMovement(net.minecraft.world.phys.Vec2 moveVector) {
-		KillAuraModule module = ModuleManager.find(KillAuraModule.class);
-		if (module == null || !module.isEnabled() || !module.movement.is(MOVEMENT_FREE) || !trackingUserYaw) {
-			return null;
-		}
-		Minecraft client = Minecraft.getInstance();
-		if (client == null || client.player == null || moveVector == null
-				|| moveVector.x == 0.0F && moveVector.y == 0.0F) {
-			return null;
-		}
+		return RotationManager.correctedInput(moveVector);
+	}
 
-		float aimYaw = client.player.getYRot();
-		if (Math.abs(Mth.wrapDegrees(userYaw - aimYaw)) < 1.0F) {
-			return null;
+	/** Режим поворота из настройки — в терминах слоя. */
+	private RotationManager.Mode rotationMode() {
+		if (rotation.is(ROTATION_VISIBLE)) {
+			return RotationManager.Mode.VISIBLE;
 		}
+		if (rotation.is(ROTATION_NONE)) {
+			return RotationManager.Mode.NONE;
+		}
+		return RotationManager.Mode.SILENT;
+	}
 
-		// Мировое направление текущего ввода (относительно наведённой камеры)…
-		double aimRad = Math.toRadians(aimYaw);
-		double aimForwardX = -Math.sin(aimRad), aimForwardZ = Math.cos(aimRad);
-		double aimRightX = -aimForwardZ, aimRightZ = aimForwardX;
-		double worldX = aimForwardX * moveVector.y + aimRightX * moveVector.x;
-		double worldZ = aimForwardZ * moveVector.y + aimRightZ * moveVector.x;
-
-		// …и то же направление в осях «своего» взгляда игрока
-		double userRad = Math.toRadians(userYaw);
-		double userForwardX = -Math.sin(userRad), userForwardZ = Math.cos(userRad);
-		double userRightX = -userForwardZ, userRightZ = userForwardX;
-		return new net.minecraft.world.phys.Vec2(
-				(float) (worldX * userRightX + worldZ * userRightZ),
-				(float) (worldX * userForwardX + worldZ * userForwardZ));
+	/** Коррекция движения из настройки — в терминах слоя. */
+	private RotationManager.Movement movementMode() {
+		if (movement.is(MOVEMENT_FOCUSED)) {
+			return RotationManager.Movement.FOCUSED;
+		}
+		if (movement.is(MOVEMENT_FREE)) {
+			return RotationManager.Movement.FREE;
+		}
+		return RotationManager.Movement.LEGIT;
 	}
 
 	private void releaseJump(Minecraft client) {
@@ -857,10 +868,11 @@ public class KillAuraModule extends Module {
 
 	/** Стоит ли блок между глазами и хитбоксом цели (по реальному clip'у мира). */
 	private static boolean blockBlocksRay(LocalPlayer player, Entity target) {
-		net.minecraft.world.phys.Vec3 eyes = player.getEyePosition();
-		net.minecraft.world.phys.Vec3 center = positionCenter(target);
+		Vec3 eyes = player.getEyePosition();
+		Vec3 center = positionCenter(target);
 		double distance = Math.min(eyes.distanceTo(center), player.blockInteractionRange() + 1.0);
-		net.minecraft.world.phys.Vec3 end = eyes.add(player.getViewVector(1.0F).scale(distance));
+		// Луч ведём по ПРИЦЕЛУ АУРЫ, а не по камере: именно так его увидит сервер
+		Vec3 end = eyes.add(RotationManager.lookVector().scale(distance));
 		var hit = player.level().clip(new net.minecraft.world.level.ClipContext(eyes, end,
 				net.minecraft.world.level.ClipContext.Block.COLLIDER,
 				net.minecraft.world.level.ClipContext.Fluid.NONE, player));
@@ -877,10 +889,12 @@ public class KillAuraModule extends Module {
 	 * цели (с маленьким допуском). Именно эту проверку делает сервер и античиты —
 	 * бить можно только то, что прицел реально видит.
 	 */
-	private static boolean rayIntersectsHitbox(LocalPlayer player, Entity target, double range) {
+	private boolean rayIntersectsHitbox(LocalPlayer player, Entity target, double range) {
 		Vec3 eye = player.getEyePosition();
-		Vec3 look = player.getViewVector(1.0F);
-		AABB box = target.getBoundingBox().inflate(0.15);
+		Vec3 look = RotationManager.lookVector();
+		// Небольшой допуск (настройка) — «край хитбокса» сервер тоже считает щедро
+		double expand = 0.15 + hitboxExpand.get() * 0.1;
+		AABB box = target.getBoundingBox().inflate(expand);
 
 		double[] origin = {eye.x, eye.y, eye.z};
 		double[] direction = {look.x, look.y, look.z};
@@ -919,15 +933,28 @@ public class KillAuraModule extends Module {
 		return look.dot(toPlayer) >= FACING_DOT;
 	}
 
-	/** Угол между взглядом игрока и направлением на сущность, в градусах. */
+	/**
+	 * Угол между ВЗГЛЯДОМ ИГРОКА (не ауры!) и направлением на сущность, в градусах.
+	 *
+	 * Важно именно так: в «сайленте» прицел слоя всегда смотрит в цель, и фильтр
+	 * «угол обзора»/приоритет «под прицелом» на углах ауры были бы бессмысленны
+	 * (всегда ноль). Считаем по тому, куда смотрит человек.
+	 */
 	private static double angleTo(LocalPlayer player, Entity target) {
-		Vec3 look = player.getViewVector(1.0F);
 		Vec3 direction = target.getEyePosition().subtract(player.getEyePosition()).normalize();
-		double dot = Mth.clamp(look.dot(direction), -1.0, 1.0);
+		double yawRad = Math.toRadians(RotationManager.userYaw(player));
+		double pitchRad = Math.toRadians(RotationManager.userPitch(player));
+		double lookX = -Math.sin(yawRad) * Math.cos(pitchRad);
+		double lookY = -Math.sin(pitchRad);
+		double lookZ = Math.cos(yawRad) * Math.cos(pitchRad);
+		double dot = Mth.clamp(lookX * direction.x + lookY * direction.y + lookZ * direction.z, -1.0, 1.0);
 		return Math.toDegrees(Math.acos(dot));
 	}
 
-	/** Углы, по которым игрок смотрит в точку прицеливания на теле цели. */
+	/**
+	 * Углы, в которые должна «смотреть» аура: точка прицела на теле цели
+	 * (с упреждением по её скорости) из глаз игрока.
+	 */
 	private float[] aimAt(LocalPlayer player, Entity target) {
 		Vec3 eye = player.getEyePosition();
 		AABB box = target.getBoundingBox();
@@ -939,18 +966,25 @@ public class KillAuraModule extends Module {
 		};
 		// Точка всегда внутри реального AABB. Старый расчёт прибавлял смещение
 		// к позиции глаз и иногда целился выше головы маленьких сущностей.
-		Vec3 at = new Vec3((box.minX + box.maxX) * 0.5,
-				box.minY + (box.maxY - box.minY) * fraction,
-				(box.minZ + box.maxZ) * 0.5);
+		double centerX = (box.minX + box.maxX) * 0.5;
+		double centerY = box.minY + (box.maxY - box.minY) * fraction;
+		double centerZ = (box.minZ + box.maxZ) * 0.5;
 
-		double dx = at.x - eye.x;
-		double dy = at.y - eye.y;
-		double dz = at.z - eye.z;
-		double horizontal = Math.sqrt(dx * dx + dz * dz);
+		// Упреждение: берём горизонтальную скорость цели (без вертикали — прыжок
+		// и гравитация ломают прогноз уже через тик), и целимся в «куда она придёт»
+		int lead = leadTicks.get();
+		if (lead > 0) {
+			Vec3 velocity = target.getDeltaMovement();
+			double[] ahead = RotationMath.lead(centerX, centerY, centerZ,
+					velocity.x, velocity.y, velocity.z, lead);
+			centerX = ahead[0];
+			centerY = ahead[1];
+			centerZ = ahead[2];
+		}
 
-		float yaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
-		float pitch = (float) (-Math.toDegrees(Math.atan2(dy, horizontal)));
-		return new float[]{yaw, Mth.clamp(pitch, -90.0F, 90.0F)};
+		float yaw = RotationMath.yawTo(eye.x, eye.z, centerX, centerZ);
+		float pitch = RotationMath.pitchTo(eye.x, eye.y, eye.z, centerX, centerY, centerZ);
+		return new float[]{yaw, pitch};
 	}
 
 	// ------------------------------------------------------------------

@@ -177,6 +177,21 @@ public final class RotationHumanizer {
 	 * или null, если слой сейчас не активен (тогда киллаура целится точно)
 	 */
 	public static float[] aimTowards(LocalPlayer player, float yaw, float pitch) {
+		return aimTowards(player, yaw, pitch,
+				player == null ? yaw : player.getYRot(),
+				player == null ? pitch : player.getXRot());
+	}
+
+	/**
+	 * Тот же доворот для {@link com.dreamcast.client.rotation.RotationManager}:
+	 * стартовые углы передаются отдельно, потому что в «сайлент»-режиме реальные
+	 * углы игрока — это взгляд человека, а не то, куда уже наведён слой.
+	 *
+	 * @param baseYaw   угол, от которого стартуем (обычно текущий боевой угол слоя)
+	 * @param basePitch то же для питча
+	 */
+	public static float[] aimTowards(LocalPlayer player, float yaw, float pitch,
+	                                 float baseYaw, float basePitch) {
 		if (!active()) {
 			engagement = null;
 			return null;
@@ -185,13 +200,8 @@ public final class RotationHumanizer {
 		if (stale) {
 			stale = false;
 			engagement = null;
-			if (player != null) {
-				currentYaw = player.getYRot();
-				currentPitch = player.getXRot();
-			} else {
-				currentYaw = yaw;
-				currentPitch = pitch;
-			}
+			currentYaw = baseYaw;
+			currentPitch = basePitch;
 		}
 
 		return route(yaw, pitch, true);

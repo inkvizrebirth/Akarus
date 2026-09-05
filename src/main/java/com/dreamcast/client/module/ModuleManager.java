@@ -139,6 +139,7 @@ public final class ModuleManager {
 				}
 			} catch (RuntimeException error) {
 				DreamcastClient.LOGGER.error("Модуль {} аварийно остановлен", module.getId(), error);
+				com.dreamcast.client.rotation.RotationManager.release(module);
 				try {
 					module.setEnabledSilently(false);
 				} catch (RuntimeException cleanupError) {
@@ -149,5 +150,9 @@ public final class ModuleManager {
 						module.getName(), "Остановлен из-за внутренней ошибки; подробности в latest.log");
 			}
 		}
+
+		// Слой поворотов: если в этом тике никто не продлевал заявку, он сам
+		// отпустит камеру и перестанет подменять поворот в пакетах движения
+		com.dreamcast.client.rotation.RotationManager.tickEnd();
 	}
 }

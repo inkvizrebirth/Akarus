@@ -17,6 +17,7 @@
     "MouseHandlerMixin",
     "SubmitNodeCollectionMixin",
     "LocalPlayerMixin",
+    "LocalPlayerRotationMixin",
     "MultiPlayerGameModeMixin"
   ],
   "injectors": {

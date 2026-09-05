@@ -68,6 +68,9 @@ public class DreamcastClient implements ClientModInitializer {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			com.dreamcast.client.util.PendingRestores.clear();
 			com.dreamcast.client.util.KeyOwnership.clear(client);
+			// Повороты живут внутри одной игровой сессии: в новом мире чужой
+			// «боевой угол» и память о нём недопустимы
+			com.dreamcast.client.rotation.RotationManager.reset();
 		});
 
 		// Сохраняем настройки при закрытии игры

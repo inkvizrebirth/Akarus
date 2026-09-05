@@ -242,6 +242,26 @@ jobs:
               javap -p -cp "$MC" net.minecraft.client.CameraType 2>&1 | head -25
               echo; echo "=== Vec3 (helpers) ==="
               javap -p -cp "$MC" net.minecraft.world.phys.Vec3 2>&1 | grep -iE 'directionFromRotation|rotate|length|normalize|distanceTo|add|scale|lerp' | head -25
+              echo; echo "=== GameRenderer (постэффекты) ==="
+              javap -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | grep -iE 'postEffect|Effect|overlay|active' | head -30
+              echo; echo "=== Minecraft (постэффекты/камера) ==="
+              javap -p -cp "$MC" net.minecraft.client.Minecraft 2>&1 | grep -iE 'postEffect|EntityRenderDispatcher|getCamera|level;' | head -20
+              echo; echo "=== строки-идентификаторы постэффектов в GameRenderer ==="
+              javap -v -p -cp "$MC" net.minecraft.client.renderer.GameRenderer 2>&1 | grep -oE 'String [a-z0-9_/:.]+' | grep -iE 'fire|nausea|water|blind|shaders|post' | sort -u | head -20
+              echo; echo "=== ассеты шейдеров ==="
+              unzip -l "$MC" | grep -iE 'shaders.*(fire|nausea|blind|water)|post/.*(fire|nausea|blind)' | head -20
+              echo; echo "=== Hud полный список методов ==="
+              javap -p -cp "$MC" net.minecraft.client.gui.Hud 2>&1 | grep -E '^  [a-z]' | head -60
+              echo; echo "=== Hud константы-строки ==="
+              javap -v -p -cp "$MC" net.minecraft.client.gui.Hud 2>&1 | grep -oE 'String [a-z0-9_/:.]*' | grep -iE 'fire|vignette|snow|pumpkin|portal' | sort -u | head -20
+              echo; echo "=== Entity fire ==="
+              javap -p -cp "$MC" net.minecraft.world.entity.Entity 2>&1 | grep -iE 'fire|Fire' | head -20
+              echo; echo "=== FlameOverlay/классы ==="
+              unzip -l "$MC" | grep -iE 'client/renderer/(Fire|.*Overlay)' | head -20
+              echo; echo "=== ScreenEffect / camera overlay компонент ==="
+              javap -p -cp "$MC" net.minecraft.world.effect.MobEffect 2>&1 | grep -iE 'screen|overlay|postEffect|attributes' | head -20
+              echo; echo "=== DataComponents (список) ==="
+              javap -p -cp "$MC" net.minecraft.core.component.DataComponents 2>&1 | grep -iE 'public static final' | head -60
               echo; echo "=== Minecraft (crosshair/misc) ==="
               javap -p -cp "$MC" net.minecraft.client.Minecraft 2>&1 | grep -iE 'crosshairPickEntity|isPaused|getCameraEntity|setCameraEntity|levelRenderer|isLocalServer|getUser|getWindow|getSoundManager|level;|player;|mouseHandler|options|gameMode|hitResult|fps' | head -30
               echo; echo "=== Entity (velocity/util) ==="
