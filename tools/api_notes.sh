@@ -5,6 +5,7 @@ set +e
 . /tmp/paths.env
 OUT=api-notes.txt
 : > "$OUT"
+echo "=== source: $(git log -1 --format='%h %ad' --date=iso) ===" >> "$OUT"
 if [ -z "$JAR" ]; then echo "MC jar не найден" >> "$OUT"; exit 0; fi
 J() { echo "=== $1 ===" >> "$OUT"; javap -p -cp "$JAR" "$1" >> "$OUT" 2>&1; }
 JC() { echo "=== $1 (байткод) ===" >> "$OUT"; javap -p -c -cp "$JAR" "$1" >> "$OUT" 2>&1; }

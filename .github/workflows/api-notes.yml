@@ -20,6 +20,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          # fetch-depth: 0 обязателен: GitHub отклоняет push из shallow-клона
+          fetch-depth: 0
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -50,12 +52,12 @@ jobs:
       - name: Отправить в служебную ветку
         run: |
           set +e
-          [ -f .skip-notes ] || [ ! -f api-notes.txt ] && exit 0
+          if [ ! -f api-notes.txt ]; then echo "заметок нет — нечего отправлять"; exit 0; fi
+          SHORT=$(git log -1 --format=%h)
           git config user.name "arena-agent"
           git config user.email "297053741+arena-agent@users.noreply.github.com"
-          git checkout -q -b arena/api-notes origin/arena/api-notes 2>/dev/null \
-            || git checkout -q --orphan arena/api-notes
+          git checkout -q -B arena/api-notes
           git add -f api-notes.txt
-          git commit -qm "api notes: $(git log -1 --format=%h arena/01a0709d-dreamcast 2>/dev/null || echo local)" || true
-          git push -f -q origin HEAD:refs/heads/arena/api-notes && echo "готово: ветка arena/api-notes"
+          git commit -qm "api notes: $SHORT" || echo "пустой diff — файл не изменился"
+          git push -f origin arena/api-notes:arena/api-notes && echo "готово: api-notes.txt из $SHORT" || echo "::warning::push не прошёл"
           exit 0
