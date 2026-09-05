@@ -644,9 +644,14 @@ public class KillAuraModule extends Module {
 	private int moveSuppressTicks;
 
 	/**
-	 * «Фокусированный» режим: пока далеко — жмём W (игрок бежит в центр цели),
-	 * у центра — кружим: strafe влево/вправо со сменой направления раз в
-	 * 8–14 тиков плюс «ультра-быстрый» доворот камеры (см. tick).
+	 * «Фокусированный» режим: аура сама ведёт игрока в центр цели, а вблизи —
+	 * кружит вокруг неё.
+	 *
+	 * Направление считается ПОСЛЕНО (куда реально идти), а не «просто зажми W»:
+	 * вектор «в цель» переводится в оси того взгляда, которым игрок управляет
+	 * вводом, и уже из него нажимаются W/S/A/D. Поэтому режим одинаково работает
+	 * и в «видимом» повороте (ввод идёт от камеры ауры), и в «сайте» (ввод идёт
+	 * от камеры игрока, а аура вообще её не трогает).
 	 */
 	private void moveFocused(Minecraft client, LocalPlayer player, Entity target) {
 		if (moveSuppressTicks > 0) {
@@ -657,18 +662,42 @@ public class KillAuraModule extends Module {
 			return;
 		}
 
-		if (player.distanceTo(target) > 2.2F) {
-			holdForward(client, true);
+		double dx = target.getX() - player.getX();
+		double dz = target.getZ() - player.getZ();
+		double flat = Math.sqrt(dx * dx + dz * dz);
+		if (flat < 1.0e-3) {
+			holdForward(client, false);
 			holdStrafe(client, 0);
 			return;
 		}
 
-		if (--this.orbitTicks <= 0) {
-			this.orbitDirection = RANDOM.nextBoolean() ? 1 : -1;
-			this.orbitTicks = 8 + RANDOM.nextInt(7);
+		// Далеко — идём в цель; вблизи — по касательной (кругом)
+		double dirX;
+		double dirZ;
+		if (flat < 2.2) {
+			if (--this.orbitTicks <= 0) {
+				this.orbitDirection = RANDOM.nextBoolean() ? 1 : -1;
+				this.orbitTicks = 8 + RANDOM.nextInt(7);
+			}
+			dirX = -dz / flat * this.orbitDirection;
+			dirZ = dx / flat * this.orbitDirection;
+		} else {
+			this.orbitTicks = 0;
+			dirX = dx / flat;
+			dirZ = dz / flat;
 		}
-		holdForward(client, false);
-		holdStrafe(client, this.orbitDirection);
+
+		// Оси ввода — фактический разворот игрока: в «видимом» режиме его уже
+		// развернула аура, в «сайте» там же и остался взгляд игрока
+		float axisYaw = player.getYRot();
+		double rad = Math.toRadians(axisYaw);
+		double fwdX = -Math.sin(rad), fwdZ = Math.cos(rad);
+		double rightX = -fwdZ, rightZ = fwdX;
+		float forward = (float) (dirX * fwdX + dirZ * fwdZ);
+		float strafe = (float) (dirX * rightX + dirZ * rightZ);
+
+		holdForward(client, forward > 0.35F);
+		holdStrafe(client, strafe > 0.35F ? 1 : strafe < -0.35F ? -1 : 0);
 	}
 
 	private void holdForward(Minecraft client, boolean down) {

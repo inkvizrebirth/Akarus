@@ -442,8 +442,7 @@ public final class RotationManager {
 	 * @return новый вектор ввода или {@code null}, если ничего менять не нужно
 	 */
 	public static Vec2 correctedInput(Vec2 input) {
-		if (owner == null || mode != Mode.VISIBLE || movement != Movement.FREE
-				&& movement != Movement.LEGIT || !trackingUser) {
+		if (owner == null || mode != Mode.VISIBLE || movement != Movement.FREE || !trackingUser) {
 			return null;
 		}
 		Minecraft client = Minecraft.getInstance();
