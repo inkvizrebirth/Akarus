@@ -100,7 +100,7 @@ public final class ModInstallLogic {
 		StringBuilder query = new StringBuilder("loaders=[\"fabric\"]");
 		if (!version.isEmpty()) {
 			query.append("&game_versions=%5B%22")
-					.append(version.replace("\"", "").replace("[", "").replace("]", ""))
+					.append(version.replaceAll("[\"\[\]\s]", ""))
 					.append("%22%5D");
 		}
 		return query.toString();

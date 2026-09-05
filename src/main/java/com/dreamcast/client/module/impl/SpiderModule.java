@@ -36,6 +36,8 @@ public class SpiderModule extends Module {
 			ModeSetting.option("water_bucket", "WaterBucket"),
 			ModeSetting.option("jump", "Прыжок"));
 
+	/** Дальность клиентского клика по блоку (ванильные 4.5 блока, с запасом). */
+	private static final double REACH_SQR = 4.75 * 4.75;
 	/** Кулдаун между действиями с ведром (тиков) — пакеты должны успеть. */
 	private static final int ACTION_COOLDOWN = 4;
 	/** Как часто напоминаем, что ведра нет. */
@@ -220,8 +222,16 @@ public class SpiderModule extends Module {
 			}
 			toPlayer = Direction.UP;
 		}
-		if (!canPlaceAt(client, feet.above(2))) {
-			return; // над головой что-то стоит — воду некуда ставить
+		// Вода появится в блоке напротив грани, по которой мы кликаем, — запоминать
+		// надо именно его. Раньше писало «ноги + 2» всегда, и на низкой стене
+		// (клик по её верхушке) модуль помнил позицию в стороне: забрать ведро не
+		// мог, вода оставалась в мире, а подъём стопорился до конца блока.
+		BlockPos target = wallBlock.relative(toPlayer);
+		if (!canPlaceAt(client, target)) {
+			return; // в целевую клетку лить некуда — ждём, пока освободится
+		}
+		if (target.getCenter().distanceToSqr(player.position()) > REACH_SQR) {
+			return; // сервер такой клик всё равно отклонит — не дёргаем ведро зря
 		}
 
 		Vec3 hitLocation = Vec3.atCenterOf(wallBlock).add(
@@ -232,7 +242,7 @@ public class SpiderModule extends Module {
 		client.gameMode.useItemOn(player, InteractionHand.MAIN_HAND, hit);
 		player.swing(InteractionHand.MAIN_HAND);
 		bucketSlot = slot;
-		waterSource = feet.above(2);
+		waterSource = target;
 		cooldown = ACTION_COOLDOWN;
 	}
 
