@@ -23,18 +23,18 @@
 MC_JAR=/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-deobf/26.2/minecraft-merged-deobf-26.2.jar
 
 === классы мобов/врагов/манекенов ===
-        0  2026-09-05 08:53   assets/minecraft/textures/entity/armorstand/
+        0  2026-09-05 08:59   assets/minecraft/textures/entity/armorstand/
       809  1980-02-01 00:00   assets/minecraft/textures/entity/armorstand/armorstand.png
-        0  2026-09-05 08:53   net/minecraft/client/model/object/armorstand/
+        0  2026-09-05 08:59   net/minecraft/client/model/object/armorstand/
+     6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
       320  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/package-info.class
      5851  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandModel.class
-     6334  1980-02-01 00:00   net/minecraft/client/model/object/armorstand/ArmorStandArmorModel.class
     11516  1980-02-01 00:00   net/minecraft/client/renderer/entity/ArmorStandRenderer.class
      1224  1980-02-01 00:00   net/minecraft/client/renderer/entity/state/ArmorStandRenderState.class
      2859  1980-02-01 00:00   net/minecraft/util/datafix/fixes/EntityArmorStandSilentFix.class
      3925  1980-02-01 00:00   net/minecraft/world/entity/MobCategory.class
-    71991  1980-02-01 00:00   net/minecraft/world/entity/Mob.class
    157622  1980-02-01 00:00   net/minecraft/world/entity/LivingEntity.class
+    71991  1980-02-01 00:00   net/minecraft/world/entity/Mob.class
      5673  1980-02-01 00:00   net/minecraft/world/entity/decoration/ArmorStand$ArmorStandPose.class
     31215  1980-02-01 00:00   net/minecraft/world/entity/decoration/ArmorStand.class
     84438  1980-02-01 00:00   net/minecraft/world/entity/player/Player.class
@@ -474,26 +474,26 @@ public class net.minecraft.world.item.BucketItem extends net.minecraft.world.ite
   public void handleSlotStateChanged(int, int, boolean);
 
 === классы оверлеев ===
-     7316  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay.class
      3595  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay$1.class
-     3361  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay$1.class
-     4652  1980-02-01 00:00   net/minecraft/client/gui/components/IMEPreeditOverlay.class
+     7316  1980-02-01 00:00   net/minecraft/client/gui/components/BossHealthOverlay.class
     21742  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay.class
-     2498  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay$ScoreDisplayEntry.class
-    21670  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay.class
+     4652  1980-02-01 00:00   net/minecraft/client/gui/components/IMEPreeditOverlay.class
+     3361  1980-02-01 00:00   net/minecraft/client/gui/components/DebugScreenOverlay$1.class
      1473  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay$HealthState.class
+    21670  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay.class
+     2498  1980-02-01 00:00   net/minecraft/client/gui/components/PlayerTabOverlay$ScoreDisplayEntry.class
      2015  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$SoundPlayedAt.class
-     7576  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay.class
      5001  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay$Subtitle.class
+     7576  1980-02-01 00:00   net/minecraft/client/gui/components/SubtitleOverlay.class
      2687  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay$LogoTexture.class
-     8761  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay.class
       632  1980-02-01 00:00   net/minecraft/client/gui/screens/Overlay.class
+     8761  1980-02-01 00:00   net/minecraft/client/gui/screens/LoadingOverlay.class
      1522  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayScreen$1.class
      4421  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayTabButton.class
     22448  1980-02-01 00:00   net/minecraft/client/gui/screens/friends/FriendsOverlayScreen.class
+     6490  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayCraftingRecipeButton.class
      3112  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayRecipeButton$Pos.class
      4694  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayRecipeButton.class
-     6490  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlayCraftingRecipeButton.class
      3959  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent$OverlaySmeltingRecipeButton.class
      7848  1980-02-01 00:00   net/minecraft/client/gui/screens/recipebook/OverlayRecipeComponent.class
      2000  1980-02-01 00:00   net/minecraft/client/particle/FireworkParticles$OverlayParticle.class
@@ -509,11 +509,11 @@ public class net.minecraft.world.item.BucketItem extends net.minecraft.world.ite
        95  1980-02-01 00:00   assets/minecraft/items/pumpkin_seeds.json
       166  1980-02-01 00:00   assets/minecraft/models/block/attached_pumpkin_stem.json
       197  1980-02-01 00:00   assets/minecraft/models/block/carved_pumpkin.json
-      326  1980-02-01 00:00   assets/minecraft/models/block/pumpkin.json
-      110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage0.json
       110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage1.json
       110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage2.json
       110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage3.json
+      110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage4.json
+      110  1980-02-01 00:00   assets/minecraft/models/block/pumpkin_stem_stage5.json
 grep: write error: Broken pipe
 
 === FogRenderer ===
@@ -588,16 +588,16 @@ public final class net.minecraft.world.inventory.ContainerInput extends java.lan
   public static final net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> DARKNESS;
 
 === fog environments ===
-        0  2026-09-05 08:53   net/minecraft/client/renderer/fog/environment/
+        0  2026-09-05 08:59   net/minecraft/client/renderer/fog/environment/
      7163  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/AtmosphericFogEnvironment.class
      2722  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/BlindnessFogEnvironment.class
-     2698  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/DarknessFogEnvironment.class
      1723  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/FogEnvironment.class
-     2599  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/LavaFogEnvironment.class
+     2698  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/DarknessFogEnvironment.class
      1494  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/MobEffectFogEnvironment.class
      2290  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/PowderedSnowFogEnvironment.class
       321  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/package-info.class
      3052  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/WaterFogEnvironment.class
+     2599  1980-02-01 00:00   net/minecraft/client/renderer/fog/environment/LavaFogEnvironment.class
 
 === gui layers/overlays ===
      2196  1980-02-01 00:00   net/minecraft/client/gui/Hud$1DisplayEntry.class
@@ -606,8 +606,8 @@ public final class net.minecraft.world.inventory.ContainerInput extends java.lan
     60255  1980-02-01 00:00   net/minecraft/client/gui/Hud.class
      5054  1980-02-01 00:00   assets/minecraft/textures/misc/credits_vignette.png
        41  1980-02-01 00:00   assets/minecraft/textures/misc/credits_vignette.png.mcmeta
-       41  1980-02-01 00:00   assets/minecraft/textures/misc/vignette.png.mcmeta
      5054  1980-02-01 00:00   assets/minecraft/textures/misc/vignette.png
+       41  1980-02-01 00:00   assets/minecraft/textures/misc/vignette.png.mcmeta
      2617  1980-02-01 00:00   net/minecraft/world/entity/ai/goal/ClimbOnTopOfPowderSnowGoal.class
     12056  1980-02-01 00:00   net/minecraft/world/level/block/PowderSnowBlock.class
 
@@ -1223,7 +1223,7 @@ grep: write error: Broken pipe
 grep: write error: Broken pipe
 
 === PlayerRenderer / render state ===
-        0  2026-09-05 08:53   net/minecraft/client/renderer/entity/player/
+        0  2026-09-05 08:59   net/minecraft/client/renderer/entity/player/
       319  1980-02-01 00:00   net/minecraft/client/renderer/entity/player/package-info.class
     24446  1980-02-01 00:00   net/minecraft/client/renderer/entity/player/AvatarRenderer.class
 
@@ -2063,11 +2063,11 @@ grep: write error: Broken pipe
 === ServerboundPlayerInputPacket? ===
      5443  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundInteractPacket.class
      1874  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerCommandPacket$Action.class
+     4644  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerCommandPacket.class
      4009  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerInputPacket.class
      3509  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundSetCarriedItemPacket.class
      3618  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundSwingPacket.class
      4306  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundUseItemOnPacket.class
-     4644  1980-02-01 00:00   net/minecraft/network/protocol/game/ServerboundPlayerCommandPacket.class
 
 === ClientLevel (entities by class) ===
   public java.lang.Iterable<net.minecraft.world.entity.Entity> entitiesForRendering();
@@ -2118,36 +2118,36 @@ com/mojang/blaze3d/opengl/GlRenderPipeline.class
 com/mojang/blaze3d/pipeline/
 com/mojang/blaze3d/pipeline/BindGroupLayout$Builder.class
 com/mojang/blaze3d/pipeline/BindGroupLayout$UniformDescription.class
-com/mojang/blaze3d/pipeline/ColorTargetState$WriteMask.class
-com/mojang/blaze3d/pipeline/BlendFunction.class
-com/mojang/blaze3d/pipeline/CompiledRenderPipeline.class
-com/mojang/blaze3d/pipeline/ColorTargetState.class
-com/mojang/blaze3d/pipeline/DepthStencilState.class
-com/mojang/blaze3d/pipeline/MainTarget$Dimension.class
-com/mojang/blaze3d/pipeline/MainTarget.class
 com/mojang/blaze3d/pipeline/BlendEquation.class
-com/mojang/blaze3d/pipeline/RenderPipeline$Builder.class
+com/mojang/blaze3d/pipeline/BindGroupLayout.class
+com/mojang/blaze3d/pipeline/ColorTargetState$WriteMask.class
+com/mojang/blaze3d/pipeline/CompiledRenderPipeline.class
+com/mojang/blaze3d/pipeline/BlendFunction.class
+com/mojang/blaze3d/pipeline/DepthStencilState.class
+com/mojang/blaze3d/pipeline/ColorTargetState.class
+com/mojang/blaze3d/pipeline/RenderPipeline$Snippet.class
 com/mojang/blaze3d/pipeline/RenderPipeline.class
+com/mojang/blaze3d/pipeline/RenderTarget.class
 com/mojang/blaze3d/pipeline/TextureTarget.class
 com/mojang/blaze3d/pipeline/package-info.class
-com/mojang/blaze3d/pipeline/RenderPipeline$Snippet.class
-com/mojang/blaze3d/pipeline/BindGroupLayout.class
-com/mojang/blaze3d/pipeline/RenderTarget.class
+com/mojang/blaze3d/pipeline/MainTarget$Dimension.class
+com/mojang/blaze3d/pipeline/MainTarget.class
+com/mojang/blaze3d/pipeline/RenderPipeline$Builder.class
 com/mojang/blaze3d/vulkan/VulkanRenderPipeline.class
 net/minecraft/client/renderer/PostChain$TargetBundle$1.class
+net/minecraft/client/renderer/PostChain$TargetBundle.class
 net/minecraft/client/renderer/PostChainConfig$Input.class
-net/minecraft/client/renderer/PostChain.class
 net/minecraft/client/renderer/PostChainConfig$InternalTarget.class
-net/minecraft/client/renderer/PostChainConfig$TargetInput.class
-net/minecraft/client/renderer/PostChainConfig$TextureInput.class
-net/minecraft/client/renderer/PostChainConfig.class
-net/minecraft/client/renderer/PostPass$InputTexture.class
+net/minecraft/client/renderer/PostChain.class
 net/minecraft/client/renderer/PostChainConfig$Pass.class
+net/minecraft/client/renderer/PostChainConfig.class
+net/minecraft/client/renderer/PostPass$Input.class
+net/minecraft/client/renderer/PostPass$InputTexture.class
 net/minecraft/client/renderer/PostPass$TargetInput.class
 net/minecraft/client/renderer/PostPass$TextureInput.class
 net/minecraft/client/renderer/PostPass.class
-net/minecraft/client/renderer/PostPass$Input.class
-net/minecraft/client/renderer/PostChain$TargetBundle.class
+net/minecraft/client/renderer/PostChainConfig$TextureInput.class
+net/minecraft/client/renderer/PostChainConfig$TargetInput.class
 net/minecraft/client/renderer/ShaderDefines$Builder.class
 net/minecraft/client/renderer/ShaderDefines.class
 net/minecraft/client/renderer/ShaderManager$1.class
@@ -2353,17 +2353,17 @@ assets/minecraft/models/block/copper_bars_post.json
 assets/minecraft/models/block/copper_bars_post_ends.json
 assets/minecraft/models/block/crimson_fence_post.json
 assets/minecraft/models/block/custom_fence_post.json
-assets/minecraft/models/block/dark_oak_fence_post.json
 assets/minecraft/models/block/cyan_stained_glass_pane_post.json
+assets/minecraft/models/block/dark_oak_fence_post.json
 assets/minecraft/models/block/deepslate_brick_wall_post.json
+assets/minecraft/models/block/deepslate_tile_wall_post.json
 assets/minecraft/models/block/diorite_wall_post.json
 assets/minecraft/models/block/end_stone_brick_wall_post.json
 assets/minecraft/models/block/exposed_copper_bars_post.json
 assets/minecraft/models/block/exposed_copper_bars_post_ends.json
 assets/minecraft/models/block/fence_post.json
-assets/minecraft/models/block/deepslate_tile_wall_post.json
-assets/minecraft/models/block/glass_pane_post.json
 assets/minecraft/models/block/granite_wall_post.json
+assets/minecraft/models/block/gray_stained_glass_pane_post.json
 
 === все .json рядом с шейдерами ===
 
@@ -2641,25 +2641,25 @@ net/minecraft/client/renderer/entity/state/AxolotlRenderState.class
 net/minecraft/client/renderer/entity/state/BatRenderState.class
 net/minecraft/client/renderer/entity/state/BeeRenderState.class
 net/minecraft/client/renderer/entity/state/BlockDisplayEntityRenderState.class
-net/minecraft/client/renderer/entity/state/BoggedRenderState.class
 net/minecraft/client/renderer/entity/state/BoatRenderState.class
+net/minecraft/client/renderer/entity/state/BoggedRenderState.class
+net/minecraft/client/renderer/entity/state/BreezeRenderState.class
 net/minecraft/client/renderer/entity/state/CamelRenderState.class
+net/minecraft/client/renderer/entity/state/CatRenderState.class
 net/minecraft/client/renderer/entity/state/ChickenRenderState.class
 net/minecraft/client/renderer/entity/state/CowRenderState.class
-net/minecraft/client/renderer/entity/state/CreakingRenderState.class
+net/minecraft/client/renderer/entity/state/CopperGolemRenderState.class
 net/minecraft/client/renderer/entity/state/CreeperRenderState.class
-net/minecraft/client/renderer/entity/state/DisplayEntityRenderState.class
+net/minecraft/client/renderer/entity/state/CreakingRenderState.class
 net/minecraft/client/renderer/entity/state/DolphinRenderState.class
+net/minecraft/client/renderer/entity/state/DisplayEntityRenderState.class
 net/minecraft/client/renderer/entity/state/DonkeyRenderState.class
 net/minecraft/client/renderer/entity/state/EndCrystalRenderState.class
-net/minecraft/client/renderer/entity/state/BreezeRenderState.class
-net/minecraft/client/renderer/entity/state/EnderDragonRenderState.class
-net/minecraft/client/renderer/entity/state/CatRenderState.class
 net/minecraft/client/renderer/entity/state/EndermanRenderState.class
+net/minecraft/client/renderer/entity/state/EnderDragonRenderState.class
 net/minecraft/client/renderer/entity/state/EntityRenderState$LeashState.class
 net/minecraft/client/renderer/entity/state/EntityRenderState$ShadowPiece.class
-net/minecraft/client/renderer/entity/state/EquineRenderState.class
-net/minecraft/client/renderer/entity/state/EvokerFangsRenderState.class
+net/minecraft/client/renderer/entity/state/EntityRenderState.class
 
 === EntityRenderState ===
 Compiled from "EntityRenderState.java"
@@ -2852,17 +2852,17 @@ assets/minecraft/models/block/copper_bars_post.json
 assets/minecraft/models/block/copper_bars_post_ends.json
 assets/minecraft/models/block/crimson_fence_post.json
 assets/minecraft/models/block/custom_fence_post.json
-assets/minecraft/models/block/dark_oak_fence_post.json
 assets/minecraft/models/block/cyan_stained_glass_pane_post.json
+assets/minecraft/models/block/dark_oak_fence_post.json
 assets/minecraft/models/block/deepslate_brick_wall_post.json
+assets/minecraft/models/block/deepslate_tile_wall_post.json
 assets/minecraft/models/block/diorite_wall_post.json
 assets/minecraft/models/block/end_stone_brick_wall_post.json
 assets/minecraft/models/block/exposed_copper_bars_post.json
 assets/minecraft/models/block/exposed_copper_bars_post_ends.json
 assets/minecraft/models/block/fence_post.json
-assets/minecraft/models/block/deepslate_tile_wall_post.json
-assets/minecraft/models/block/glass_pane_post.json
 assets/minecraft/models/block/granite_wall_post.json
+assets/minecraft/models/block/gray_stained_glass_pane_post.json
 grep: write error: Broken pipe
 
 === ShaderManager: публичный API ===
@@ -3019,11 +3019,13 @@ public interface net.minecraft.client.renderer.UniformValue {
 === shaders/: все файлы ===
 assets/minecraft/shaders/
 assets/minecraft/shaders/core/
-assets/minecraft/shaders/core/animate_sprite_blit.fsh
-assets/minecraft/shaders/core/blit_screen.fsh
 assets/minecraft/shaders/core/animate_sprite.vsh
+assets/minecraft/shaders/core/animate_sprite_blit.fsh
+assets/minecraft/shaders/core/animate_sprite_interpolate.fsh
+assets/minecraft/shaders/core/blit_screen.fsh
 assets/minecraft/shaders/core/block.fsh
 assets/minecraft/shaders/core/block.vsh
+assets/minecraft/shaders/core/debug_point.vsh
 assets/minecraft/shaders/core/entity.fsh
 assets/minecraft/shaders/core/entity.vsh
 assets/minecraft/shaders/core/glint.fsh
@@ -3041,11 +3043,9 @@ assets/minecraft/shaders/core/position.fsh
 assets/minecraft/shaders/core/position.vsh
 assets/minecraft/shaders/core/position_color.fsh
 assets/minecraft/shaders/core/position_color.vsh
-assets/minecraft/shaders/core/debug_point.vsh
-assets/minecraft/shaders/core/animate_sprite_interpolate.fsh
-assets/minecraft/shaders/core/position_tex_color.fsh
+assets/minecraft/shaders/core/position_tex.fsh
+assets/minecraft/shaders/core/position_tex.vsh
 assets/minecraft/shaders/core/position_tex_color.vsh
-assets/minecraft/shaders/core/rendertype_beacon_beam.fsh
 assets/minecraft/shaders/core/rendertype_beacon_beam.vsh
 assets/minecraft/shaders/core/rendertype_clouds.fsh
 assets/minecraft/shaders/core/rendertype_clouds.vsh
@@ -3085,7 +3085,7 @@ assets/minecraft/shaders/include/dynamictransforms.glsl
 assets/minecraft/shaders/include/fog.glsl
 assets/minecraft/shaders/include/globals.glsl
 assets/minecraft/shaders/include/light.glsl
-assets/minecraft/shaders/core/position_tex.fsh
+assets/minecraft/shaders/include/matrix.glsl
 assets/minecraft/shaders/include/projection.glsl
 assets/minecraft/shaders/include/sample_lightmap.glsl
 assets/minecraft/shaders/post/
@@ -3272,3 +3272,299 @@ public class com.mojang.blaze3d.pipeline.RenderPipeline {
         89: putfield      #982                // Field net/minecraft/client/renderer/state/OptionsRenderState.menuBackgroundBlurriness:I
          0: ldc_w         #1749               // String blur
          6: putstatic     #448                // Field BLUR_POST_CHAIN_ID:Lnet/minecraft/resources/Identifier;
+
+=== список assets/minecraft/post_effect ===
+assets/minecraft/post_effect/
+assets/minecraft/post_effect/blur.json
+assets/minecraft/post_effect/creeper.json
+assets/minecraft/post_effect/entity_outline.json
+assets/minecraft/post_effect/invert.json
+assets/minecraft/post_effect/spider.json
+assets/minecraft/post_effect/transparency.json
+
+=== blur.json (полный пример) ===
+{
+    "targets": {
+        "swap": {}
+    },
+    "passes": [
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/box_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "minecraft:main",
+                    "bilinear": true
+                }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "BlurConfig": [
+                    {
+                        "name": "BlurDir",
+                        "type": "vec2",
+                        "value": [ 1.0, 0.0 ]
+                    },
+                    {
+                        "name": "Radius",
+                        "type": "float",
+                        "value": 0.0
+                    }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/box_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap",
+                    "bilinear": true
+                }
+            ],
+            "output": "minecraft:main",
+            "uniforms": {
+                "BlurConfig": [
+                    {
+                        "name": "BlurDir",
+                        "type": "vec2",
+                        "value": [ 0.0, 1.0 ]
+                    },
+                    {
+                        "name": "Radius",
+                        "type": "float",
+                        "value": 0.0
+                    }
+                ]
+            }
+        }, {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/box_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "minecraft:main",
+                    "bilinear": true
+                }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "BlurConfig": [
+                    {
+                        "name": "BlurDir",
+                        "type": "vec2",
+                        "value": [ 1.0, 0.0 ]
+                    },
+                    {
+                        "name": "Radius",
+                        "type": "float",
+                        "value": 0.0
+                    }
+                ]
+
+=== invert.json ===
+{
+    "targets": {
+        "swap": {}
+    },
+    "passes": [
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/invert",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "minecraft:main"
+                }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "InvertConfig": [
+                    {
+                        "name": "InverseAmount",
+                        "type": "float",
+                        "value": 0.8
+                    }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/blit",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap"
+                }
+            ],
+            "uniforms": {
+                "BlitConfig": [
+                    {
+                        "name": "ColorModulate",
+                        "type": "vec4",
+                        "value": [ 1.0, 1.0, 1.0, 1.0 ]
+
+=== invert.fsh ===
+#version 330
+
+uniform sampler2D InSampler;
+
+in vec2 texCoord;
+
+layout(std140) uniform SamplerInfo {
+    vec2 OutSize;
+    vec2 InSize;
+};
+
+layout(std140) uniform InvertConfig {
+    float InverseAmount;
+};
+
+out vec4 fragColor;
+
+void main(){
+    vec2 sizeRatio = OutSize / InSize;
+
+    vec4 diffuseColor = texture(InSampler, texCoord);
+    vec4 invertColor = 1.0 - diffuseColor;
+    vec4 outColor = mix(diffuseColor, invertColor, InverseAmount);
+    fragColor = vec4(outColor.rgb, 1.0);
+}
+
+=== box_blur.fsh ===
+#version 330
+
+#moj_import <minecraft:globals.glsl>
+
+uniform sampler2D InSampler;
+
+layout(std140) uniform SamplerInfo {
+    vec2 OutSize;
+    vec2 InSize;
+};
+
+layout(std140) uniform BlurConfig {
+    vec2 BlurDir;
+    float Radius;
+};
+
+in vec2 texCoord;
+
+out vec4 fragColor;
+
+// This shader relies on GL_LINEAR sampling to reduce the amount of texture samples in half.
+// Instead of sampling each pixel position with a step of 1 we sample between pixels with a step of 2.
+// In the end we sample the last pixel with a half weight, since the amount of pixels to sample is always odd (actualRadius * 2 + 1).
+void main() {
+    vec2 oneTexel = 1.0 / InSize;
+    vec2 sampleStep = oneTexel * BlurDir;
+
+    vec4 blurred = vec4(0.0);
+    float actualRadius = Radius >= 0.5 ? round(Radius) : float(MenuBlurRadius);
+    for (float a = -actualRadius + 0.5; a <= actualRadius; a += 2.0) {
+        blurred += texture(InSampler, texCoord + sampleStep * a);
+    }
+    blurred += texture(InSampler, texCoord + sampleStep * actualRadius) / 2.0;
+    fragColor = blurred / (actualRadius + 0.5);
+}
+
+=== rotscale.vsh ===
+#version 330
+
+layout(std140) uniform SamplerInfo {
+    vec2 OutSize;
+    vec2 InSize;
+};
+
+layout(std140) uniform RotScaleConfig {
+    vec2 InScale;
+    vec2 InOffset;
+    float InRotation;
+};
+
+out vec2 texCoord;
+out vec2 scaledCoord;
+
+void main(){
+    vec2 uv = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+    vec4 pos = vec4(uv * vec2(2, 2) + vec2(-1, -1), 0, 1);
+
+    gl_Position = pos;
+    texCoord = uv;
+
+    float Deg2Rad = 0.0174532925;
+    float InRadians = InRotation * Deg2Rad;
+    float Cosine = cos(InRadians);
+    float Sine = sin(InRadians);
+    float RotU = texCoord.x * Cosine - texCoord.y * Sine;
+    float RotV = texCoord.y * Cosine + texCoord.x * Sine;
+    scaledCoord = vec2(RotU, RotV) * InScale + InOffset;
+}
+
+=== RenderTypes: варианты ===
+
+=== UniformValue + реализации ===
+net/minecraft/client/renderer/PostChainConfig$Input.class
+net/minecraft/client/renderer/PostChainConfig$InternalTarget.class
+net/minecraft/client/renderer/PostChainConfig$Pass.class
+net/minecraft/client/renderer/PostChainConfig.class
+net/minecraft/client/renderer/PostChainConfig$TextureInput.class
+net/minecraft/client/renderer/PostChainConfig$TargetInput.class
+net/minecraft/client/renderer/UniformValue$FloatUniform.class
+net/minecraft/client/renderer/UniformValue$IVec3Uniform.class
+net/minecraft/client/renderer/UniformValue$IntUniform.class
+net/minecraft/client/renderer/UniformValue$Matrix4x4Uniform.class
+net/minecraft/client/renderer/UniformValue$Vec2Uniform.class
+net/minecraft/client/renderer/UniformValue$Type.class
+net/minecraft/client/renderer/UniformValue$Vec3Uniform.class
+net/minecraft/client/renderer/UniformValue$Vec4Uniform.class
+net/minecraft/client/renderer/UniformValue.class
+
+=== ShaderManager public ===
+public class net.minecraft.client.renderer.ShaderManager extends net.minecraft.server.packs.resources.SimplePreparableReloadListener<net.minecraft.client.renderer.ShaderManager$Configs> implements java.lang.AutoCloseable {
+  public static final int MAX_LOG_LENGTH;
+  public static final java.lang.String SHADER_PATH;
+  public net.minecraft.client.renderer.ShaderManager(net.minecraft.client.renderer.texture.TextureManager, java.util.function.Consumer<java.lang.Exception>);
+  public java.lang.String getName();
+  public net.minecraft.client.renderer.PostChain getPostChain(net.minecraft.resources.Identifier, java.util.Set<net.minecraft.resources.Identifier>);
+  public void close();
+  public java.lang.String getShader(net.minecraft.resources.Identifier, com.mojang.blaze3d.shaders.ShaderType);
+
+=== GameRenderer setPostEffect/clearPostEffect байткод ===
+        53: invokevirtual #429                // Method setPostEffect:(Lnet/minecraft/resources/Identifier;)V
+        56: goto          101
+        59: aload_2
+        60: checkcast     #405                // class net/minecraft/world/entity/monster/spider/Spider
+        63: astore        5
+        65: aload_0
+        66: ldc_w         #431                // String spider
+        69: invokestatic  #425                // Method net/minecraft/resources/Identifier.withDefaultNamespace:(Ljava/lang/String;)Lnet/minecraft/resources/Identifier;
+        72: invokevirtual #429                // Method setPostEffect:(Lnet/minecraft/resources/Identifier;)V
+        75: goto          101
+        78: aload_2
+        79: checkcast     #407                // class net/minecraft/world/entity/monster/EnderMan
+        82: astore        6
+        84: aload_0
+        85: ldc_w         #433                // String invert
+        88: invokestatic  #425                // Method net/minecraft/resources/Identifier.withDefaultNamespace:(Ljava/lang/String;)Lnet/minecraft/resources/Identifier;
+        91: invokevirtual #429                // Method setPostEffect:(Lnet/minecraft/resources/Identifier;)V
+        94: goto          101
+        97: aload_0
+        98: invokevirtual #435                // Method clearPostEffect:()V
+       101: return
+
+  private void setPostEffect(net.minecraft.resources.Identifier);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: putfield      #393                // Field postEffectId:Lnet/minecraft/resources/Identifier;
+         5: aload_0
+         6: iconst_1
+         7: putfield      #395                // Field effectActive:Z
+        10: return
+
+
+=== FrameGraph/RenderTarget size ===
+Error: class not found: net.minecraft.client.renderer.MainTarget
