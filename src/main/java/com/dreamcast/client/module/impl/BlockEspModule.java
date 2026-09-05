@@ -70,6 +70,9 @@ public class BlockEspModule extends Module {
 	public BlockEspModule() {
 		super("block_esp", "BlockESP", "Подсветка выбранных блоков: руда, сундуки и что угодно ещё",
 				ModuleCategory.RENDER, GLFW.GLFW_KEY_UNKNOWN);
+		// Без регистрации списка он существовал в логике сканера, но не попадал
+		// ни в ClickGUI, ни в конфиг — выбрать свой блок было невозможно.
+		addSetting(blocks);
 	}
 
 	@Override

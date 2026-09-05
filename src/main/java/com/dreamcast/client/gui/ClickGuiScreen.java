@@ -82,8 +82,8 @@ public class ClickGuiScreen extends Screen {
 	private static final int ROW_BORDER = 0x12FFFFFF;
 	private static final int SHEEN = 0x0CFFFFFF;
 	private static final int TEXT_PRIMARY = 0xFFF6F6F8;
-	private static final int TEXT_SECONDARY = 0xFFA6A6B2;
-	private static final int TEXT_DIM = 0xFF6B6B78;
+	private static final int TEXT_SECONDARY = 0xFFC6C6D1;
+	private static final int TEXT_DIM = 0xFF9292A1;
 	/** Имена старых ресурсов не всегда совпадают с id модулей. */
 	private static final Map<String, String> MODULE_ICONS = Map.of(
 			"scaffold", "auto_mine",

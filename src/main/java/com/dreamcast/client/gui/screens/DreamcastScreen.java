@@ -180,19 +180,19 @@ public abstract class DreamcastScreen extends Screen {
 		float near = Math.max(0.0f, 1.0f - (float) Math.sqrt(dx * dx + dy * dy) / 38.0f);
 		item.hover = ease(item.hover, inside ? 1.0f : near, 0.18);
 
-		// Полная четырёхслойная тень на каждой кнопке была главным расходом
-		// главного меню. Здесь остаётся одна короткая тень только у подсветки.
-		if (item.hover > 0.01f) {
-			RenderUtils.drawSoftShadow(graphics, x, y, w, h, 8, 1);
-		}
+		// В главном меню тени и соты на затухающих соседних кнопках давали
+		// заметный фриз именно при движении мыши. Оставляем лёгкую геометрию
+		// только под реально наведённой кнопкой.
 		int top = RenderUtils.mix(0xF4121215, 0xF61C1C22, item.hover);
 		int bottom = RenderUtils.mix(0xF60A0A0C, 0xF8121217, item.hover);
 		int border = RenderUtils.mix(0x26FFFFFF, 0x66FFFFFF, item.hover);
 		RenderUtils.fillRoundedBorder(graphics, x, y, w, h, 8, border, top, bottom, 1);
 		graphics.fill(x + 8, y, x + w - 8, y + 1, RenderUtils.withAlpha(accent, 0.30f + 0.60f * item.hover));
 		// Сотовая текстура: шестиугольники расступаются у курсора и подсвечиваются
-		RenderUtils.drawHexPattern(graphics, x + 2, y + 2, w - 4, h - 4, accent,
-				mouseX, mouseY, item.hover);
+		if (inside) {
+			RenderUtils.drawHexPattern(graphics, x + 2, y + 2, w - 4, h - 4, accent,
+					mouseX, mouseY, item.hover);
+		}
 
 		int textY = y + (h - font.lineHeight) / 2;
 		int textColor = RenderUtils.mix(0xFFE8E8F0, 0xFFFFFFFF, item.hover);

@@ -178,7 +178,7 @@ public final class WorldRenderHook {
 	private static void drawTrail(TrailsModule trails, PoseStack.Pose pose, VertexConsumer buffer,
 	                              double camX, double camY, double camZ, float unitsPerPixel,
 	                              float partialTick, long now) {
-		var points = trails.trailPoints().toArray(new float[0][]);
+		var points = trails.trailPoints().toArray(new TrailsModule.TrailPoint[0]);
 		if (points.length < 1) {
 			return;
 		}
@@ -195,33 +195,39 @@ public final class WorldRenderHook {
 		}
 
 		int width = trails.lineWidth();
-		// Два прохода: широкое мягкое свечение, затем плотная сердцевина
+		// Три прохода: широкий ореол, цветная лента и тонкая яркая сердцевина.
+		// Это даёт объёмный шлейф вместо одиночных "треугольников" за игроком.
 		drawTrailPass(trails, pose, buffer, points, head, camX, camY, camZ,
-				unitsPerPixel, width * 2.8F, 0.22F, now);
+				unitsPerPixel, width * 3.8F, 0.14F, now);
 		drawTrailPass(trails, pose, buffer, points, head, camX, camY, camZ,
-				unitsPerPixel, width, 0.85F, now);
+				unitsPerPixel, width * 1.8F, 0.42F, now);
+		drawTrailPass(trails, pose, buffer, points, head, camX, camY, camZ,
+				unitsPerPixel, Math.max(1.0F, width * 0.70F), 0.95F, now);
 	}
 
 	private static void drawTrailPass(TrailsModule trails, PoseStack.Pose pose, VertexConsumer buffer,
-	                                  float[][] points, float[] head,
+	                                  TrailsModule.TrailPoint[] points, float[] head,
 	                                  double camX, double camY, double camZ,
 	                                  float unitsPerPixel, float widthPx, float alphaScale,
 	                                  long now) {
 		// Первый сегмент: от интерполированной позиции игрока к свежей точке
 		float[] from = head;
+		float fromAlpha = 1.0F;
 		for (int i = points.length - 1; i >= 0; i--) {
-			float[] to = points[i];
+			TrailsModule.TrailPoint to = points[i];
 			float t = (points.length - 1 - i + 1) / (float) (points.length + 1);
 			float tNext = (points.length - 1 - i) / (float) (points.length + 1);
+			float toAlpha = trails.pointAlpha(to, now);
 
-			int colorFrom = RenderUtils.withAlpha(trails.trailColor(tNext, now), alphaScale);
-			int colorTo = RenderUtils.withAlpha(trails.trailColor(t, now), alphaScale * (1.0f - t));
+			int colorFrom = RenderUtils.withAlpha(trails.trailColor(tNext, now), alphaScale * fromAlpha);
+			int colorTo = RenderUtils.withAlpha(trails.trailColor(t, now), alphaScale * toAlpha * (1.0F - t * 0.20F));
 
 			WorldGeometryRenderer.line(buffer, pose,
 					from[0] - camX, from[1] - camY, from[2] - camZ, colorFrom,
-					to[0] - camX, to[1] - camY, to[2] - camZ, colorTo,
+					to.x() - camX, to.y() - camY, to.z() - camZ, colorTo,
 					widthPx, unitsPerPixel);
-			from = to;
+			from = new float[]{to.x(), to.y(), to.z()};
+			fromAlpha = toAlpha;
 		}
 	}
 

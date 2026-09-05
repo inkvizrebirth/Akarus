@@ -64,6 +64,8 @@ public class DreamcastSettingsScreen extends DreamcastScreen {
 		IntConsumer cycleSet;
 
 		float hover;
+		/** Левая граница слайдера, вычисленная при отрисовке текущего кадра. */
+		int sliderX;
 
 		Row(String label, int kind, Runnable onChange) {
 			this.label = label;
@@ -76,6 +78,8 @@ public class DreamcastSettingsScreen extends DreamcastScreen {
 	private final Screen parent;
 
 	private int scroll;
+	/** Слайдер, который сейчас тянут ЛКМ; null — обычный клик. */
+	private Row draggingSlider;
 
 	public DreamcastSettingsScreen(Screen parent) {
 		super("Настройки");
@@ -315,7 +319,26 @@ public class DreamcastSettingsScreen extends DreamcastScreen {
 		int sy = y + (ROW_HEIGHT - 4) / 2;
 		RenderUtils.drawSlider(graphics, sx, sy, sliderWidth, 4, (float) fraction01, ACCENT);
 		graphics.text(font, RenderUtils.styled(valueLabel), sx + sliderWidth + 8, textY, 0xFFB9B9C6, true);
-		row.intValue = sx; // левый край слайдера запоминаем: по нему кликом ставим значение
+		row.sliderX = sx;
+	}
+
+	private void applySlider(Row row, double mouseX) {
+		int sliderWidth = 96;
+		double fraction = Math.max(0.0, Math.min(1.0, (mouseX - row.sliderX) / (double) sliderWidth));
+		if (row.kind == SLIDER_INT) {
+			int value = (int) Math.round(row.min + fraction * (row.max - row.min));
+			row.intSet.accept(Math.max(row.min, Math.min(row.max, value)));
+		} else if (row.kind == SLIDER_DOUBLE) {
+			double dMin = row.dMin == 0.0 && !row.percent ? 0.0 : row.dMin;
+			double dMax = row.dMax == 0.0 ? 1.0 : row.dMax;
+			row.dblSet.accept(Math.round((dMin + fraction * (dMax - dMin)) * 1000.0) / 1000.0);
+		}
+	}
+
+	private void saveOptions() {
+		if (this.minecraft != null && this.minecraft.options != null) {
+			this.minecraft.options.save();
+		}
 	}
 
 	@Override
@@ -343,7 +366,9 @@ public class DreamcastSettingsScreen extends DreamcastScreen {
 		}
 
 		int visible = Math.min(rows.size(), (height - 120) / (ROW_HEIGHT + ROW_GAP));
-		int y0 = 44;
+		// Должно совпадать с отрисовкой (52). Старое 44 смещало области клика
+		// и делало слайдеры визуально "сломанными".
+		int y0 = 52;
 		int index = 0;
 		for (int i = scroll; i < Math.min(rows.size(), scroll + visible + 1); i++, index++) {
 			int ry = y0 + index * (ROW_HEIGHT + ROW_GAP);
@@ -354,19 +379,12 @@ public class DreamcastSettingsScreen extends DreamcastScreen {
 			switch (row.kind) {
 				case TOGGLE -> row.boolSet.accept(!row.boolGet.getAsBoolean());
 				case SLIDER_INT -> {
-					int sx = row.intValue; // левый край, записан в draw
-					int sliderWidth = 96;
-					double f = Math.max(0.0, Math.min(1.0, (mx - sx) / (double) sliderWidth));
-					int value = (int) Math.round(row.min + f * (row.max - row.min));
-					row.intSet.accept(Math.max(row.min, Math.min(row.max, value)));
+					applySlider(row, mx);
+					draggingSlider = row;
 				}
 				case SLIDER_DOUBLE -> {
-					int sx = row.intValue;
-					int sliderWidth = 96;
-					double f = Math.max(0.0, Math.min(1.0, (mx - sx) / (double) sliderWidth));
-					double dMin = row.dMin == 0.0 && !row.percent ? 0.0 : row.dMin;
-					double dMax = row.dMax == 0.0 ? 1.0 : row.dMax;
-					row.dblSet.accept(Math.round((dMin + f * (dMax - dMin)) * 1000.0) / 1000.0);
+					applySlider(row, mx);
+					draggingSlider = row;
 				}
 				case CYCLE -> row.cycleSet.accept(row.cycleGet.getAsInt() + 1);
 				case ACTION -> {
@@ -379,10 +397,30 @@ public class DreamcastSettingsScreen extends DreamcastScreen {
 				default -> {
 				}
 			}
+			saveOptions();
 			playClick();
 			return true;
 		}
 		return super.mouseClicked(event, doubleClick);
+	}
+
+	@Override
+	public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+		if (draggingSlider != null) {
+			applySlider(draggingSlider, event.x());
+			return true;
+		}
+		return super.mouseDragged(event, deltaX, deltaY);
+	}
+
+	@Override
+	public boolean mouseReleased(MouseButtonEvent event) {
+		if (draggingSlider != null) {
+			draggingSlider = null;
+			saveOptions();
+			return true;
+		}
+		return super.mouseReleased(event);
 	}
 
 	@Override
@@ -395,6 +433,7 @@ public class DreamcastSettingsScreen extends DreamcastScreen {
 
 	@Override
 	public void onClose() {
+		saveOptions();
 		if (this.minecraft != null) {
 			this.minecraft.gui.setScreen(parent);
 		}

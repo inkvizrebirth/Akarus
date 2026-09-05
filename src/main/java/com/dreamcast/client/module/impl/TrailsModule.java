@@ -49,14 +49,19 @@ public class TrailsModule extends Module {
 
 	private final IntSetting width = intSetting("width", "Толщина линии", 3, 1, 12);
 	private final IntSetting length = intSetting("length", "Длина, блоков", 10, 2, 32);
+	private final IntSetting lifetime = intSetting("lifetime", "Затухание (0.1 с)", 18, 4, 80);
 	private final IntSetting heightOffset = intSetting("height", "Высота (0.1 блока)", 6, 0, 20);
 
 	private final IntSetting density = intSetting("density", "Партиклов/шаг", 2, 1, 6);
 	private final IntSetting particleSize = intSetting("particle_size", "Размер партиклов", 2, 1, 8);
 	private final BooleanSetting onlyMoving = bool("only_moving", "Только в движении", true);
 
-	/** Точки следа (голова буфера — самая свежая). x, y, z. */
-	private final Queue<float[]> points = new ArrayDeque<>();
+	/** Одна точка шлейфа: время рождения нужно для независимого плавного затухания. */
+	public record TrailPoint(float x, float y, float z, long bornAt) {
+	}
+
+	/** Точки следа: голова очереди — самая старая, хвост — свежая. */
+	private final Queue<TrailPoint> points = new ArrayDeque<>();
 	private float lastX = Float.NaN;
 	private float lastY = Float.NaN;
 	private float lastZ = Float.NaN;
@@ -81,7 +86,9 @@ public class TrailsModule extends Module {
 
 		if (onlyMoving.isEnabled() && player.getDeltaMovement().horizontalDistanceSqr() < 1.0e-4
 				&& (player.onGround() || player.isInWater())) {
-			// Стоим на месте — след не растёт (но и не исчезает мгновенно)
+			// Стоим на месте — след не растёт, но старые сегменты всё равно
+			// продолжают плавно растворяться, а не зависают хвостом в воздухе.
+			pruneTrail();
 			return;
 		}
 
@@ -102,7 +109,7 @@ public class TrailsModule extends Module {
 			lastY += dy * t;
 			lastZ += dz * t;
 
-			points.add(new float[]{lastX, lastY, lastZ});
+			points.add(new TrailPoint(lastX, lastY, lastZ, net.minecraft.util.Util.getMillis()));
 			if (wantsParticles()) {
 				spawnDust(lastX, lastY, lastZ);
 			}
@@ -129,29 +136,34 @@ public class TrailsModule extends Module {
 
 	/** Держим в буфере не больше length блоков пути. */
 	private void pruneTrail() {
+		long now = net.minecraft.util.Util.getMillis();
+		long maxAge = lifetime.get() * 100L;
+		while (!points.isEmpty() && now - points.peek().bornAt() >= maxAge) {
+			points.poll();
+		}
 		double limit = length.get();
 		double total = 0.0;
-		Iterator<float[]> iterator = points.iterator();
-		float[] previous = null;
+		Iterator<TrailPoint> iterator = points.iterator();
+		TrailPoint previous = null;
 		while (iterator.hasNext()) {
-			float[] point = iterator.next();
+			TrailPoint point = iterator.next();
 			if (previous != null) {
 				total += Math.sqrt(
-						(point[0] - previous[0]) * (point[0] - previous[0])
-								+ (point[1] - previous[1]) * (point[1] - previous[1])
-								+ (point[2] - previous[2]) * (point[2] - previous[2]));
+						(point.x() - previous.x()) * (point.x() - previous.x())
+								+ (point.y() - previous.y()) * (point.y() - previous.y())
+								+ (point.z() - previous.z()) * (point.z() - previous.z()));
 			}
 			previous = point;
 		}
 		// Хвост (самые старые) удаляем по одному, пока след не влезет в лимит
 		while (total > limit && points.size() > 2) {
-			float[] head = points.poll();
-			float[] next = points.peek();
+			TrailPoint head = points.poll();
+			TrailPoint next = points.peek();
 			if (next != null) {
 				total -= Math.sqrt(
-						(next[0] - head[0]) * (next[0] - head[0])
-								+ (next[1] - head[1]) * (next[1] - head[1])
-								+ (next[2] - head[2]) * (next[2] - head[2]));
+						(next.x() - head.x()) * (next.x() - head.x())
+								+ (next.y() - head.y()) * (next.y() - head.y())
+								+ (next.z() - head.z()) * (next.z() - head.z()));
 			}
 		}
 	}
@@ -205,10 +217,23 @@ public class TrailsModule extends Module {
 	}
 
 	/** Точки следа для рендера (свежие — в конце очереди). */
-	public Queue<float[]> trailPoints() {
+	public Queue<TrailPoint> trailPoints() {
 		// Снапшот: отложенный рендер не итерирует живую очередь, которую
 		// параллельно чистит tick()
 		return new java.util.ArrayDeque<>(points);
+	}
+
+	/** Альфа одной точки: быстрое появление + мягкое исчезновение по возрасту. */
+	public float pointAlpha(TrailPoint point, long now) {
+		float age = Math.max(0.0F, now - point.bornAt());
+		float maxAge = lifetime.get() * 100.0F;
+		float appear = Math.min(1.0F, age / 110.0F);
+		float fadeStart = maxAge * 0.35F;
+		float fade = age <= fadeStart ? 1.0F
+				: Math.max(0.0F, 1.0F - (age - fadeStart) / Math.max(1.0F, maxAge - fadeStart));
+		// smoothstep убирает резкий край на последних кадрах жизни точки
+		fade = fade * fade * (3.0F - 2.0F * fade);
+		return appear * fade;
 	}
 
 	/** Точка «прямо сейчас» — интерполированная позиция головы следа. */
