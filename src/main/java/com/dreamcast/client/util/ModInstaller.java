@@ -185,13 +185,15 @@ public final class ModInstaller {
 		return message.length() > 120 ? message.substring(0, 120) : message;
 	}
 
+	/**
+	 * Версия игры для фильтра Modrinth. Именно {@code nativeVersionLabel()}, а не
+	 * {@code currentVersion()}: VFP умеет притворяться сервером 1.20.4, а нам нужна
+	 * версия самого клиента — та, под которую собран Baritone. {@link ViaIntegration}
+	 * читает {@code SharedConstants} рефлексией и не падает, если класс недоступен.
+	 */
 	private static String gameVersion() {
-		try {
-			String normalized = FabricLoader.getInstance().getGameProvider().getNormalizedGameVersion();
-			return normalized == null || normalized.isBlank() ? "26.2" : normalized;
-		} catch (Throwable ignored) {
-			return "26.2";
-		}
+		String version = ViaIntegration.nativeVersionLabel();
+		return version == null || version.isBlank() ? "26.2" : version;
 	}
 
 	private static HttpClient client() {
