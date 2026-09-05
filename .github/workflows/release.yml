@@ -37,33 +37,58 @@ jobs:
             echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Cache embedded mods
+        uses: actions/cache@v4
+        with:
+          path: libs
+          key: dreamcast-embedded-mods-v1-vfp4.6.3-lithium0.25.3-modmenu20.0.1-imf1.16.4
       - name: Fetch embedded mods for bundling
         run: |
           mkdir -p libs
-          # Свежие релизные jar под Minecraft 26.2 из GitHub releases; при проблемах с API —
-          # запасной путь к известному тегу. Сборка требует полный набор: fabric.mod.json
-          # объявляет все пять nested jar.
+          # Вложенные моды качаются с GitHub/Modrinth, а их API периодически
+          # отваливаются — и сборка падала не на компиляции. Поэтому: кэш между
+          # сборками, повторы запросов и проверка, что прилетел настоящий zip,
+          # а не страница ошибки.
+          rm -f libs/Sodium.jar   # Sodium не пинимся версией — всегда берём свежий
+          check_zip() { # file name
+            if [ ! -s "$1" ] || [ "$(head -c 2 "$1" | tr -dc 'A-Za-z')" != "PK" ]; then
+              echo "::error::$2 — скачался не jar (ожидалась zip-подпись PK)"; exit 1
+            fi
+          }
           fetch() { # repo tag pattern out
-            local url
-            url=$(curl -fsSL --max-time 20 "https://api.github.com/repos/$1/releases/tags/$2" \
-              | grep -oE 'https://github.com/[^"]+/releases/download/[^"]+\.jar' \
-              | grep -E "$3" | grep -vE 'sources|javadoc|dev' | head -1 || true)
+            local url="" attempt
+            if [ -s "libs/$4" ]; then echo "уже в кэше: $4"; check_zip "libs/$4" "$4"; return 0; fi
+            for attempt in 1 2 3; do
+              url=$(curl -fsSL --retry 3 --retry-all-errors --retry-delay 3 --max-time 45 \
+                "https://api.github.com/repos/$1/releases/tags/$2" \
+                | grep -oE 'https://github.com/[^"]+/releases/download/[^"]+\.jar' \
+                | grep -E "$3" | grep -vE 'sources|javadoc|dev' | head -1 || true)
+              [ -n "$url" ] && break
+              echo "попытка $attempt: $1@$2 не отвечает, повторяю"; sleep 5
+            done
             if [ -z "$url" ]; then
               echo "::error::$4 ($1@$2) не найден"; exit 1
             fi
             echo "Скачиваю: $url"
-            curl -fL --retry 3 --max-time 180 -o "libs/$4" "$url"
+            curl -fL --retry 4 --retry-all-errors --retry-delay 4 --max-time 240 -o "libs/$4" "$url"
+            check_zip "libs/$4" "$4"
           }
           fetch ViaVersion/ViaFabricPlus 4.6.3 'ViaFabricPlus-[0-9.]+' ViaFabricPlus.jar
           # Sodium не выкладывает jar в GitHub-релизы — берём с Modrinth (fabric, 26.2)
-          sodium_url=$(curl -fsSL --max-time 20 \
-            'https://api.modrinth.com/v2/project/sodium/version?loaders=%5B%22fabric%22%5D&game_versions=%5B%2226.2%22%5D' \
-            | grep -oE 'https://cdn\.modrinth\.com/[^"]+\.jar' | head -1 || true)
+          sodium_url=""
+          for attempt in 1 2 3; do
+            sodium_url=$(curl -fsSL --retry 3 --retry-all-errors --retry-delay 3 --max-time 45 \
+              'https://api.modrinth.com/v2/project/sodium/version?loaders=%5B%22fabric%22%5D&game_versions=%5B%2226.2%22%5D' \
+              | grep -oE 'https://cdn\.modrinth\.com/[^"]+\.jar' | head -1 || true)
+            [ -n "$sodium_url" ] && break
+            echo "попытка $attempt: Modrinth не отвечает, повторяю"; sleep 5
+          done
           if [ -z "$sodium_url" ]; then
             echo "::error::Sodium (fabric, mc26.2) не найден на Modrinth"; exit 1
           fi
           echo "Скачиваю: $sodium_url"
-          curl -fL --retry 3 --max-time 180 -o libs/Sodium.jar "$sodium_url"
+          curl -fL --retry 4 --retry-all-errors --retry-delay 4 --max-time 240 -o libs/Sodium.jar "$sodium_url"
+          check_zip libs/Sodium.jar Sodium.jar
           fetch CaffeineMC/lithium mc26.2-0.25.3 'lithium.*fabric.*26\.2' Lithium.jar
           fetch Prospector/modmenu v20.0.1 'modmenu-20\.0\.1' ModMenu.jar
           fetch RaphiMC/ImmediatelyFast v1.16.4 'ImmediatelyFast-Fabric-1\.16\.4.*26\.2' ImmediatelyFast.jar
